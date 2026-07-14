@@ -1,0 +1,53 @@
+/*
+ * LandForger design tokens.
+ * Values are the design's de-facto tokens as measured in
+ * docs/research/design-inventory.md §3 and docs/research/animation-catalog.md §1.
+ */
+:root {
+  /* Surfaces */
+  --bg: #080807;
+  --panel-1: #100e0c;
+  --panel-2: #0e0d0c;
+  --panel-3: #181614;
+
+  /* Text — rgba(245,241,234,α) ladder */
+  --text-hi: rgba(245, 241, 234, 0.95);
+  --text: rgba(245, 241, 234, 0.78);
+  --text-dim: rgba(245, 241, 234, 0.55);
+  --text-faint: rgba(245, 241, 234, 0.35);
+
+  /* Accent */
+  --bronze: #b0824a;
+  --bronze-light: #e6c79a;
+
+  /* Hairlines — rgba(255,255,255, 0.05–0.12) */
+  --hairline-soft: rgba(255, 255, 255, 0.05);
+  --hairline: rgba(255, 255, 255, 0.08);
+  --hairline-strong: rgba(255, 255, 255, 0.12);
+
+  /* Category colors — oklch(0.80 0.085 H); items L 0.83, organizations L 0.79 */
+  --cat-stories: oklch(0.8 0.085 215);
+  --cat-eras: oklch(0.8 0.085 300);
+  --cat-characters: oklch(0.8 0.085 32);
+  --cat-locations: oklch(0.8 0.085 152);
+  --cat-items: oklch(0.83 0.085 92);
+  --cat-organizations: oklch(0.79 0.085 268);
+  --cat-events: oklch(0.8 0.085 332);
+
+  /* Fonts */
+  --font-sans: 'Hanken Grotesk', system-ui, sans-serif;
+  --font-serif: 'Newsreader', Georgia, serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  /* Easing curves — the complete measured set */
+  --ease-house: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-panel-swap: cubic-bezier(0.76, 0, 0.24, 1);
+  --ease-burst: cubic-bezier(0.5, 0, 0.2, 1);
+  --ease-map-zoom: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-shake: cubic-bezier(0.36, 0.07, 0.19, 0.97);
+  --ease-overshoot: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-overshoot-soft: cubic-bezier(0.34, 1.42, 0.5, 1);
+
+  /* Motion scale: multiply-is-slower. Durations use calc(var(--mo, 1) * <N>ms). */
+  --mo: 1;
+}
