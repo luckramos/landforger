@@ -18,8 +18,8 @@
 .recent h2 { margin: 5px 0 0; color: var(--text-hi); font-family: var(--font-serif); font-size: 28px; font-weight: 400; }
 .recent > header > span { color: var(--text-faint); font-family: var(--font-mono); font-size: 10px; }
 .recent > div { border-top: 1px solid var(--hairline); }
-.recent a { display: grid; grid-template-columns: 28px 1fr 130px 65px; gap: 10px; align-items: center; padding: 13px 8px 13px 16px; border-bottom: 1px solid var(--hairline-soft); color: var(--text-dim); font-size: 12px; text-decoration: none; transition: padding-left calc(var(--mo, 1) * 200ms) var(--ease-house), background calc(var(--mo, 1) * 160ms); }
-.recent a:hover { padding-left: 20px; background: var(--hairline-soft); }
+.recent a { display: grid; grid-template-columns: 28px 1fr 130px 65px; gap: 10px; align-items: center; padding: 13px 8px 13px 16px; border-bottom: 1px solid var(--hairline-soft); color: var(--text-dim); font-size: 12px; text-decoration: none; transition: transform calc(var(--mo, 1) * 200ms) var(--ease-house), background calc(var(--mo, 1) * 160ms); }
+.recent a:hover { transform: translateX(4px); background: var(--hairline-soft); }
 .recent strong { color: var(--text-hi); font-family: var(--font-serif); font-size: 16px; font-weight: 500; }
 .recent time { color: var(--text-faint); font-family: var(--font-mono); font-size: 9px; text-align: right; }
 .pageIcon { font-size: 17px; }

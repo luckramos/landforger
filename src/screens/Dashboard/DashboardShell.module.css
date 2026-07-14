@@ -75,7 +75,7 @@
 .searchTrigger kbd { margin-left: auto; font-family: var(--font-mono); font-size: 9px; }
 .saveIndicator { width: 58px; gap: 6px; color: var(--text-faint); font-family: var(--font-mono); font-size: 10px; }
 .saveIndicator i { width: 6px; height: 6px; border-radius: 50%; background: oklch(.7 .1 145); }
-.saveIndicator[data-saving] i { background: var(--bronze); animation: saving-pulse calc(var(--mo, 1) * 1s) ease infinite; }
+.saveIndicator[data-saving] i { background: var(--bronze); animation: saving-pulse calc(var(--mo, 1) * 1s) linear infinite; }
 .topbarButton { display: grid; width: 30px; height: 30px; place-items: center; border-radius: 7px; }
 .topbarButton:hover { background: var(--hairline-soft); color: var(--text-hi); }
 .exitFocus { position: fixed; top: 14px; right: 18px; z-index: 50; padding: 7px 12px; border: 1px solid var(--hairline); border-radius: 999px; background: var(--panel-3); color: var(--text-dim); cursor: pointer; }

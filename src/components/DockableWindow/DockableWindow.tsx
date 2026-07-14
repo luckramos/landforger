@@ -2,7 +2,7 @@ import { motion } from 'motion/react'
 import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useUiStore } from '../../state/uiStore'
-import { overlayExitTransition, prefersReducedMotion } from '../motionPrefs'
+import { EASE_HOUSE, overlayExitTransition, prefersReducedMotion } from '../motionPrefs'
 import styles from './DockableWindow.module.css'
 
 interface Geometry {
@@ -149,7 +149,7 @@ export function DockableWindow({
       exit={{ opacity: 0 }}
       transition={{
         duration: reduced || pointerOperation ? 0 : 0.34 * motionScale,
-        ease: [0.22, 0.61, 0.36, 1],
+        ease: EASE_HOUSE,
         opacity: overlayExitTransition(motionScale),
       }}
     >

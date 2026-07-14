@@ -37,7 +37,7 @@ describe('relationship graph panel', () => {
     expect(component).toContain('170 * motionScale')
     expect(css).toContain('transform: scale(.1)')
     expect(css).toContain(".node[data-revealed='true'] .nodeCore { transform: scale(1); }")
-    expect(css).toContain('calc(var(--mo, 1) * 400ms) cubic-bezier(.34,1.42,.5,1)')
+    expect(css).toContain('calc(var(--mo, 1) * 400ms) var(--ease-overshoot-soft)')
   })
 
   it('opens refresh-safe from ?panel=graph and category chips filter the visible nodes', async () => {
