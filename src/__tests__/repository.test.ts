@@ -196,6 +196,48 @@ describe('LocalStorageWorldRepository — World mutations', () => {
     expect((await repo.getWorld('testland'))?.activeEra).toBe('era-two')
   })
 
+  it('defaults an invalid Active Era to the last Era and keeps it across repository reloads', async () => {
+    const world = { ...baseWorld, eraOrder: ['era-one', 'era-two'], activeEra: 'missing-era' }
+    const repo = new LocalStorageWorldRepository(storage, fixturesFor(world, [basePage]))
+
+    expect((await repo.getWorld('testland'))?.activeEra).toBe('era-two')
+    const reloaded = new LocalStorageWorldRepository(storage, fixturesFor(baseWorld, [basePage]))
+    expect((await reloaded.getWorld('testland'))?.activeEra).toBe('era-two')
+  })
+
+  it('persists reordered Eras while preserving the current Active Era', async () => {
+    const repo = new LocalStorageWorldRepository(storage, fixturesFor(baseWorld, [basePage]))
+    await repo.updateWorld('testland', { eraOrder: ['era-two', 'era-one'] })
+
+    const reloaded = new LocalStorageWorldRepository(storage, fixturesFor(baseWorld, [basePage]))
+    expect((await reloaded.getWorld('testland'))?.eraOrder).toEqual(['era-two', 'era-one'])
+    expect((await reloaded.getWorld('testland'))?.activeEra).toBe('era-one')
+  })
+
+  it('adds newly created Era Pages to the timeline and removes deleted Eras from it', async () => {
+    const repo = new LocalStorageWorldRepository(storage, fixturesFor(baseWorld, [basePage]))
+    const created = await repo.createPage('testland', {
+      title: 'The Second Era',
+      category: 'eras',
+      customProperties: [{ key: 'datelabel', label: 'Date Label', type: 'text', value: 'After the test' }],
+    })
+    expect((await repo.getWorld('testland'))?.eraOrder).toEqual(['era-one', created.slug])
+
+    await repo.deletePage('testland', 'era-one')
+    expect(await repo.getWorld('testland')).toMatchObject({ eraOrder: [created.slug], activeEra: created.slug })
+  })
+
+  it('keeps the timeline coherent when a Page changes to or from the Eras Category', async () => {
+    const repo = new LocalStorageWorldRepository(storage, fixturesFor(baseWorld, [basePage]))
+    const promoted = await repo.createPage('testland', { title: 'Promoted Chapter', category: 'events' })
+
+    await repo.updatePage('testland', promoted.slug, { category: 'eras' })
+    expect((await repo.getWorld('testland'))?.eraOrder).toEqual(['era-one', promoted.slug])
+
+    await repo.updatePage('testland', promoted.slug, { category: 'events' })
+    expect(await repo.getWorld('testland')).toMatchObject({ eraOrder: ['era-one'], activeEra: 'era-one' })
+  })
+
   it('notifies subscribers whenever a repository mutation starts', async () => {
     const repo = new LocalStorageWorldRepository(storage, fixturesFor(baseWorld, [basePage]))
     const mutations: string[] = []

@@ -1,0 +1,70 @@
+.panel { position: relative; height: 100%; background: radial-gradient(circle at 20% 0, color-mix(in oklab, var(--cat-eras) 8%, transparent), transparent 42%), var(--bg); }
+.headerTools, .occurrences, .modeToggle { display: flex; align-items: center; }
+.headerTools { gap: 10px; margin-left: auto; }
+.occurrences { gap: 5px; padding: 3px; border: 1px solid var(--hairline); border-radius: 8px; color: var(--text-faint); font-family: var(--font-mono); font-size: 9px; }
+.occurrences button, .modeToggle button { border: 0; background: transparent; color: var(--text-dim); cursor: pointer; }
+.occurrences button { width: 24px; height: 22px; }
+.modeToggle { gap: 2px; padding: 3px; border: 1px solid var(--hairline); border-radius: 8px; }
+.modeToggle button { padding: 5px 9px; border-radius: 5px; font-size: 10px; }
+.modeToggle button[aria-pressed='true'] { background: color-mix(in oklab, var(--cat-eras) 16%, var(--panel-3)); color: var(--text-hi); }
+.activeBar { display: flex; height: 44px; align-items: center; gap: 8px; padding: 0 24px; border-bottom: 1px solid var(--hairline); color: var(--text-dim); font-size: 11px; }
+.activeBar > button { margin-left: auto; border: 0; background: transparent; color: var(--cat-eras); cursor: pointer; font-size: 11px; }
+.activeDot { width: 7px; height: 7px; border-radius: 50%; background: var(--cat-eras); box-shadow: 0 0 14px color-mix(in oklab, var(--cat-eras) 55%, transparent); }
+.scroll { height: calc(100% - 44px); padding: 28px clamp(30px, 8vw, 120px) 70px; overflow: auto; scroll-behavior: auto; }
+.era { position: relative; display: grid; grid-template-columns: 34px minmax(0, 720px); margin: 0 auto 18px; justify-content: center; opacity: 0; animation: timeline-node-in calc(var(--mo, 1) * 360ms) var(--ease-house) both; }
+.rail { position: relative; display: flex; justify-content: center; }
+.rail i { position: relative; z-index: 2; width: 13px; height: 13px; margin-top: 24px; border: 3px solid var(--bg); border-radius: 50%; background: var(--cat-eras); box-shadow: 0 0 0 1px color-mix(in oklab, var(--cat-eras) 50%, transparent); }
+.rail span { position: absolute; top: 36px; bottom: -42px; width: 1px; background: color-mix(in oklab, var(--cat-eras) 28%, transparent); }
+.era:last-child .rail span { display: none; }
+.era[data-pulse] .rail i { animation: timeline-glow 1000ms var(--ease-house) both; }
+.card { position: relative; padding: 14px 16px; border: 1px solid var(--hairline); border-radius: 11px; background: color-mix(in oklab, var(--panel-1) 96%, transparent); transition: transform calc(var(--mo, 1) * 200ms), border-color calc(var(--mo, 1) * 200ms), box-shadow calc(var(--mo, 1) * 200ms); }
+.card:hover, .era[data-active] .card { border-color: color-mix(in oklab, var(--cat-eras) 34%, var(--hairline)); box-shadow: 0 8px 28px rgba(0,0,0,.25); }
+.era[data-occurrence] .card::before { position: absolute; top: 12px; right: 13px; width: 5px; height: 5px; border-radius: 50%; background: var(--cat-eras); box-shadow: 0 0 10px var(--cat-eras); content: ''; }
+.card:hover { transform: translateY(-2px); }
+.expand { display: grid; width: 100%; grid-template-columns: 22px 1fr auto; align-items: center; gap: 6px; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
+.expand > span:nth-child(2) { display: grid; gap: 3px; }
+.expand strong { color: var(--text-hi); font-family: var(--font-serif); font-size: 20px; font-weight: 500; }
+.expand small { color: var(--cat-eras); font-family: var(--font-mono); font-size: 9px; letter-spacing: .04em; }
+.expand b { color: var(--text-faint); font-family: var(--font-mono); font-size: 9px; font-weight: 400; }
+.caret, .caretOpen { color: var(--text-faint); font-size: 9px; transition: transform calc(var(--mo, 1) * 240ms) var(--ease-house); }
+.caretOpen { transform: rotate(90deg); }
+.card > p { margin: 10px 30px 0; color: var(--text-dim); font-family: var(--font-serif); font-size: 13px; line-height: 1.55; }
+.activeButton { position: absolute; top: 52px; right: 14px; border: 0; background: transparent; color: var(--text-faint); cursor: pointer; font-family: var(--font-mono); font-size: 8px; text-transform: uppercase; }
+.activeButton[aria-pressed='true'] { color: var(--cat-eras); }
+.members { margin: 15px 30px 2px; padding-top: 13px; border-top: 1px solid var(--hairline-soft); }
+.members section + section { margin-top: 12px; }
+.members h3 { margin: 0 0 6px; color: var(--text-faint); font-family: var(--font-mono); font-size: 8px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; }
+.members section > div { display: flex; flex-wrap: wrap; gap: 6px; }
+.members a { display: flex; align-items: center; gap: 6px; padding: 6px 9px; border: 1px solid var(--hairline); border-radius: 999px; color: var(--text-dim); font-size: 10px; text-decoration: none; animation: member-in calc(var(--mo, 1) * 220ms) var(--ease-house) both; }
+.members a:hover { transform: translateY(-2px); color: var(--text-hi); }
+.noMembers { margin: 0 !important; color: var(--text-faint) !important; font-family: var(--font-sans) !important; font-size: 11px !important; }
+.manage { height: calc(100% - 44px); max-width: 760px; margin: 0 auto; padding: 30px 40px; overflow: auto; }
+.manage > header { display: flex; justify-content: space-between; margin-bottom: 12px; color: var(--text-faint); font-size: 11px; }
+.manage > header b { font-family: var(--font-mono); font-size: 9px; font-weight: 400; }
+.manageRow { position: relative; display: grid; min-height: 64px; grid-template-columns: 30px 42px 1fr auto; align-items: center; border-bottom: 1px solid var(--hairline); background: var(--panel-1); cursor: grab; transition: transform calc(var(--mo, 1) * 220ms) var(--ease-house); }
+.manageRow[data-drop-before]::before { position: absolute; top: -2px; right: 0; left: 0; height: 2px; background: var(--cat-eras); box-shadow: 0 0 10px var(--cat-eras); content: ''; }
+.grip { color: var(--text-faint); font-size: 17px; text-align: center; }
+.order { color: var(--cat-eras); font-family: var(--font-mono); font-size: 10px; }
+.manageRow > span:nth-child(3) { display: grid; gap: 3px; }
+.manageRow strong { color: var(--text-hi); font-family: var(--font-serif); font-size: 16px; font-weight: 500; }
+.manageRow small { color: var(--text-faint); font-family: var(--font-mono); font-size: 8px; }
+.manageRow > b { margin-right: 14px; color: var(--cat-eras); font-family: var(--font-mono); font-size: 8px; font-weight: 400; text-transform: uppercase; }
+.empty { display: grid; min-height: 330px; place-items: center; align-content: center; text-align: center; }
+.empty > span { color: var(--cat-eras); font-size: 40px; }
+.empty h3 { margin: 13px 0 4px; color: var(--text-hi); font-family: var(--font-serif); font-size: 25px; font-weight: 400; }
+.empty p { margin: 0 0 17px; color: var(--text-faint); font-size: 12px; }
+.empty button, .createForm button[type='submit'] { padding: 8px 13px; border: 1px solid color-mix(in oklab, var(--cat-eras) 48%, transparent); border-radius: 8px; background: color-mix(in oklab, var(--cat-eras) 12%, var(--panel-2)); color: var(--text-hi); cursor: pointer; }
+.createScrim { position: absolute; inset: 52px 0 0; z-index: 3; display: grid; place-items: center; background: rgba(0,0,0,.68); backdrop-filter: blur(7px); }
+.createForm { width: min(460px, calc(100% - 32px)); padding: 24px; border: 1px solid var(--hairline-strong); border-radius: 13px; background: var(--panel-1); box-shadow: 0 25px 70px rgba(0,0,0,.55); animation: form-in calc(var(--mo, 1) * 220ms) var(--ease-house) both; }
+.formEyebrow { color: var(--cat-eras); font-family: var(--font-mono); font-size: 8px; letter-spacing: .14em; text-transform: uppercase; }
+.createForm h3 { margin: 5px 0 17px; color: var(--text-hi); font-family: var(--font-serif); font-size: 25px; font-weight: 400; }
+.createForm label { display: grid; gap: 5px; margin-bottom: 12px; color: var(--text-dim); font-size: 10px; }
+.createForm input, .createForm textarea { width: 100%; padding: 9px 10px; border: 1px solid var(--hairline); border-radius: 7px; outline: 0; background: var(--panel-2); color: var(--text-hi); font: inherit; }
+.createForm input:focus, .createForm textarea:focus { border-color: color-mix(in oklab, var(--cat-eras) 48%, transparent); }
+.createForm > div { display: flex; justify-content: flex-end; gap: 8px; margin-top: 17px; }
+.createForm > div button:first-child { border: 0; background: transparent; color: var(--text-faint); cursor: pointer; }
+@keyframes timeline-node-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes member-in { from { opacity: 0; transform: scale(.92); } }
+@keyframes timeline-glow { 22% { box-shadow: 0 0 0 3px rgba(200,160,230,.55), 0 0 30px 6px rgba(200,160,230,.4); } }
+@keyframes form-in { from { opacity: 0; transform: translateY(8px) scale(.98); } }
+@media (prefers-reduced-motion: reduce) { .era, .members a, .createForm { animation-duration: .01ms; animation-delay: 0ms !important; } .card, .caret, .caretOpen, .manageRow { transition-duration: .01ms; } }

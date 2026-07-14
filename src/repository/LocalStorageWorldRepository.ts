@@ -1,6 +1,7 @@
 import { pageFromMarkdown, pageToMarkdown } from '../domain/page'
 import { deriveBacklinks, type Backlink } from '../domain/backlinks'
 import { resolveSlugCollision, slugify } from '../domain/slug'
+import { normalizeWorldTimeline } from '../domain/timeline'
 import type { CategoryTemplate, Page, World } from '../domain/types'
 import { worldFromMarkdown, worldToMarkdown } from '../domain/world'
 import type {
@@ -159,7 +160,11 @@ export class LocalStorageWorldRepository implements WorldRepository {
 
   private readWorld(worldSlug: string): World | undefined {
     const raw = this.storage.getItem(worldKey(worldSlug))
-    return raw ? worldFromMarkdown(raw) : undefined
+    if (!raw) return undefined
+    const parsed = worldFromMarkdown(raw)
+    const normalized = normalizeWorldTimeline(parsed)
+    if (normalized !== parsed) this.writeWorld(normalized)
+    return normalized
   }
 
   private writeWorld(world: World): void {
@@ -180,13 +185,13 @@ export class LocalStorageWorldRepository implements WorldRepository {
     const world = this.readWorld(worldSlug)
     if (!world) throw new Error(`No such World: ${worldSlug}`)
     this.notifyMutation({ kind: 'updateWorld', worldSlug })
-    const updated: World = {
+    const updated = normalizeWorldTimeline({
       ...world,
       ...withoutUndefined(patch),
       slug: world.slug,
       created: world.created,
       updated: new Date().toISOString(),
-    }
+    })
     this.writeWorld(updated)
     return updated
   }
@@ -269,6 +274,17 @@ export class LocalStorageWorldRepository implements WorldRepository {
     }
     this.writePage(worldSlug, page)
     this.writePageSlugs(worldSlug, [...existingSlugs, slug])
+    if (page.category === 'eras') {
+      const world = this.readWorld(worldSlug)
+      if (!world) throw new Error(`No such World: ${worldSlug}`)
+      this.writeWorld(
+        normalizeWorldTimeline({
+          ...world,
+          eraOrder: [...world.eraOrder, page.slug],
+          updated: now,
+        }),
+      )
+    }
     return page
   }
 
@@ -284,15 +300,38 @@ export class LocalStorageWorldRepository implements WorldRepository {
       updated: new Date().toISOString(),
     }
     this.writePage(worldSlug, updated)
+    if (page.category !== updated.category && (page.category === 'eras' || updated.category === 'eras')) {
+      const world = this.readWorld(worldSlug)
+      if (world) {
+        const eraOrder =
+          updated.category === 'eras'
+            ? [...world.eraOrder.filter((slug) => slug !== pageSlug), pageSlug]
+            : world.eraOrder.filter((slug) => slug !== pageSlug)
+        this.writeWorld(normalizeWorldTimeline({ ...world, eraOrder, updated: updated.updated }))
+      }
+    }
     return updated
   }
 
   async deletePage(worldSlug: string, pageSlug: string): Promise<void> {
+    const page = this.readPage(worldSlug, pageSlug)
     this.notifyMutation({ kind: 'deletePage', worldSlug, pageSlug })
     this.storage.removeItem(pageKey(worldSlug, pageSlug))
     this.writePageSlugs(
       worldSlug,
       this.pageSlugs(worldSlug).filter((slug) => slug !== pageSlug),
     )
+    const world = this.readWorld(worldSlug)
+    if (world?.eraOrder.includes(pageSlug) || page?.category === 'eras') {
+      if (world) {
+        this.writeWorld(
+          normalizeWorldTimeline({
+            ...world,
+            eraOrder: world.eraOrder.filter((slug) => slug !== pageSlug),
+            updated: new Date().toISOString(),
+          }),
+        )
+      }
+    }
   }
 }

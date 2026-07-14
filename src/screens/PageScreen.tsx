@@ -3,7 +3,7 @@
 
 import type { Editor } from '@tiptap/core'
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate, useOutletContext, useParams } from 'react-router-dom'
+import { Link, useNavigate, useOutletContext, useParams } from 'react-router-dom'
 import type { Backlink } from '../domain/backlinks'
 import type { Page } from '../domain/types'
 import { PageEditor } from '../editor/PageEditor'
@@ -167,6 +167,18 @@ export function PageScreen({ repository, onEditorReady }: PageScreenProps) {
         <h1 className={styles.title}>{page.title}</h1>
         <p className={styles.summary}>{page.summary}</p>
         <div className={styles.tags} aria-label="Tags">{page.tags.map((tag) => <span key={tag}>#{tag}</span>)}</div>
+        {page.category !== 'eras' && page.eras.length > 0 && (
+          <div className={styles.eras} aria-label="Eras">
+            <span className={styles.erasLabel}>Eras</span>
+            {page.eras.map((eraSlug) => {
+              const era = pages.find((candidate) => candidate.slug === eraSlug)
+              return <span key={eraSlug} className={styles.eraChip}>◐ {era?.title ?? eraSlug}</span>
+            })}
+            <Link to={`?panel=timeline&focus=${encodeURIComponent(page.slug)}`} aria-label="See on timeline">
+              See on timeline →
+            </Link>
+          </div>
+        )}
         <span className={styles.saveState} data-save-state={saveState}>
           {saveState === 'saving' ? 'Saving' : saveState === 'saved' ? 'Saved' : ''}
         </span>
