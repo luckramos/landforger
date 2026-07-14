@@ -14,7 +14,10 @@
   --text-hi: rgba(245, 241, 234, 0.95);
   --text: rgba(245, 241, 234, 0.78);
   --text-dim: rgba(245, 241, 234, 0.55);
-  --text-faint: rgba(245, 241, 234, 0.35);
+  /* 0.5 computes to ~4.84:1 against --bg, clearing the WCAG floor with margin (was 0.35, ~2.9:1). */
+  --text-faint: rgba(245, 241, 234, 0.5);
+  /* Decorative-only: legend swatches, graph edge strokes, resize-handle grips. Never for informative text. */
+  --ornament-faint: rgba(245, 241, 234, 0.35);
 
   /* Accent */
   --bronze: #b0824a;

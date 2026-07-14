@@ -43,4 +43,15 @@ describe('design tokens match the measured design values', () => {
   it('declares the motion scale', () => {
     expect(tokens).toContain('--mo: 1')
   })
+
+  it('pins --text-faint at alpha 0.5 so informative text clears the WCAG contrast floor', () => {
+    // Was rgba(245, 241, 234, 0.35) ≈ 2.9:1 against --bg (#080807) — below the 3:1 floor.
+    // At 0.5 it blends to ~rgb(126.5, 124.5, 120.5), which is ≈4.84:1 against --bg (≥ 4:1 target).
+    expect(tokens).toContain('--text-faint: rgba(245, 241, 234, 0.5)')
+    expect(tokens).not.toContain('--text-faint: rgba(245, 241, 234, 0.35)')
+  })
+
+  it('keeps a separate decorative-only token at the old low-contrast alpha for non-text ornament', () => {
+    expect(tokens).toContain('--ornament-faint: rgba(245, 241, 234, 0.35)')
+  })
 })
