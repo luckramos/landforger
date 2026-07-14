@@ -2,7 +2,14 @@ import { pageFromMarkdown, pageToMarkdown } from '../domain/page'
 import { resolveSlugCollision, slugify } from '../domain/slug'
 import type { CategoryTemplate, Page, World } from '../domain/types'
 import { worldFromMarkdown, worldToMarkdown } from '../domain/world'
-import type { CreatePageInput, CreateWorldInput, UpdatePageInput, WorldMutationInput, WorldRepository } from './WorldRepository'
+import type {
+  CreatePageInput,
+  CreateWorldInput,
+  RepositoryMutation,
+  UpdatePageInput,
+  WorldMutationInput,
+  WorldRepository,
+} from './WorldRepository'
 
 /**
  * The design's per-Category `createSchemas` (design-inventory.md §2.3), seeded onto a
@@ -96,11 +103,22 @@ function withoutUndefined<T extends object>(patch: T): Partial<T> {
  * (including in other tabs/reloads) persist across the session.
  */
 export class LocalStorageWorldRepository implements WorldRepository {
+  private readonly mutationListeners = new Set<(mutation: RepositoryMutation) => void>()
+
   constructor(
     private readonly storage: Storage = globalThis.localStorage,
     fixtures?: FixtureFiles,
   ) {
     this.ensureSeeded(fixtures)
+  }
+
+  subscribeToMutations(listener: (mutation: RepositoryMutation) => void): () => void {
+    this.mutationListeners.add(listener)
+    return () => this.mutationListeners.delete(listener)
+  }
+
+  private notifyMutation(mutation: RepositoryMutation): void {
+    for (const listener of this.mutationListeners) listener(mutation)
   }
 
   private ensureSeeded(fixtures?: FixtureFiles): void {
@@ -160,6 +178,7 @@ export class LocalStorageWorldRepository implements WorldRepository {
   async updateWorld(worldSlug: string, patch: WorldMutationInput): Promise<World> {
     const world = this.readWorld(worldSlug)
     if (!world) throw new Error(`No such World: ${worldSlug}`)
+    this.notifyMutation({ kind: 'updateWorld', worldSlug })
     const updated: World = {
       ...world,
       ...withoutUndefined(patch),
@@ -174,6 +193,7 @@ export class LocalStorageWorldRepository implements WorldRepository {
   async createWorld(input: CreateWorldInput): Promise<World> {
     const existingSlugs = this.worldSlugs()
     const slug = resolveSlugCollision(slugify(input.name), existingSlugs)
+    this.notifyMutation({ kind: 'createWorld', worldSlug: slug })
     const now = new Date().toISOString()
     const world: World = {
       slug,
@@ -227,6 +247,7 @@ export class LocalStorageWorldRepository implements WorldRepository {
   async createPage(worldSlug: string, input: CreatePageInput): Promise<Page> {
     const existingSlugs = this.pageSlugs(worldSlug)
     const slug = resolveSlugCollision(slugify(input.title), existingSlugs)
+    this.notifyMutation({ kind: 'createPage', worldSlug, pageSlug: slug })
     const now = new Date().toISOString()
     const page: Page = {
       slug,
@@ -249,6 +270,7 @@ export class LocalStorageWorldRepository implements WorldRepository {
   async updatePage(worldSlug: string, pageSlug: string, patch: UpdatePageInput): Promise<Page> {
     const page = this.readPage(worldSlug, pageSlug)
     if (!page) throw new Error(`No such Page: ${worldSlug}/${pageSlug}`)
+    this.notifyMutation({ kind: 'updatePage', worldSlug, pageSlug })
     const updated: Page = {
       ...page,
       ...withoutUndefined(patch),
@@ -261,6 +283,7 @@ export class LocalStorageWorldRepository implements WorldRepository {
   }
 
   async deletePage(worldSlug: string, pageSlug: string): Promise<void> {
+    this.notifyMutation({ kind: 'deletePage', worldSlug, pageSlug })
     this.storage.removeItem(pageKey(worldSlug, pageSlug))
     this.writePageSlugs(
       worldSlug,

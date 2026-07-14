@@ -24,12 +24,9 @@ afterEach(() => {
   setRepository(undefined)
 })
 
-describe('route skeleton', () => {
+describe('routes', () => {
   // Routes still on the shared Placeholder frame until their slices land.
   const placeholderCases: Array<[path: string, heading: string]> = [
-    ['/w/ninth-vale', 'Dashboard'],
-    ['/w/ninth-vale/c/characters', 'Category'],
-    ['/w/ninth-vale/t/coastal', 'Tag'],
     ['/w/ninth-vale/map', 'Root Map'],
     ['/w/ninth-vale/map/duskwater', 'Map'],
     ['/w/ninth-vale/library', 'Map Library'],
@@ -38,6 +35,19 @@ describe('route skeleton', () => {
   it.each(placeholderCases)('%s renders the %s placeholder', (path, heading) => {
     renderAt(path)
     expect(screen.getByRole('heading', { name: heading })).toBeTruthy()
+  })
+
+  it('/w/:world, /c/:category and /t/:tag render the real Dashboard views', async () => {
+    const home = renderAt('/w/ninth-vale')
+    expect(await screen.findByRole('heading', { name: 'The Ninth Vale' })).toBeTruthy()
+    home.unmount()
+
+    const category = renderAt('/w/ninth-vale/c/characters')
+    expect(await screen.findByRole('heading', { name: 'Characters' })).toBeTruthy()
+    category.unmount()
+
+    renderAt('/w/ninth-vale/t/coastal')
+    expect(await screen.findByRole('heading', { name: '#coastal' })).toBeTruthy()
   })
 
   it('/login renders the real Auth screen', () => {
@@ -70,7 +80,7 @@ describe('route skeleton', () => {
 
   it.each([['timeline'], ['graph']])('?panel=%s renders the panel placeholder', (panel) => {
     renderAt(`/w/ninth-vale?panel=${panel}`)
-    expect(screen.getByText(`panel: ${panel} (placeholder)`)).toBeTruthy()
+    return screen.findByText(`panel: ${panel} (placeholder)`).then((element) => expect(element).toBeTruthy())
   })
 
   it('unknown routes render the soft 404', () => {

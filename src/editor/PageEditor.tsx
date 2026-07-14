@@ -60,8 +60,8 @@ export function PageEditor({ body, resolveTitle, onBodyChange, readOnly = false,
   const style = width ? ({ '--page-editor-width': width } as CSSProperties) : undefined
 
   return (
-    <div className={styles.root} style={style}>
-      {!readOnly && editor && <Toolbar editor={editor} />}
+    <div className={styles.root} style={style} data-read-only={readOnly || undefined}>
+      {editor && <Toolbar editor={editor} readOnly={readOnly} />}
       <EditorContent editor={editor} className={styles.content} />
     </div>
   )
@@ -74,7 +74,7 @@ export function PageEditor({ body, resolveTitle, onBodyChange, readOnly = false,
 // never re-renders per keystroke — only this bar does, on selected changes).
 // ---------------------------------------------------------------------------
 
-function Toolbar({ editor }: { editor: Editor }) {
+function Toolbar({ editor, readOnly }: { editor: Editor; readOnly: boolean }) {
   const [anchor, setAnchor] = useState<ToolbarAnchor>('top')
 
   const s = useEditorState({
@@ -116,6 +116,7 @@ function Toolbar({ editor }: { editor: Editor }) {
     <div
       role="toolbar"
       aria-label="Format"
+      aria-hidden={readOnly || undefined}
       className={anchor === 'bottom' ? `${styles.toolbar} ${styles.toolbarBottom}` : styles.toolbar}
     >
       <ToolbarButton label="Undo" disabled={!s.canUndo} onRun={() => chain().undo().run()}>

@@ -176,4 +176,20 @@ describe('LocalStorageWorldRepository — World mutations', () => {
     expect(updated.activeEra).toBe('era-two')
     expect((await repo.getWorld('testland'))?.activeEra).toBe('era-two')
   })
+
+  it('notifies subscribers whenever a repository mutation starts', async () => {
+    const repo = new LocalStorageWorldRepository(storage, fixturesFor(baseWorld, [basePage]))
+    const mutations: string[] = []
+    const unsubscribe = repo.subscribeToMutations((mutation) => mutations.push(mutation.kind))
+
+    await repo.updatePage('testland', 'alaric', { summary: 'Changed.' })
+    await repo.updateWorld('testland', { activeEra: 'era-one' })
+    await repo.createPage('testland', { title: 'New Place', category: 'locations' })
+    await repo.deletePage('testland', 'new-place')
+
+    expect(mutations).toEqual(['updatePage', 'updateWorld', 'createPage', 'deletePage'])
+    unsubscribe()
+    await repo.updatePage('testland', 'alaric', { summary: 'Changed again.' })
+    expect(mutations).toHaveLength(4)
+  })
 })

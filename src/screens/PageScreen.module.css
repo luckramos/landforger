@@ -24,6 +24,25 @@
   gap: 6px;
 }
 
+.cover {
+  width: 100%;
+  height: 300px;
+  margin-bottom: 22px;
+  border-radius: 12px;
+  object-fit: cover;
+  opacity: .72;
+  animation: cover-fade calc(var(--mo, 1) * 380ms) var(--ease-house) both;
+}
+
+@keyframes cover-fade {
+  from { opacity: 0; transform: scale(1.012); }
+  to { opacity: .72; transform: scale(1); }
+}
+
+.summary { max-width: 680px; margin: 4px 0; color: var(--text-dim); font-family: var(--font-serif); font-size: 17px; line-height: 1.5; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 5px 0 8px; }
+.tags span { padding: 4px 9px; border: 1px solid var(--hairline); border-radius: 999px; color: var(--text-faint); font-size: 10px; }
+
 .eyebrow {
   font-family: var(--font-mono);
   font-size: 11px;
@@ -86,6 +105,10 @@
 
 @media (prefers-reduced-motion: reduce) {
   .screen {
+    animation-duration: 0ms;
+  }
+
+  .cover {
     animation-duration: 0ms;
   }
 
