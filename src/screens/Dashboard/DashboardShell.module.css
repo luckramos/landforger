@@ -80,7 +80,6 @@
 .exitFocus { position: fixed; top: 14px; right: 18px; z-index: 50; padding: 7px 12px; border: 1px solid var(--hairline); border-radius: 999px; background: var(--panel-3); color: var(--text-dim); cursor: pointer; }
 
 .view { min-height: calc(100vh - 56px); animation: lw-view-in calc(var(--mo, 1) * 300ms) var(--ease-house) both; }
-.panelPlaceholder { position: fixed; right: 24px; bottom: 24px; padding: 10px 14px; border: 1px solid var(--hairline); border-radius: 9px; background: var(--panel-3); color: var(--text-faint); font-family: var(--font-mono); font-size: 10px; }
 .loading { display: grid; min-height: 100vh; place-items: center; color: var(--text-dim); }
 
 @keyframes lw-view-in { from { opacity: 0; transform: translateY(10px) scale(.994); } to { opacity: 1; transform: none; } }

@@ -233,6 +233,14 @@ export function PageScreen({ repository, onEditorReady }: PageScreenProps) {
         {worldData.pins.some((pin) => pin.pageSlug === page.slug) && (
           <Link aria-label="See on map" className={styles.seeOnMap} to={`/w/${world}/map?page=${encodeURIComponent(page.slug)}`}>⌖ See on map</Link>
         )}
+        <button
+          type="button"
+          className={styles.graphButton}
+          aria-label="Open local relationship graph"
+          onClick={() => navigate(`/w/${world}/p/${page.slug}?panel=graph`)}
+        >
+          ✳ <span>Connections</span>
+        </button>
         <span className={styles.saveState} data-save-state={saveState}>
           {saveState === 'saving' ? 'Saving' : saveState === 'saved' ? 'Saved' : ''}
         </span>

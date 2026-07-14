@@ -3,6 +3,11 @@ import { canonicalWikilinkRegex, wikilinkMarkdown } from './wikilink'
 
 export type BacklinkKind = 'body' | 'relation' | 'era-membership'
 
+export interface PageReference {
+  targetSlug: string
+  kinds: BacklinkKind[]
+}
+
 /** A derived inverse reference. It is never persisted alongside the Page. */
 export interface Backlink {
   sourceSlug: string
@@ -81,6 +86,26 @@ function relationSlugs(page: Page): string[] {
   )
 }
 
+/** Canonical outbound references used by both Backlinks and graph edges. */
+export function derivePageReferences(page: Page): PageReference[] {
+  const kindsByTarget = new Map<string, Set<BacklinkKind>>()
+  const add = (targetSlug: string, kind: BacklinkKind) => {
+    const kinds = kindsByTarget.get(targetSlug) ?? new Set<BacklinkKind>()
+    kinds.add(kind)
+    kindsByTarget.set(targetSlug, kinds)
+  }
+
+  for (const targetSlug of extractWikilinkSlugs(page.body)) add(targetSlug, 'body')
+  for (const targetSlug of relationSlugs(page)) add(targetSlug, 'relation')
+  for (const targetSlug of page.eras) add(targetSlug, 'era-membership')
+
+  const kindOrder: BacklinkKind[] = ['body', 'relation', 'era-membership']
+  return [...kindsByTarget].map(([targetSlug, kinds]) => ({
+    targetSlug,
+    kinds: kindOrder.filter((kind) => kinds.has(kind)),
+  }))
+}
+
 function titleizeSlug(slug: string): string {
   return slug
     .split('-')
@@ -113,10 +138,10 @@ export function deriveBacklinks(pages: Page[], targetSlug: string): Backlink[] {
   const backlinks: Backlink[] = []
 
   for (const source of pages) {
-    const kinds: BacklinkKind[] = []
-    if (extractWikilinkSlugs(source.body).includes(targetSlug)) kinds.push('body')
-    if (relationSlugs(source).includes(targetSlug)) kinds.push('relation')
-    if (target?.category === 'eras' && source.eras.includes(targetSlug)) kinds.push('era-membership')
+    const reference = derivePageReferences(source).find((candidate) => candidate.targetSlug === targetSlug)
+    const kinds = reference?.kinds.filter(
+      (kind) => kind !== 'era-membership' || target?.category === 'eras',
+    ) ?? []
     if (kinds.length === 0) continue
 
     const relationLabels = source.customProperties

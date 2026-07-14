@@ -75,6 +75,23 @@
   color: var(--text-faint);
 }
 
+.graphButton {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 4px;
+  padding: 6px 10px;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.graphButton:hover { border-color: color-mix(in oklab, var(--bronze) 50%, var(--hairline)); color: var(--bronze-hi); }
+
 .backlinks {
   width: var(--page-editor-width, min(760px, calc(100vw - 32px)));
   margin: 0 auto 72px;
