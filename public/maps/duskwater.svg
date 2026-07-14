@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1080" viewBox="0 0 1600 1080">
+  <rect x="0" y="0" width="1600" height="1080" fill="#080807" />
+  <rect x="12" y="12" width="1576" height="1056" fill="none" stroke="#B0824A" stroke-width="6" />
+  <line x1="12" y1="12" x2="1588" y2="1068" stroke="#B0824A" stroke-width="1" opacity="0.15" />
+  <line x1="1588" y1="12" x2="12" y2="1068" stroke="#B0824A" stroke-width="1" opacity="0.15" />
+  <text x="800" y="530" text-anchor="middle" font-family="Georgia, serif" font-size="56" fill="rgba(245,241,234,0.92)">Duskwater</text>
+  
+</svg>
