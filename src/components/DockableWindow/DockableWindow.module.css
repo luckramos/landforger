@@ -10,6 +10,9 @@
   background: color-mix(in oklab, var(--panel-1) 97%, transparent);
   box-shadow: 0 26px 80px rgba(0, 0, 0, .68);
   color: var(--text);
+  transition:
+    border-color calc(var(--mo, 1) * 300ms) ease,
+    box-shadow calc(var(--mo, 1) * 300ms) ease;
 }
 
 .window[data-dock-state='fullscreen'] { border-color: transparent; box-shadow: none; }
@@ -44,10 +47,15 @@
 .heading h2 { margin: 0; color: var(--text-hi); font-family: var(--font-serif); font-size: 17px; font-weight: 500; }
 .heading p { margin: 1px 0 0; color: var(--text-faint); font-family: var(--font-mono); font-size: 9px; letter-spacing: .06em; text-transform: uppercase; }
 .controls { display: flex; align-items: center; gap: 3px; margin-left: auto; }
-.controls button { display: grid; width: 30px; height: 30px; place-items: center; border: 0; border-radius: 7px; background: transparent; color: var(--text-dim); font-size: 16px; }
+.controls button { display: grid; width: 30px; height: 30px; place-items: center; border: 0; border-radius: 7px; background: transparent; color: var(--text-dim); font-size: 16px; transition: background calc(var(--mo, 1) * 130ms), color calc(var(--mo, 1) * 130ms); }
 .controls button:hover { background: var(--hairline-soft); color: var(--text-hi); }
-.body { min-height: 0; flex: 1; overflow: hidden; overscroll-behavior: contain; }
-.window[data-dock-state='minimized'] .body { visibility: hidden; pointer-events: none; }
+.body { min-height: 0; flex: 1; overflow: hidden; overscroll-behavior: contain; transition: opacity calc(var(--mo, 1) * 140ms) ease, visibility 0s; }
+.window[data-dock-state='minimized'] .body {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity calc(var(--mo, 1) * 140ms) ease, visibility 0s calc(var(--mo, 1) * 140ms);
+}
 
 .resizeHandle {
   position: absolute;
