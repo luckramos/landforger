@@ -115,7 +115,7 @@
 
 .chip {
   padding: 6px 12px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   border: 1px solid var(--hairline);
   background: transparent;
   color: var(--text-dim);

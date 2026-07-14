@@ -90,7 +90,7 @@
 .welcome {
   margin: 0;
   font-family: var(--font-serif);
-  font-size: 38px;
+  font-size: var(--text-display);
   font-weight: 400;
   color: var(--text-hi);
 }
