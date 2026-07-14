@@ -1,5 +1,6 @@
 import { useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Button } from '../../components/Button/Button'
 import { prefersReducedMotion } from '../../components/motionPrefs'
 import { useSessionStore } from '../../state/sessionStore'
 import { useUiStore } from '../../state/uiStore'
@@ -193,9 +194,9 @@ export function Auth() {
             </div>
           )}
 
-          <button type="submit" className={styles.submitButton} data-stagger disabled={submitting}>
+          <Button type="submit" className={styles.submitButton} data-stagger disabled={submitting}>
             {copy.submit}
-          </button>
+          </Button>
 
           <div className={styles.hintChip} data-stagger>
             Demo build — any credentials sign you straight in.

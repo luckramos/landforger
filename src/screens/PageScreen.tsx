@@ -4,6 +4,7 @@
 import type { Editor } from '@tiptap/core'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useOutletContext, useParams } from 'react-router-dom'
+import { Button } from '../components/Button/Button'
 import type { Backlink } from '../domain/backlinks'
 import type { Category, CustomProperty, Page, PropertyDef, World } from '../domain/types'
 import { PageEditor } from '../editor/PageEditor'
@@ -208,9 +209,9 @@ export function PageScreen({ repository, onEditorReady }: PageScreenProps) {
       <main className={`${styles.screen} ${styles.missing}`}>
         <span className={styles.eyebrow}>Off the map</span>
         <h1 className={styles.title}>Nothing charted at “{slug}”</h1>
-        <button type="button" className={styles.createButton} onClick={createMissingPage}>
+        <Button type="button" variant="ghost" className={styles.createButton} onClick={createMissingPage}>
           Create '{slug}' page?
-        </button>
+        </Button>
       </main>
     )
   }

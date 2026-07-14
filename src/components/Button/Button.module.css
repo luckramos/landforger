@@ -1,0 +1,54 @@
+.button {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  border: none;
+  transition:
+    filter calc(var(--mo, 1) * 160ms),
+    background calc(var(--mo, 1) * 160ms),
+    color calc(var(--mo, 1) * 160ms),
+    border-color calc(var(--mo, 1) * 160ms),
+    transform calc(var(--mo, 1) * 160ms) var(--ease-house);
+}
+
+.button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.button:disabled {
+  cursor: default;
+  opacity: 0.8;
+}
+
+/* primary — bronze gradient fill, parity with Auth's .submitButton */
+.primary {
+  padding: 13px 16px;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(180deg, var(--bronze-light), var(--bronze));
+  color: var(--on-bronze);
+}
+
+.primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+/* ghost — outline pill, parity with PageScreen's "Create first era" CTA */
+.ghost {
+  padding: 8px 16px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-pill);
+  background: var(--panel-3);
+  color: var(--bronze-light);
+}
+
+.ghost:hover:not(:disabled) {
+  background: var(--hairline);
+  border-color: var(--bronze);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button {
+    transition-duration: 0ms;
+  }
+}
