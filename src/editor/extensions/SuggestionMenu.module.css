@@ -8,7 +8,6 @@
   border-radius: 10px;
   background: var(--panel-3);
   box-shadow: 0 16px 42px rgba(0, 0, 0, 0.5);
-  animation: suggestion-in calc(var(--mo, 1) * 200ms) var(--ease-house) both;
 }
 
 .item {
@@ -73,19 +72,3 @@
   font-size: 11px;
 }
 
-@keyframes suggestion-in {
-  from {
-    opacity: 0;
-    transform: translateY(5px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .menu {
-    animation-duration: 0ms;
-  }
-}
