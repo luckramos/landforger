@@ -1,0 +1,95 @@
+/* Page view — entrance per the design's lw-viewIn (mo×300ms, house curve). */
+
+.screen {
+  min-height: 100%;
+  padding: 48px 16px 0;
+  animation: view-in calc(var(--mo, 1) * 300ms) var(--ease-house) both;
+}
+
+@keyframes view-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.994);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.header {
+  width: var(--page-editor-width, min(760px, calc(100vw - 32px)));
+  margin: 0 auto 8px;
+  display: grid;
+  gap: 6px;
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--bronze);
+}
+
+/* Serif page title — 43px per design-inventory.md §2.3 ("Page view"). */
+.title {
+  font-family: var(--font-serif);
+  font-size: 43px;
+  font-weight: 400;
+  line-height: 1.15;
+  color: var(--text-hi);
+  margin: 0;
+}
+
+.saveState {
+  min-height: 16px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.stateText {
+  text-align: center;
+  color: var(--text-dim);
+  padding-top: 25vh;
+}
+
+.createButton {
+  justify-self: center;
+  margin-top: 8px;
+  padding: 8px 16px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: 999px;
+  background: var(--panel-3);
+  color: var(--bronze-light);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  cursor: pointer;
+  transition:
+    background calc(var(--mo, 1) * 150ms),
+    border-color calc(var(--mo, 1) * 150ms);
+}
+
+.createButton:hover {
+  background: var(--hairline);
+  border-color: var(--bronze);
+}
+
+/* Soft-404 — same type ramp, centered like the loading state. */
+.missing {
+  display: grid;
+  place-content: center;
+  gap: 8px;
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .screen {
+    animation-duration: 0ms;
+  }
+
+  .createButton {
+    transition-duration: 0ms;
+  }
+}

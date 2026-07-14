@@ -1,0 +1,236 @@
+/* PageEditor — content column + the design's floating format toolbar.
+   Geometry per docs/research/design-inventory.md §2.3 ("Format toolbar":
+   floating pill, anchorable top or bottom via segmented control) and
+   docs/research/animation-catalog.md §2.4 ("format toolbar dock":
+   top 66px ↔ calc(100vh − 58px), mo×340ms house curve). */
+
+.root {
+  /* Overridable by the caller (the sidebar arrives in #19 and will track it). */
+  --page-editor-width: min(760px, calc(100vw - 32px));
+}
+
+.content {
+  width: var(--page-editor-width);
+  margin: 0 auto;
+}
+
+/* ---- editor surface ---- */
+
+.content :global(.tiptap) {
+  outline: none;
+  font-family: var(--font-serif);
+  font-size: 17px;
+  line-height: 1.65;
+  color: var(--text);
+  padding: 8px 0 96px;
+}
+
+.content :global(.tiptap h1),
+.content :global(.tiptap h2),
+.content :global(.tiptap h3) {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  color: var(--text-hi);
+  line-height: 1.25;
+}
+
+.content :global(.tiptap h1) {
+  font-size: 30px;
+}
+
+.content :global(.tiptap h2) {
+  font-size: 24px;
+}
+
+.content :global(.tiptap h3) {
+  font-size: 19px;
+}
+
+.content :global(.tiptap blockquote) {
+  margin: 0;
+  padding-left: 16px;
+  border-left: 2px solid var(--bronze);
+  color: var(--text-dim);
+}
+
+.content :global(.tiptap hr) {
+  border: none;
+  border-top: 1px solid var(--hairline-strong);
+  margin: 24px 0;
+}
+
+.content :global(.tiptap img) {
+  max-width: 100%;
+  border-radius: 6px;
+}
+
+.content :global(.tiptap code) {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--panel-3);
+  border: 1px solid var(--hairline-soft);
+}
+
+.content :global(.tiptap mark) {
+  background: color-mix(in oklab, var(--bronze) 40%, transparent);
+  color: var(--text-hi);
+  border-radius: 2px;
+  padding: 0 2px;
+}
+
+.content :global(.tiptap a) {
+  color: var(--bronze-light);
+}
+
+.content :global(.tiptap div[data-callout]) {
+  border: 1px solid var(--hairline);
+  border-left: 2px solid var(--bronze);
+  border-radius: 8px;
+  background: var(--panel-2);
+  padding: 12px 16px;
+  margin: 12px 0;
+  font-style: italic;
+}
+
+.content :global(.tiptap div[data-type='details']) {
+  border: 1px solid var(--hairline-soft);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin: 12px 0;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.content :global(.tiptap div[data-type='details'] summary) {
+  font-weight: 600;
+  color: var(--text-hi);
+  cursor: pointer;
+  list-style: none;
+}
+
+.content :global(.tiptap div[data-type='details'] > button) {
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.content :global(.tiptap ul[data-type='taskList']) {
+  list-style: none;
+  padding-left: 4px;
+}
+
+.content :global(.tiptap ul[data-type='taskList'] li) {
+  display: flex;
+  gap: 8px;
+}
+
+.content :global(.tiptap ul[data-type='taskList'] li > label) {
+  flex-shrink: 0;
+}
+
+/* ---- floating format toolbar ---- */
+
+.toolbar {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 66px;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  max-width: var(--page-editor-width);
+  padding: 5px 10px;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  background: var(--panel-3);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  /* Anchor swap: top 66px ↔ calc(100vh − 58px), mo×340ms, house curve. */
+  transition: top calc(var(--mo, 1) * 340ms) var(--ease-house);
+}
+
+.toolbarBottom {
+  top: calc(100vh - 58px);
+}
+
+.button {
+  min-width: 29px;
+  height: 29px;
+  padding: 0 6px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-dim);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background calc(var(--mo, 1) * 130ms),
+    color calc(var(--mo, 1) * 130ms);
+}
+
+.button:hover:not(:disabled) {
+  background: var(--hairline);
+  color: var(--text-hi);
+}
+
+.button:disabled {
+  opacity: 0.32;
+  cursor: default;
+}
+
+.buttonActive {
+  background: color-mix(in oklab, var(--bronze) 22%, transparent);
+  color: var(--bronze-light);
+}
+
+.divider {
+  width: 1px;
+  height: 18px;
+  margin: 0 4px;
+  background: var(--hairline);
+}
+
+.segmented {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--hairline-soft);
+  border-radius: 999px;
+}
+
+.segment,
+.segmentActive {
+  border: none;
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  background: transparent;
+  color: var(--text-faint);
+  transition:
+    background calc(var(--mo, 1) * 160ms),
+    color calc(var(--mo, 1) * 160ms);
+}
+
+.segmentActive {
+  background: var(--hairline);
+  color: var(--text-hi);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toolbar,
+  .button,
+  .segment,
+  .segmentActive {
+    transition-duration: 0ms;
+  }
+}

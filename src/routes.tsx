@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { Auth } from './screens/Auth/Auth'
 import { NotFound, Placeholder } from './screens/Placeholder'
+import { PageScreen } from './screens/PageScreen'
 import { Worlds } from './screens/Worlds/Worlds'
 
 /** The PRD's full URL scheme, each route a placeholder until its slice lands. */
@@ -11,7 +12,7 @@ export function AppRoutes() {
       <Route path="/login" element={<Auth />} />
       <Route path="/worlds" element={<Worlds />} />
       <Route path="/w/:world" element={<Placeholder name="Dashboard" />} />
-      <Route path="/w/:world/p/:slug" element={<Placeholder name="Page" />} />
+      <Route path="/w/:world/p/:slug" element={<PageScreen />} />
       <Route path="/w/:world/c/:category" element={<Placeholder name="Category" />} />
       <Route path="/w/:world/t/:tag" element={<Placeholder name="Tag" />} />
       <Route path="/w/:world/map" element={<Placeholder name="Root Map" />} />

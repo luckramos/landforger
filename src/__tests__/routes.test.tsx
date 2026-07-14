@@ -28,7 +28,6 @@ describe('route skeleton', () => {
   // Routes still on the shared Placeholder frame until their slices land.
   const placeholderCases: Array<[path: string, heading: string]> = [
     ['/w/ninth-vale', 'Dashboard'],
-    ['/w/ninth-vale/p/sera', 'Page'],
     ['/w/ninth-vale/c/characters', 'Category'],
     ['/w/ninth-vale/t/coastal', 'Tag'],
     ['/w/ninth-vale/map', 'Root Map'],
@@ -52,10 +51,16 @@ describe('route skeleton', () => {
     expect(await screen.findByText('The Ninth Vale')).toBeTruthy()
   })
 
-  it('echoes route params on the placeholder', () => {
+  // /w/:world/p/:slug is the real Page screen since issue #20
+  it('/w/ninth-vale/p/sera renders the Page screen with the fixture Page', async () => {
     renderAt('/w/ninth-vale/p/sera')
+    expect(await screen.findByRole('heading', { name: 'Sera Valen' })).toBeTruthy()
+  })
+
+  it('echoes route params on the placeholder', () => {
+    renderAt('/w/ninth-vale/map/duskwater')
     expect(screen.getByText(/world: ninth-vale/)).toBeTruthy()
-    expect(screen.getByText(/slug: sera/)).toBeTruthy()
+    expect(screen.getByText(/mapId: duskwater/)).toBeTruthy()
   })
 
   it('/ redirects to /login', () => {
