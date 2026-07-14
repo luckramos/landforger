@@ -13,7 +13,8 @@
   animation: wf-cardIn calc(var(--mo, 1) * 460ms) var(--ease-house) both;
   transition:
     border-color calc(var(--mo, 1) * 200ms),
-    box-shadow calc(var(--mo, 1) * 200ms);
+    box-shadow calc(var(--mo, 1) * 200ms),
+    transform calc(var(--mo, 1) * 160ms) var(--ease-house);
 }
 
 .card:hover:not(:disabled) {
@@ -21,6 +22,10 @@
   box-shadow:
     0 0 0 1px color-mix(in oklch, var(--bronze) 35%, transparent),
     0 8px 34px -12px color-mix(in oklch, var(--bronze) 45%, transparent);
+}
+
+.card:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
 .card:disabled {
@@ -31,10 +36,6 @@
   from {
     opacity: 0;
     transform: translateY(12px) scale(0.985);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
   }
 }
 
