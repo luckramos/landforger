@@ -1,0 +1,33 @@
+{
+  "name": "prototype-tiptap-spike",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "check": "vitest run checks/acceptance.test.ts"
+  },
+  "dependencies": {
+    "@tiptap/core": "^3.27.4",
+    "@tiptap/extension-details": "^3.27.4",
+    "@tiptap/extension-image": "^3.27.4",
+    "@tiptap/extension-list": "^3.27.4",
+    "@tiptap/extension-mention": "^3.27.4",
+    "@tiptap/markdown": "^3.27.4",
+    "@tiptap/pm": "^3.27.4",
+    "@tiptap/react": "^3.27.4",
+    "@tiptap/starter-kit": "^3.27.4",
+    "@tiptap/suggestion": "^3.27.4",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@vitejs/plugin-react": "^4.5.0",
+    "happy-dom": "^18.0.0",
+    "typescript": "^5.8.0",
+    "vite": "^7.0.0",
+    "vitest": "^3.2.0"
+  }
+}
