@@ -1,3 +1,6 @@
+/** Mirrors --bronze in src/styles/tokens.css — the shared source for the custom-color default. */
+export const BRONZE_HEX = '#b0824a'
+
 /** Preset genre swatches for the create-world modal (design-inventory.md §2.2). */
 export interface GenrePreset {
   name: string

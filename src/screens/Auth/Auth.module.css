@@ -265,7 +265,7 @@
 }
 
 .forgotLink:hover {
-  color: #fff;
+  color: var(--text-hi);
 }
 
 .terms {
@@ -297,7 +297,7 @@
   border-radius: 8px;
   border: none;
   background: linear-gradient(180deg, var(--bronze-light), var(--bronze));
-  color: #1a1408;
+  color: var(--on-bronze);
   font-family: var(--font-sans);
   font-weight: 600;
   font-size: 14px;
@@ -348,7 +348,7 @@
 }
 
 .linkButton:hover {
-  color: #fff;
+  color: var(--text-hi);
 }
 
 /* --- Submit burst overlay --- */
