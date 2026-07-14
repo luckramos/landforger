@@ -219,7 +219,7 @@ export function DashboardShell() {
 
         {focusMode && <button type="button" className={styles.exitFocus} aria-label="Exit focus mode" onClick={() => setFocusMode(false)}>× Exit focus</button>}
 
-        <div key={`${location.pathname}${location.search}`} className={styles.view} data-route-key={location.pathname}>
+        <div key={location.pathname} className={styles.view} data-route-key={location.pathname}>
           <Outlet context={{ world, pages, repository, readOnly } satisfies DashboardOutletContext} />
         </div>
       </div>
