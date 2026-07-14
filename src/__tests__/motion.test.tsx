@@ -91,6 +91,16 @@ describe('motion scale root sync', () => {
     expect(css).toContain('transition-duration: 0.01ms !important')
   })
 
+  it('global.css pins a single app-wide bronze :focus-visible ring (#41)', () => {
+    const css = readFileSync('src/styles/global.css', 'utf8')
+    expect(css).toContain(':focus-visible {')
+    expect(css).toContain('outline: 2px solid var(--bronze)')
+    // Keyboard-only: the rule must live on :focus-visible, not the plain
+    // :focus pseudo-class, or mouse/pointer activation would show it too.
+    const withoutComments = css.replace(/\/\*[\s\S]*?\*\//g, '')
+    expect(withoutComments.match(/:focus(?!-visible)/g)).toBeNull()
+  })
+
   it('Spotlight uses the design open motion scaled by --mo', () => {
     const css = readFileSync('src/screens/Dashboard/SpotlightSearch.module.css', 'utf8')
     expect(css).toContain('calc(var(--mo, 1) * 160ms)')

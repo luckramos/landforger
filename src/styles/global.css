@@ -24,6 +24,18 @@ a {
   color: var(--bronze-light);
 }
 
+/* Global keyboard focus ring — the bronze halo pattern proven on text inputs
+   (Auth, CreateWorldModal, Worlds search), promoted app-wide (issue #41).
+   :focus-visible only, so mouse/pointer activation never shows it. Components
+   that already define their own ring (those inputs) use a higher-specificity
+   `:focus` selector that overrides this rule's `outline`, so there's no
+   double ring. */
+:focus-visible {
+  outline: 2px solid var(--bronze);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(176, 130, 74, 0.18);
+}
+
 /* Universal reduced-motion collapse (animation catalog §1.3, Dashboard variant) */
 @media (prefers-reduced-motion: reduce) {
   *,
