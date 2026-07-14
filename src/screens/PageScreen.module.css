@@ -46,7 +46,7 @@
 
 .eras { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin-top: 8px; }
 .erasLabel { margin-right: 4px; color: var(--text-faint); font-family: var(--font-mono); font-size: 9px; letter-spacing: .1em; text-transform: uppercase; }
-.eraChip { padding: 5px 8px; border: 1px solid color-mix(in oklab, var(--cat-eras) 32%, transparent); border-radius: 999px; background: color-mix(in oklab, var(--cat-eras) 9%, transparent); color: var(--cat-eras); font-size: 10px; }
+.eraChip { padding: 5px 8px; border: 1px solid color-mix(in oklab, var(--cat-eras) 32%, transparent); border-radius: var(--radius-pill); background: color-mix(in oklab, var(--cat-eras) 9%, transparent); color: var(--cat-eras); font-size: 10px; }
 .eras a { margin-left: 3px; color: var(--text-dim); font-size: 10px; text-decoration: none; }
 .eras a:hover { color: var(--cat-eras); }
 
@@ -58,10 +58,11 @@
   color: var(--bronze);
 }
 
-/* Serif page title — 43px per design-inventory.md §2.3 ("Page view"). */
+/* Serif page title — converged onto --text-display (see tokens.css); was
+   43px per design-inventory.md §2.3 ("Page view"). */
 .title {
   font-family: var(--font-serif);
-  font-size: 43px;
+  font-size: var(--text-display);
   font-weight: 400;
   line-height: 1.15;
   color: var(--text-hi);

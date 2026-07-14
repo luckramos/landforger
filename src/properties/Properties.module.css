@@ -6,13 +6,13 @@
 .labelInput { width: 100%; border: 0; border-bottom: 1px solid transparent; outline: 0; background: transparent; }
 .labelInput:focus { border-color: var(--bronze); color: var(--text); }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; min-height: 30px; align-items: center; }
-.tagChip, .eraChip, .relationChip, .ghostChip { display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; border: 1px solid var(--hairline); border-radius: 999px; background: var(--panel-2); color: var(--text-dim); font-size: 11px; }
+.tagChip, .eraChip, .relationChip, .ghostChip { display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; border: 1px solid var(--hairline); border-radius: var(--radius-pill); background: var(--panel-2); color: var(--text-dim); font-size: 11px; }
 .eraChip { border-color: color-mix(in oklab, var(--cat-eras) 45%, transparent); color: var(--cat-eras); }
 .relationChip { color: var(--bronze-light); }
 .ghostChip { border-style: dashed; color: var(--text-faint); text-decoration: line-through; }
 .tagChip button, .eraChip button, .relationChip button, .ghostChip button, .remove { border: 0; background: transparent; color: inherit; cursor: pointer; }
-.addChip { padding: 4px 8px; border: 1px dashed var(--hairline-strong); border-radius: 999px; background: transparent; color: var(--text-faint); cursor: pointer; font-size: 10px; }
-.timelineChip { padding: 4px 9px; border: 1px solid color-mix(in oklab, var(--cat-eras) 40%, transparent); border-radius: 999px; background: transparent; color: var(--cat-eras); cursor: pointer; font-size: 9px; }
+.addChip { padding: 4px 8px; border: 1px dashed var(--hairline-strong); border-radius: var(--radius-pill); background: transparent; color: var(--text-faint); cursor: pointer; font-size: 10px; }
+.timelineChip { padding: 4px 9px; border: 1px solid color-mix(in oklab, var(--cat-eras) 40%, transparent); border-radius: var(--radius-pill); background: transparent; color: var(--cat-eras); cursor: pointer; font-size: 9px; }
 .input, .textarea, .inlinePopover input, .dialog input, .dialog select, .templateRow input { width: 100%; min-height: 31px; padding: 6px 8px; border: 1px solid transparent; border-radius: 6px; outline: 0; background: transparent; color: var(--text); font: inherit; }
 .input:hover, .textarea:hover, .input:focus, .textarea:focus, .dialog input, .dialog select, .templateRow input { border-color: var(--hairline); background: var(--panel-2); }
 .textarea { min-height: 62px; resize: vertical; }
