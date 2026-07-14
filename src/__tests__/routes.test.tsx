@@ -1,7 +1,11 @@
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { AppRoutes } from '../routes'
+import { LocalStorageWorldRepository } from '../repository/LocalStorageWorldRepository'
+import { fixtureFiles } from '../repository/fixtures'
+import { setRepository } from '../state/repository'
+import { createInMemoryStorage } from './testStorage'
 
 function renderAt(path: string) {
   return render(
@@ -11,10 +15,18 @@ function renderAt(path: string) {
   )
 }
 
+// /worlds is a real screen now and reads through the repository seam.
+beforeEach(() => {
+  setRepository(new LocalStorageWorldRepository(createInMemoryStorage(), fixtureFiles))
+})
+
+afterEach(() => {
+  setRepository(undefined)
+})
+
 describe('route skeleton', () => {
-  const cases: Array<[path: string, heading: string]> = [
-    ['/login', 'Auth'],
-    ['/worlds', 'Worlds'],
+  // Routes still on the shared Placeholder frame until their slices land.
+  const placeholderCases: Array<[path: string, heading: string]> = [
     ['/w/ninth-vale', 'Dashboard'],
     ['/w/ninth-vale/p/sera', 'Page'],
     ['/w/ninth-vale/c/characters', 'Category'],
@@ -24,9 +36,20 @@ describe('route skeleton', () => {
     ['/w/ninth-vale/library', 'Map Library'],
   ]
 
-  it.each(cases)('%s renders the %s placeholder', (path, heading) => {
+  it.each(placeholderCases)('%s renders the %s placeholder', (path, heading) => {
     renderAt(path)
     expect(screen.getByRole('heading', { name: heading })).toBeTruthy()
+  })
+
+  it('/login renders the real Auth screen', () => {
+    renderAt('/login')
+    expect(screen.getByRole('heading', { name: 'Chart your worlds.' })).toBeTruthy()
+  })
+
+  it('/worlds renders the real Worlds screen against repository data', async () => {
+    renderAt('/worlds')
+    expect(screen.getByRole('heading', { name: /Welcome back/ })).toBeTruthy()
+    expect(await screen.findByText('The Ninth Vale')).toBeTruthy()
   })
 
   it('echoes route params on the placeholder', () => {
@@ -37,7 +60,7 @@ describe('route skeleton', () => {
 
   it('/ redirects to /login', () => {
     renderAt('/')
-    expect(screen.getByRole('heading', { name: 'Auth' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Chart your worlds.' })).toBeTruthy()
   })
 
   it.each([['timeline'], ['graph']])('?panel=%s renders the panel placeholder', (panel) => {

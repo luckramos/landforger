@@ -1,0 +1,100 @@
+.avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--hairline-strong);
+  background: linear-gradient(135deg, var(--bronze-light), var(--bronze));
+  color: #1a1408;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition:
+    border-color 150ms,
+    box-shadow 150ms;
+}
+
+.avatar:hover,
+.avatar[data-open] {
+  border-color: var(--bronze);
+  box-shadow: 0 0 0 3px rgba(176, 130, 74, 0.22);
+}
+
+.popover {
+  position: fixed;
+  z-index: 30;
+  width: 236px;
+  padding: 6px;
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  background: var(--panel-1);
+  box-shadow: 0 18px 50px -18px rgba(0, 0, 0, 0.7);
+  /* Entrance: um-pop 160ms house (catalog §2.3). Exit is a Motion fade.
+     No fill-forwards so the finished animation can't override the exit's
+     inline opacity. */
+  animation: um-pop calc(var(--mo, 1) * 160ms) var(--ease-house);
+}
+
+@keyframes um-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.userBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px 12px;
+}
+
+.userName {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-hi);
+}
+
+.userEmail {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.item {
+  display: block;
+  width: 100%;
+  padding: 9px 12px;
+  text-align: left;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 130ms;
+}
+
+.item:hover {
+  background: var(--hairline-soft);
+}
+
+.divider {
+  height: 1px;
+  margin: 6px 8px;
+  background: var(--hairline);
+}
+
+.danger {
+  color: oklch(0.72 0.16 25);
+}
+
+.danger:hover {
+  background: oklch(0.5 0.12 25 / 0.16);
+}

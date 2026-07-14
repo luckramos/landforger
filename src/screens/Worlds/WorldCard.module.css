@@ -1,0 +1,117 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  padding: 0;
+  border: 1px solid var(--hairline);
+  border-radius: 14px;
+  background: var(--panel-2);
+  overflow: hidden;
+  cursor: pointer;
+  color: inherit;
+  font-family: inherit;
+  animation: wf-cardIn calc(var(--mo, 1) * 460ms) var(--ease-house) both;
+  transition:
+    border-color 200ms,
+    box-shadow 200ms;
+}
+
+.card:hover:not(:disabled) {
+  border-color: color-mix(in oklch, var(--bronze) 55%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in oklch, var(--bronze) 35%, transparent),
+    0 8px 34px -12px color-mix(in oklch, var(--bronze) 45%, transparent);
+}
+
+.card:disabled {
+  cursor: default;
+}
+
+@keyframes wf-cardIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.cover {
+  position: relative;
+  height: 148px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 24% 28%, color-mix(in oklch, var(--card-color) 38%, transparent), transparent 58%),
+    radial-gradient(circle at 78% 80%, color-mix(in oklch, var(--card-color) 22%, transparent), transparent 62%),
+    color-mix(in oklch, var(--card-color) 8%, var(--panel-1));
+}
+
+.hatch {
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.04) 0 2px, transparent 2px 12px);
+}
+
+.initial {
+  position: relative;
+  font-family: var(--font-serif);
+  font-size: 64px;
+  line-height: 1;
+  color: color-mix(in oklch, var(--card-color) 85%, white);
+  opacity: 0.9;
+}
+
+.genreBadge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklch, var(--card-color) 45%, transparent);
+  background: color-mix(in oklch, var(--card-color) 16%, rgba(8, 8, 7, 0.6));
+  color: color-mix(in oklch, var(--card-color) 80%, white);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+}
+
+.name {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 21px;
+  font-weight: 400;
+  color: var(--text-hi);
+}
+
+.logline {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-dim);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: calc(2 * 1.5 * 13px);
+}
+
+.meta {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+}
