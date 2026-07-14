@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { motion } from 'motion/react'
+import { Button } from '../../components/Button/Button'
 import { overlayExitTransition } from '../../components/motionPrefs'
 import { useUiStore } from '../../state/uiStore'
 import type { World } from '../../domain/types'
@@ -148,9 +149,9 @@ export function CreateWorldModal({ onCancel, onCreate }: CreateWorldModalProps) 
             <button type="button" className={styles.cancelButton} onClick={onCancel}>
               Cancel
             </button>
-            <button type="button" className={styles.createButton} disabled={!canCreate} onClick={handleCreate}>
+            <Button type="button" disabled={!canCreate} onClick={handleCreate}>
               Create world
-            </button>
+            </Button>
           </div>
         </div>
 

@@ -214,22 +214,6 @@
 .createButton {
   justify-self: center;
   margin-top: 8px;
-  padding: 8px 16px;
-  border: 1px solid var(--hairline-strong);
-  border-radius: 999px;
-  background: var(--panel-3);
-  color: var(--bronze-light);
-  font-family: var(--font-sans);
-  font-size: 13px;
-  cursor: pointer;
-  transition:
-    background calc(var(--mo, 1) * 150ms),
-    border-color calc(var(--mo, 1) * 150ms);
-}
-
-.createButton:hover {
-  background: var(--hairline);
-  border-color: var(--bronze);
 }
 
 /* Soft-404 — same type ramp, centered like the loading state. */
@@ -247,10 +231,6 @@
 
   .cover {
     animation-duration: 0ms;
-  }
-
-  .createButton {
-    transition-duration: 0ms;
   }
 
   .backlinksCaret,
