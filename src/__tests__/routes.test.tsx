@@ -78,9 +78,14 @@ describe('routes', () => {
     expect(screen.getByRole('heading', { name: 'Chart your worlds.' })).toBeTruthy()
   })
 
-  it.each([['timeline'], ['graph']])('?panel=%s renders the panel placeholder', (panel) => {
-    renderAt(`/w/ninth-vale?panel=${panel}`)
-    return screen.findByText(`panel: ${panel} (placeholder)`).then((element) => expect(element).toBeTruthy())
+  it('?panel=timeline renders the refresh-safe Timeline panel', async () => {
+    renderAt('/w/ninth-vale?panel=timeline')
+    expect(await screen.findByRole('dialog', { name: 'Timeline' })).toBeTruthy()
+  })
+
+  it('?panel=graph keeps the graph placeholder until its slice lands', () => {
+    renderAt('/w/ninth-vale?panel=graph')
+    return screen.findByText('panel: graph (placeholder)').then((element) => expect(element).toBeTruthy())
   })
 
   it('unknown routes render the soft 404', () => {

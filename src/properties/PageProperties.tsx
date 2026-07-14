@@ -121,7 +121,7 @@ export function PageProperties({
               return <span key={slug} className={era ? styles.eraChip : styles.ghostChip}>{era?.title ?? slug}<button type="button" disabled={readOnly} aria-label={`Remove era ${era?.title ?? slug}`} onClick={() => onErasChange((eras) => eras.filter((item) => item !== slug))}>×</button></span>
             })}
             {!readOnly && <button type="button" className={styles.addChip} aria-label="Add era" onClick={() => setEraOpen((open) => !open)}>＋ era</button>}
-            {page.eras.length > 0 && <button type="button" className={styles.timelineChip} onClick={onSeeTimeline}>See on timeline →</button>}
+            {page.eras.length > 0 && <button type="button" role="link" aria-label="See on timeline" className={styles.timelineChip} onClick={onSeeTimeline}>See on timeline →</button>}
           </div>
           {eraOpen && <div className={styles.inlinePopover}>{eraPages.filter((era) => !page.eras.includes(era.slug)).map((era) => <button key={era.slug} type="button" onClick={() => { onErasChange((eras) => [...eras, era.slug]); setEraOpen(false) }}>{era.title}</button>)}</div>}
         </div>
