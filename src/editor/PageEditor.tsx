@@ -1,14 +1,15 @@
 // The editor core (issue #20): tiptap EditorContent + the design's persistent
 // floating format toolbar (design-inventory.md §2.3 "Format toolbar",
 // animation-catalog.md "format toolbar dock"). No selection bubble menu.
-// The `/`, `@`, `[[` suggestion menus are issue #21's slice — the toolbar's
-// `@` button is a disabled visual stub until then.
+// `/`, `@` and `[[` are independent Suggestion plugins: slash inserts blocks;
+// the other two insert the same canonical-by-Slug Wikilink node.
 
 import type { Editor } from '@tiptap/core'
 import { EditorContent, useEditor, useEditorState } from '@tiptap/react'
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { pageBodyCodec } from './codec/TiptapMarkdownCodec'
 import { buildBlockExtensions } from './extensions'
+import { WikiLinkRegistry, type WikiLinkPage } from './WikiLinkRegistry'
 import styles from './PageEditor.module.css'
 
 export interface PageEditorProps {
@@ -16,6 +17,10 @@ export interface PageEditorProps {
   body: string
   /** Live title lookup for wikilink chips; unresolved Slugs render as Ghost links. */
   resolveTitle: (slug: string) => string | undefined
+  /** Current World Pages used by suggestion search, live chips and previews. */
+  pages?: WikiLinkPage[]
+  /** Click-through for both resolved and Ghost links. */
+  onNavigate?: (slug: string) => void
   /**
    * Called with the serialized Markdown body after every doc change.
    * Debouncing and the dirty check are the caller's concern (PageScreen).
@@ -35,17 +40,39 @@ export interface PageEditorProps {
 
 type ToolbarAnchor = 'top' | 'bottom'
 
-export function PageEditor({ body, resolveTitle, onBodyChange, readOnly = false, width, onEditorReady }: PageEditorProps) {
+export function PageEditor({
+  body,
+  resolveTitle,
+  pages = [],
+  onNavigate,
+  onBodyChange,
+  readOnly = false,
+  width,
+  onEditorReady,
+}: PageEditorProps) {
   // Keep the lookup live without rebuilding the editor when the caller
   // re-renders with a new function identity.
   const resolveTitleRef = useRef(resolveTitle)
   resolveTitleRef.current = resolveTitle
+  const navigateRef = useRef(onNavigate)
+  navigateRef.current = onNavigate
+  const registryRef = useRef<WikiLinkRegistry | null>(null)
+  if (!registryRef.current) registryRef.current = new WikiLinkRegistry(pages)
+  const registry = registryRef.current
+
+  useEffect(() => {
+    registry.update(pages)
+  }, [pages, registry, resolveTitle])
 
   // Only the mount-time body is parsed — the editor owns the doc afterwards.
   const initialDoc = useMemo(() => pageBodyCodec.parse(body), [body])
 
   const editor = useEditor({
-    extensions: buildBlockExtensions({ resolveTitle: (slug) => resolveTitleRef.current(slug) }),
+    extensions: buildBlockExtensions({
+      resolveTitle: (slug) => resolveTitleRef.current(slug),
+      wikiLinkRegistry: registry,
+      onWikiLinkNavigate: (slug) => navigateRef.current?.(slug),
+    }),
     content: initialDoc,
     editable: !readOnly,
     shouldRerenderOnTransaction: false,
@@ -166,8 +193,7 @@ function Toolbar({ editor }: { editor: Editor }) {
       <ToolbarButton label="Link" active={s.link} onRun={setLink}>
         ⌁
       </ToolbarButton>
-      {/* Wikilink menu is issue #21 — visual stub, disabled. */}
-      <ToolbarButton label="Wikilink" disabled onRun={() => {}}>
+      <ToolbarButton label="Wikilink" onRun={() => chain().insertContent('@').run()}>
         @
       </ToolbarButton>
 

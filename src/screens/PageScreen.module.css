@@ -49,6 +49,118 @@
   color: var(--text-faint);
 }
 
+.backlinks {
+  width: var(--page-editor-width, min(760px, calc(100vw - 32px)));
+  margin: 0 auto 72px;
+  padding-top: 18px;
+  border-top: 1px solid var(--hairline-soft);
+}
+
+.backlinksToggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-hi);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.backlinksCaret,
+.backlinksCaretOpen {
+  color: var(--bronze);
+  font-size: 9px;
+  transform: rotate(0deg);
+  transition: transform calc(var(--mo, 1) * 220ms) var(--ease-house);
+}
+
+.backlinksCaretOpen {
+  transform: rotate(90deg);
+}
+
+.backlinksCount {
+  min-width: 20px;
+  padding: 1px 6px;
+  border: 1px solid var(--hairline-soft);
+  border-radius: 999px;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-align: center;
+}
+
+.backlinksGroups {
+  display: grid;
+  gap: 18px;
+  padding: 12px 0 0 17px;
+}
+
+.backlinksGroup {
+  display: grid;
+  gap: 6px;
+  animation: backlinks-in calc(var(--mo, 1) * 280ms) var(--ease-house) both;
+}
+
+.backlinksCategory {
+  margin: 0 0 2px;
+  color: var(--bronze);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.backlinkRow {
+  display: grid;
+  gap: 3px;
+  padding: 10px 12px;
+  border: 1px solid var(--hairline-soft);
+  border-radius: 8px;
+  background: var(--panel-2);
+  text-decoration: none;
+  transition:
+    transform calc(var(--mo, 1) * 160ms) var(--ease-house),
+    border-color calc(var(--mo, 1) * 160ms),
+    background calc(var(--mo, 1) * 160ms);
+}
+
+.backlinkRow:hover {
+  transform: translateX(4px);
+  border-color: var(--hairline-strong);
+  background: var(--panel-3);
+}
+
+.backlinkRow strong {
+  color: var(--text-hi);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.backlinkRow span,
+.noBacklinks {
+  margin: 0;
+  color: var(--text-faint);
+  font-family: var(--font-serif);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+@keyframes backlinks-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .stateText {
   text-align: center;
   color: var(--text-dim);
@@ -91,5 +203,15 @@
 
   .createButton {
     transition-duration: 0ms;
+  }
+
+  .backlinksCaret,
+  .backlinksCaretOpen,
+  .backlinkRow {
+    transition-duration: 0ms;
+  }
+
+  .backlinksGroup {
+    animation-duration: 0ms;
   }
 }

@@ -38,6 +38,9 @@ importers:
       '@tiptap/starter-kit':
         specifier: 3.27.4
         version: 3.27.4
+      '@tiptap/suggestion':
+        specifier: 3.27.4
+        version: 3.27.4(@floating-ui/dom@1.8.0)(@tiptap/core@3.27.4(@tiptap/pm@3.27.4))(@tiptap/pm@3.27.4)
       motion:
         specifier: ^12.0.0
         version: 12.42.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7)

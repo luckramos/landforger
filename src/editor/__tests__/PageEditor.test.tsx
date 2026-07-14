@@ -19,6 +19,11 @@ const titles = new Map<string, string>([
   // 'ember-cycle' intentionally unresolved -> Ghost link
 ])
 const resolveTitle = (slug: string) => titles.get(slug)
+const pages = [
+  { slug: 'duskwater', title: 'Duskwater', category: 'locations' as const, summary: 'The drowned port.', tags: ['port'] },
+  { slug: 'sera', title: 'Sera', category: 'characters' as const, summary: 'Captain of the fleet.', tags: ['captain'] },
+  { slug: 'gate-of-ash', title: 'The Gate of Ash', category: 'locations' as const, summary: 'A black gate.', tags: ['gate'] },
+]
 
 async function mountEditor(props: Partial<Parameters<typeof PageEditor>[0]> = {}) {
   let editor: Editor | undefined
@@ -26,6 +31,7 @@ async function mountEditor(props: Partial<Parameters<typeof PageEditor>[0]> = {}
     <PageEditor
       body={all13}
       resolveTitle={resolveTitle}
+      pages={pages}
       onEditorReady={(e) => {
         editor = e
       }}
@@ -34,6 +40,7 @@ async function mountEditor(props: Partial<Parameters<typeof PageEditor>[0]> = {}
   )
   // Flush the editor's onCreate and the React node-view portals.
   await act(async () => {})
+  if (!editor) await act(async () => {})
   return { ...utils, editor: editor! }
 }
 
@@ -66,13 +73,120 @@ describe('PageEditor — 13 blocks render from a fixture body', () => {
     const { container } = await mountEditor()
     const chips = [...container.querySelectorAll('[data-wikilink]')]
     const sera = chips.find((c) => c.getAttribute('data-wikilink') === 'sera')!
-    expect(sera.textContent).toBe('Sera')
+    expect(sera.textContent).toContain('Sera')
 
     const ghost = chips.find((c) => c.getAttribute('data-wikilink') === 'ember-cycle')!
     expect(ghost.textContent).toBe('[[ember-cycle]]')
     expect(ghost.className).toContain('ghost')
     // resolved chips are not ghosts
     expect(sera.className).not.toContain('ghost')
+  })
+
+  it('refreshes rename, Ghost and recreation states without rewriting the Markdown', async () => {
+    const before = pageBodyCodec.serialize(pageBodyCodec.parse(all13))
+    const { container, rerender } = await mountEditor()
+    expect(container.querySelector('[data-wikilink="sera"]')?.textContent).toContain('Sera')
+
+    rerender(
+      <PageEditor
+        body={all13}
+        resolveTitle={resolveTitle}
+        pages={pages.map((page) => (page.slug === 'sera' ? { ...page, title: 'Admiral Sera' } : page))}
+      />,
+    )
+    await act(async () => {})
+
+    expect(container.querySelector('[data-wikilink="sera"]')?.textContent).toContain('Admiral Sera')
+
+    rerender(<PageEditor body={all13} resolveTitle={() => undefined} pages={pages.filter((page) => page.slug !== 'sera')} />)
+    await act(async () => {})
+    expect(container.querySelector('[data-wikilink="sera"]')?.textContent).toBe('[[sera]]')
+    expect(container.querySelector('[data-wikilink="sera"]')?.className).toContain('ghost')
+
+    rerender(
+      <PageEditor
+        body={all13}
+        resolveTitle={() => undefined}
+        pages={pages.map((page) => (page.slug === 'sera' ? { ...page, title: 'Sera Reforged' } : page))}
+      />,
+    )
+    await act(async () => {})
+    expect(container.querySelector('[data-wikilink="sera"]')?.textContent).toContain('Sera Reforged')
+    expect(container.querySelector('[data-wikilink="sera"]')?.className).not.toContain('ghost')
+    expect(pageBodyCodec.serialize(pageBodyCodec.parse(all13))).toBe(before)
+  })
+
+  it('shows a rich hover preview and delegates click-through navigation', async () => {
+    const onNavigate = vi.fn()
+    const { container, getByRole, getByText } = await mountEditor({ onNavigate })
+    const chip = container.querySelector('[data-wikilink="sera"]')!
+    vi.spyOn(chip, 'getBoundingClientRect').mockReturnValue({
+      left: window.innerWidth - 100,
+      top: window.innerHeight - 40,
+      bottom: window.innerHeight - 20,
+    } as DOMRect)
+
+    act(() => chip.dispatchEvent(new MouseEvent('mouseover', { bubbles: true })))
+    const preview = getByRole('tooltip')
+    vi.spyOn(preview, 'getBoundingClientRect').mockReturnValue({ width: 280, height: 100 } as DOMRect)
+    act(() => window.dispatchEvent(new Event('resize')))
+    expect(preview.style.left).toBe(`${window.innerWidth - 288}px`)
+    expect(preview.style.top).toBe(`${window.innerHeight - 150}px`)
+    expect(preview.style.visibility).toBe('visible')
+    expect(getByText('Captain of the fleet.')).toBeTruthy()
+    expect(getByText('captain')).toBeTruthy()
+
+    act(() => chip.dispatchEvent(new MouseEvent('click', { bubbles: true })))
+    expect(onNavigate).toHaveBeenCalledWith('sera')
+  })
+})
+
+describe('PageEditor — /, @ and [[ suggestion stack', () => {
+  const open = async (editor: Editor, text: string) => {
+    act(() => editor.chain().focus('end').insertContent(text).run())
+    await act(async () => {})
+    await act(async () => {})
+  }
+
+  it('inserts the same canonical Wikilink through @ and [[, with isolated undo history', async () => {
+    const at = await mountEditor({ body: '' })
+    await open(at.editor, '@gate')
+    expect(await at.findByRole('listbox', { name: 'Pages (@)' })).toBeTruthy()
+    act(() =>
+      at.getByRole('option', { name: /The Gate of Ash/ }).dispatchEvent(new MouseEvent('mousedown', { bubbles: true })),
+    )
+    expect(pageBodyCodec.serialize(at.editor.getJSON()).trim()).toBe('[[gate-of-ash]]')
+    act(() => at.editor.commands.undo())
+    expect(at.editor.getText()).toBe('@gate')
+
+    const brackets = await mountEditor({ body: '' })
+    await open(brackets.editor, '[')
+    expect(brackets.queryByRole('listbox', { name: 'Pages ([[)' })).toBeNull()
+    await open(brackets.editor, '[gate')
+    expect(await brackets.findByRole('listbox', { name: 'Pages ([[)' })).toBeTruthy()
+    act(() =>
+      brackets
+        .getByRole('option', { name: /The Gate of Ash/ })
+        .dispatchEvent(new MouseEvent('mousedown', { bubbles: true })),
+    )
+    expect(pageBodyCodec.serialize(brackets.editor.getJSON()).trim()).toBe('[[gate-of-ash]]')
+    act(() => brackets.editor.commands.undo())
+    expect(brackets.editor.getText()).toBe('[')
+    act(() => brackets.editor.commands.redo())
+    expect(pageBodyCodec.serialize(brackets.editor.getJSON()).trim()).toBe('[[gate-of-ash]]')
+  })
+
+  it('opens an independently positioned slash menu and applies a block in one undo step', async () => {
+    const { editor, getByRole } = await mountEditor({ body: '' })
+    await open(editor, '/head')
+    expect(getByRole('listbox', { name: 'Blocks (/)' })).toBeTruthy()
+    act(() =>
+      getByRole('option', { name: /Heading 1/ }).dispatchEvent(new MouseEvent('mousedown', { bubbles: true })),
+    )
+    expect(editor.isActive('heading', { level: 1 })).toBe(true)
+    expect(editor.getText()).not.toContain('/head')
+    act(() => editor.commands.undo())
+    expect(editor.getText()).toContain('/head')
   })
 })
 
@@ -103,8 +217,7 @@ describe('PageEditor — toolbar', () => {
     for (const label of labels) {
       expect(toolbar.querySelector(`button[aria-label="${label}"]`)).toBeTruthy()
     }
-    // @ is a visual stub until issue #21 lands the mention menu
-    expect(toolbar.querySelector('button[aria-label="Wikilink"]')?.hasAttribute('disabled')).toBe(true)
+    expect(toolbar.querySelector('button[aria-label="Wikilink"]')?.hasAttribute('disabled')).toBe(false)
     // anchorable top/bottom via the segmented control on the bar
     expect(getByRole('group', { name: 'Toolbar position' })).toBeTruthy()
   })
