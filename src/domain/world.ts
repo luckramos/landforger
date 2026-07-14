@@ -1,0 +1,151 @@
+import { joinFrontmatter, splitFrontmatter } from './frontmatter'
+import { CATEGORIES, type Category, type CategoryTemplate, type PropertyDef, type Pin, type World, type WorldMap } from './types'
+import type { YamlValue } from './yaml'
+
+function asString(value: YamlValue | undefined, fallback = ''): string {
+  return typeof value === 'string' ? value : fallback
+}
+
+function asNumber(value: YamlValue | undefined, fallback = 0): number {
+  return typeof value === 'number' ? value : fallback
+}
+
+function asBoolean(value: YamlValue | undefined, fallback = false): boolean {
+  return typeof value === 'boolean' ? value : fallback
+}
+
+function asStringArray(value: YamlValue | undefined): string[] {
+  return Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : []
+}
+
+function isRecord(value: YamlValue): value is { [key: string]: YamlValue } {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function asCategory(value: YamlValue | undefined): Category {
+  if (typeof value === 'string' && (CATEGORIES as readonly string[]).includes(value)) return value as Category
+  throw new Error(`World frontmatter has an invalid or missing category: ${JSON.stringify(value)}`)
+}
+
+// --- Category Templates ---
+
+function propertyDefToRecord(def: PropertyDef): { [key: string]: YamlValue } {
+  const record: { [key: string]: YamlValue } = { key: def.key, label: def.label, type: def.type }
+  if (def.options) record.options = def.options
+  if (def.targetCategories) record.targetCategories = def.targetCategories
+  return record
+}
+
+function propertyDefFromRecord(raw: YamlValue): PropertyDef {
+  if (!isRecord(raw)) throw new Error('Malformed property definition in category template')
+  const def: PropertyDef = { key: asString(raw.key), label: asString(raw.label), type: asString(raw.type) as PropertyDef['type'] }
+  if (Array.isArray(raw.options)) def.options = asStringArray(raw.options)
+  if (Array.isArray(raw.targetCategories)) def.targetCategories = asStringArray(raw.targetCategories) as Category[]
+  return def
+}
+
+function categoryTemplateToRecord(template: CategoryTemplate): { [key: string]: YamlValue } {
+  return { category: template.category, properties: template.properties.map(propertyDefToRecord) }
+}
+
+function categoryTemplateFromRecord(raw: YamlValue): CategoryTemplate {
+  if (!isRecord(raw)) throw new Error('Malformed category template entry')
+  const propertiesRaw = Array.isArray(raw.properties) ? raw.properties : []
+  return { category: asCategory(raw.category), properties: propertiesRaw.map(propertyDefFromRecord) }
+}
+
+// --- Maps & Pins ---
+
+function mapToRecord(map: WorldMap): { [key: string]: YamlValue } {
+  const record: { [key: string]: YamlValue } = { id: map.id, title: map.title, eraLinked: map.eraLinked, images: map.images }
+  if (map.parentMap) record.parentMap = map.parentMap
+  if (map.parentPin) record.parentPin = map.parentPin
+  return record
+}
+
+function mapFromRecord(raw: YamlValue): WorldMap {
+  if (!isRecord(raw)) throw new Error('Malformed map entry')
+  const imagesRaw = raw.images
+  const images: WorldMap['images'] = {}
+  if (isRecord(imagesRaw)) {
+    for (const [era, path] of Object.entries(imagesRaw)) {
+      if (typeof path === 'string') images[era] = path
+    }
+  }
+  const map: WorldMap = { id: asString(raw.id), title: asString(raw.title), eraLinked: asBoolean(raw.eraLinked), images }
+  if (typeof raw.parentMap === 'string') map.parentMap = raw.parentMap
+  if (typeof raw.parentPin === 'string') map.parentPin = raw.parentPin
+  return map
+}
+
+function pinToRecord(pin: Pin): { [key: string]: YamlValue } {
+  const record: { [key: string]: YamlValue } = {
+    id: pin.id,
+    mapId: pin.mapId,
+    pageSlug: pin.pageSlug,
+    x: pin.x,
+    y: pin.y,
+    eras: pin.eras,
+  }
+  if (pin.childMap) record.childMap = pin.childMap
+  return record
+}
+
+function pinFromRecord(raw: YamlValue): Pin {
+  if (!isRecord(raw)) throw new Error('Malformed pin entry')
+  const pin: Pin = {
+    id: asString(raw.id),
+    mapId: asString(raw.mapId),
+    pageSlug: asString(raw.pageSlug),
+    x: asNumber(raw.x),
+    y: asNumber(raw.y),
+    eras: asStringArray(raw.eras),
+  }
+  if (typeof raw.childMap === 'string') pin.childMap = raw.childMap
+  return pin
+}
+
+/** Serializes a World to `_world.md` (frontmatter: meta, era order, templates, maps & pins; body: free-form notes). */
+export function worldToMarkdown(world: World): string {
+  const data: { [key: string]: YamlValue } = {
+    slug: world.slug,
+    name: world.name,
+    genre: world.genre,
+    color: world.color,
+    logline: world.logline,
+    eraOrder: world.eraOrder,
+    activeEra: world.activeEra,
+  }
+  if (world.rootMap) data.rootMap = world.rootMap
+  data.categoryTemplates = world.categoryTemplates.map(categoryTemplateToRecord)
+  data.maps = world.maps.map(mapToRecord)
+  data.pins = world.pins.map(pinToRecord)
+  data.created = world.created
+  data.updated = world.updated
+  return joinFrontmatter(data, world.body)
+}
+
+/** Parses `_world.md` into a World. The inverse of `worldToMarkdown`. */
+export function worldFromMarkdown(md: string): World {
+  const { data, body } = splitFrontmatter(md)
+  const templatesRaw = Array.isArray(data.categoryTemplates) ? data.categoryTemplates : []
+  const mapsRaw = Array.isArray(data.maps) ? data.maps : []
+  const pinsRaw = Array.isArray(data.pins) ? data.pins : []
+  const rootMap = typeof data.rootMap === 'string' ? data.rootMap : undefined
+  return {
+    slug: asString(data.slug),
+    name: asString(data.name),
+    genre: asString(data.genre),
+    color: asString(data.color),
+    logline: asString(data.logline),
+    eraOrder: asStringArray(data.eraOrder),
+    activeEra: asString(data.activeEra),
+    ...(rootMap !== undefined ? { rootMap } : {}),
+    categoryTemplates: templatesRaw.map(categoryTemplateFromRecord),
+    maps: mapsRaw.map(mapFromRecord),
+    pins: pinsRaw.map(pinFromRecord),
+    created: asString(data.created),
+    updated: asString(data.updated),
+    body,
+  }
+}
