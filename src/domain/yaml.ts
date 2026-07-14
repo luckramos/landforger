@@ -56,7 +56,7 @@ function splitTopLevelCommas(text: string): string[] {
 }
 
 function unescapeQuoted(inner: string): string {
-  return inner.replace(/\\(.)/g, (_, ch: string) => (ch === 'n' ? '\n' : ch))
+  return inner.replace(/\\(.)/g, (_, ch: string) => (ch === 'n' ? '\n' : ch === 'r' ? '\r' : ch))
 }
 
 function parseScalar(text: string): YamlValue {
@@ -180,12 +180,15 @@ function needsQuoting(str: string): boolean {
   if (/^-?\d+(\.\d+)?$/.test(str)) return true
   if (str === 'true' || str === 'false' || str === 'null' || str === '~') return true
   if (str.includes(': ') || str.endsWith(':')) return true
-  if (str.includes(',') || str.includes('\n')) return true
+  if (str.includes(',') || str.includes('\n') || str.includes('\r')) return true
   return false
 }
 
 function quote(str: string): string {
-  return `"${str.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
+  // Newlines must be escaped, not merely quoted: the tokenizer is
+  // line-based, so a literal newline inside a quoted scalar would split
+  // the value across lines and silently corrupt the document on parse.
+  return `"${str.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r')}"`
 }
 
 function scalarToText(value: string | number | boolean | null): string {

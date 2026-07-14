@@ -10,6 +10,17 @@ import { createInMemoryStorage } from './testStorage'
 // if any fixture file were malformed, seeding here would throw.
 const repo = new LocalStorageWorldRepository(createInMemoryStorage(), fixtureFiles)
 
+let worlds: World[]
+let pagesByWorld: Map<string, Page[]>
+
+beforeAll(async () => {
+  worlds = await repo.listWorlds()
+  pagesByWorld = new Map()
+  for (const world of worlds) {
+    pagesByWorld.set(world.slug, await repo.listPages(world.slug))
+  }
+})
+
 const WIKILINK = /\[\[([a-z0-9-]+)\]\]/g
 
 function allWikilinks(body: string): string[] {
@@ -18,21 +29,21 @@ function allWikilinks(body: string): string[] {
 
 describe('fixtures — seeded worlds', () => {
   it('ships The Ninth Vale, Marrowmoor, and Aeon Drift', () => {
-    const slugs = repo.listWorlds().map((w) => w.slug)
+    const slugs = worlds.map((w) => w.slug)
     expect(slugs).toEqual(expect.arrayContaining(['ninth-vale', 'marrowmoor', 'aeon-drift']))
   })
 
   it('The Ninth Vale ships ~25-30 pages', () => {
-    const pages = repo.listPages('ninth-vale')
+    const pages = pagesByWorld.get('ninth-vale')!
     expect(pages.length).toBeGreaterThanOrEqual(25)
     expect(pages.length).toBeLessThanOrEqual(30)
   })
 
-  it('every fixture parses cleanly with no missing required fields', () => {
-    for (const world of repo.listWorlds()) {
+  it('every fixture parses cleanly with no missing required Properties', () => {
+    for (const world of worlds) {
       expect(world.slug).not.toBe('')
       expect(world.name).not.toBe('')
-      for (const page of repo.listPages(world.slug)) {
+      for (const page of pagesByWorld.get(world.slug)!) {
         expect(page.slug).not.toBe('')
         expect(page.title).not.toBe('')
         expect(CATEGORIES).toContain(page.category)
@@ -43,8 +54,8 @@ describe('fixtures — seeded worlds', () => {
 
 describe('fixtures — no pipe tables or code fences in any body (all worlds)', () => {
   it('rejects code fences', () => {
-    for (const world of repo.listWorlds()) {
-      for (const page of repo.listPages(world.slug)) {
+    for (const world of worlds) {
+      for (const page of pagesByWorld.get(world.slug)!) {
         expect(page.body, `${world.slug}/${page.slug}`).not.toMatch(/```/)
       }
       expect(world.body, `${world.slug}/_world`).not.toMatch(/```/)
@@ -52,16 +63,16 @@ describe('fixtures — no pipe tables or code fences in any body (all worlds)', 
   })
 
   it('rejects pipe-table rows', () => {
-    for (const world of repo.listWorlds()) {
-      for (const page of repo.listPages(world.slug)) {
+    for (const world of worlds) {
+      for (const page of pagesByWorld.get(world.slug)!) {
         expect(page.body, `${world.slug}/${page.slug}`).not.toMatch(/^\s*\|.*\|\s*$/m)
       }
     }
   })
 
   it('never uses the rejected [[slug|Label]] display-label syntax (ADR 0001)', () => {
-    for (const world of repo.listWorlds()) {
-      for (const page of repo.listPages(world.slug)) {
+    for (const world of worlds) {
+      for (const page of pagesByWorld.get(world.slug)!) {
         expect(page.body, `${world.slug}/${page.slug}`).not.toMatch(/\[\[[^\]]*\|[^\]]*\]\]/)
       }
     }
@@ -72,9 +83,9 @@ describe('fixtures — the 9 mandatory coverage items (The Ninth Vale)', () => {
   let world: World
   let pages: Page[]
 
-  beforeAll(() => {
-    world = repo.getWorld('ninth-vale')!
-    pages = repo.listPages('ninth-vale')
+  beforeAll(async () => {
+    world = (await repo.getWorld('ninth-vale'))!
+    pages = pagesByWorld.get('ninth-vale')!
   })
 
   it('1. a page has multiple pins on the same map narrowed to different eras (Sera moves)', () => {
@@ -153,7 +164,7 @@ describe('fixtures — the 9 mandatory coverage items (The Ninth Vale)', () => {
     }
   })
 
-  it('8. at least one page diverges from its category template (extra or removed field)', () => {
+  it('8. at least one page diverges from its category template (extra or removed Property)', () => {
     const charactersTemplate = world.categoryTemplates.find((t) => t.category === 'characters')!
     const templateKeys = new Set(charactersTemplate.properties.map((p) => p.key))
     const sera = pages.find((p) => p.slug === 'sera')!

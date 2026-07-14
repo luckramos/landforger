@@ -24,6 +24,20 @@ describe('hand-rolled YAML-subset codec', () => {
     expect(parseYaml(yaml)).toEqual(value)
   })
 
+  it('round-trips strings with embedded newlines without truncation or key leakage', () => {
+    const value = {
+      summary: 'First line of the summary.\nSecond line, which must survive.\nthird: not a key',
+      windowsStyle: 'carriage\r\nreturn',
+      after: 'still here',
+    }
+    const yaml = stringifyYaml(value)
+    const parsed = parseYaml(yaml)
+    expect(parsed).toEqual(value)
+    // The newline must be escaped into the scalar, never emitted literally —
+    // a literal newline would truncate the value and mint a bogus top-level key.
+    expect(Object.keys(parsed as object)).toEqual(['summary', 'windowsStyle', 'after'])
+  })
+
   it('round-trips nested mappings', () => {
     const value = {
       slug: 'ninth-vale',

@@ -2,13 +2,13 @@ import { parseYaml, stringifyYaml, type YamlValue } from './yaml'
 
 const DELIMITER = '---'
 
-export interface FrontmatterDocument {
+export interface ParsedFrontmatter {
   data: { [key: string]: YamlValue }
   body: string
 }
 
 /** Splits `---\n<yaml>\n---\n<body>` into its parsed frontmatter and raw body. */
-export function splitFrontmatter(raw: string): FrontmatterDocument {
+export function splitFrontmatter(raw: string): ParsedFrontmatter {
   const opening = `${DELIMITER}\n`
   if (!raw.startsWith(opening)) return { data: {}, body: raw }
 

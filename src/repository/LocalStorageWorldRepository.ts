@@ -17,6 +17,14 @@ const pageKey = (worldSlug: string, pageSlug: string) => `landforger:world:${wor
 const FIXTURE_PATH = /worlds\/([^/]+)\/([^/]+)\.md$/
 
 /**
+ * Drops keys whose value is explicitly `undefined` so `{ ...entity, ...patch }`
+ * can never blank a required Property (e.g. `updatePage(slug, { title: undefined })`).
+ */
+function withoutUndefined<T extends object>(patch: T): Partial<T> {
+  return Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== undefined)) as Partial<T>
+}
+
+/**
  * `WorldRepository` over `localStorage`, seeded on first load from fixture
  * `.md` files. After the seed marker is set, every read/write goes through
  * `localStorage` only — fixtures are never consulted again, so mutations
@@ -74,20 +82,26 @@ export class LocalStorageWorldRepository implements WorldRepository {
     this.storage.setItem(worldKey(world.slug), worldToMarkdown(world))
   }
 
-  listWorlds(): World[] {
+  async listWorlds(): Promise<World[]> {
     return this.worldSlugs()
       .map((slug) => this.readWorld(slug))
       .filter((world): world is World => world !== undefined)
   }
 
-  getWorld(worldSlug: string): World | undefined {
+  async getWorld(worldSlug: string): Promise<World | undefined> {
     return this.readWorld(worldSlug)
   }
 
-  updateWorld(worldSlug: string, patch: WorldMutationInput): World {
+  async updateWorld(worldSlug: string, patch: WorldMutationInput): Promise<World> {
     const world = this.readWorld(worldSlug)
     if (!world) throw new Error(`No such World: ${worldSlug}`)
-    const updated: World = { ...world, ...patch, slug: world.slug, created: world.created, updated: new Date().toISOString() }
+    const updated: World = {
+      ...world,
+      ...withoutUndefined(patch),
+      slug: world.slug,
+      created: world.created,
+      updated: new Date().toISOString(),
+    }
     this.writeWorld(updated)
     return updated
   }
@@ -110,17 +124,17 @@ export class LocalStorageWorldRepository implements WorldRepository {
     this.storage.setItem(pageKey(worldSlug, page.slug), pageToMarkdown(page))
   }
 
-  listPages(worldSlug: string): Page[] {
+  async listPages(worldSlug: string): Promise<Page[]> {
     return this.pageSlugs(worldSlug)
       .map((slug) => this.readPage(worldSlug, slug))
       .filter((page): page is Page => page !== undefined)
   }
 
-  getPage(worldSlug: string, pageSlug: string): Page | undefined {
+  async getPage(worldSlug: string, pageSlug: string): Promise<Page | undefined> {
     return this.readPage(worldSlug, pageSlug)
   }
 
-  createPage(worldSlug: string, input: CreatePageInput): Page {
+  async createPage(worldSlug: string, input: CreatePageInput): Promise<Page> {
     const existingSlugs = this.pageSlugs(worldSlug)
     const slug = resolveSlugCollision(slugify(input.title), existingSlugs)
     const now = new Date().toISOString()
@@ -142,12 +156,12 @@ export class LocalStorageWorldRepository implements WorldRepository {
     return page
   }
 
-  updatePage(worldSlug: string, pageSlug: string, patch: UpdatePageInput): Page {
+  async updatePage(worldSlug: string, pageSlug: string, patch: UpdatePageInput): Promise<Page> {
     const page = this.readPage(worldSlug, pageSlug)
     if (!page) throw new Error(`No such Page: ${worldSlug}/${pageSlug}`)
     const updated: Page = {
       ...page,
-      ...patch,
+      ...withoutUndefined(patch),
       slug: page.slug,
       created: page.created,
       updated: new Date().toISOString(),
@@ -156,7 +170,7 @@ export class LocalStorageWorldRepository implements WorldRepository {
     return updated
   }
 
-  deletePage(worldSlug: string, pageSlug: string): void {
+  async deletePage(worldSlug: string, pageSlug: string): Promise<void> {
     this.storage.removeItem(pageKey(worldSlug, pageSlug))
     this.writePageSlugs(
       worldSlug,

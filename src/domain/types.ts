@@ -6,7 +6,7 @@ export type Category = (typeof CATEGORIES)[number]
 /** The seven Custom Property types (CONTEXT.md — "Custom Property"). */
 export type CustomPropertyType = 'text' | 'textarea' | 'select' | 'relation' | 'image' | 'number' | 'date'
 
-/** Everything but `value` — a field a Category Template seeds new Pages with. */
+/** Everything but `value` — a Custom Property definition a Category Template seeds new Pages with. */
 export interface PropertyDef {
   key: string
   label: string

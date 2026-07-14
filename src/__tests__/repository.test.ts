@@ -50,30 +50,30 @@ beforeEach(() => {
 })
 
 describe('LocalStorageWorldRepository — seeding', () => {
-  it('seeds localStorage from fixtures on first load', () => {
+  it('seeds localStorage from fixtures on first load', async () => {
     const repo = new LocalStorageWorldRepository(storage, fixturesFor(baseWorld, [basePage]))
-    expect(repo.getWorld('testland')?.name).toBe('Testland')
-    expect(repo.getPage('testland', 'alaric')?.title).toBe('Alaric')
+    expect((await repo.getWorld('testland'))?.name).toBe('Testland')
+    expect((await repo.getPage('testland', 'alaric'))?.title).toBe('Alaric')
     expect(storage.getItem('landforger:seeded')).toBe('1')
   })
 
-  it('reads localStorage only on subsequent loads, ignoring different fixtures', () => {
+  it('reads localStorage only on subsequent loads, ignoring different fixtures', async () => {
     new LocalStorageWorldRepository(storage, fixturesFor(baseWorld, [basePage]))
 
     // Mutate through a second repository instance sharing the same storage.
     const second = new LocalStorageWorldRepository(storage, fixturesFor(baseWorld, [basePage]))
-    second.updatePage('testland', 'alaric', { title: 'Alaric Renamed' })
+    await second.updatePage('testland', 'alaric', { title: 'Alaric Renamed' })
 
     // A third instance, even given entirely different fixtures, must not re-seed.
     const differentWorld: World = { ...baseWorld, name: 'Should Not Appear' }
     const third = new LocalStorageWorldRepository(storage, fixturesFor(differentWorld, [basePage]))
-    expect(third.getWorld('testland')?.name).toBe('Testland')
-    expect(third.getPage('testland', 'alaric')?.title).toBe('Alaric Renamed')
+    expect((await third.getWorld('testland'))?.name).toBe('Testland')
+    expect((await third.getPage('testland', 'alaric'))?.title).toBe('Alaric Renamed')
   })
 
-  it('starts with an empty world list when no fixtures are given', () => {
+  it('starts with an empty world list when no fixtures are given', async () => {
     const repo = new LocalStorageWorldRepository(storage)
-    expect(repo.listWorlds()).toEqual([])
+    expect(await repo.listWorlds()).toEqual([])
   })
 })
 
@@ -82,72 +82,98 @@ describe('LocalStorageWorldRepository — Page CRUD', () => {
     return new LocalStorageWorldRepository(storage, fixturesFor(baseWorld, [basePage]))
   }
 
-  it('lists and gets pages as parsed Page objects, never raw frontmatter', () => {
+  it('lists and gets pages as parsed Page objects, never raw frontmatter', async () => {
     const repo = freshRepo()
-    const pages = repo.listPages('testland')
+    const pages = await repo.listPages('testland')
     expect(pages).toHaveLength(1)
     expect(pages[0]).toEqual(basePage)
     expect(typeof pages[0]).not.toBe('string')
   })
 
-  it('creates a page with a kebab-case slug generated from the title', () => {
+  it('creates a page with a kebab-case slug generated from the title', async () => {
     const repo = freshRepo()
-    const created = repo.createPage('testland', { title: 'Corin Ashthorn', category: 'characters' })
+    const created = await repo.createPage('testland', { title: 'Corin Ashthorn', category: 'characters' })
     expect(created.slug).toBe('corin-ashthorn')
-    expect(repo.getPage('testland', 'corin-ashthorn')).toEqual(created)
+    expect(await repo.getPage('testland', 'corin-ashthorn')).toEqual(created)
   })
 
-  it('resolves slug collisions with a numeric suffix', () => {
+  it('resolves slug collisions with a numeric suffix', async () => {
     const repo = freshRepo()
     // The fixture already seeded a page titled "Alaric" (slug `alaric`).
-    const first = repo.createPage('testland', { title: 'Alaric', category: 'characters' })
-    const second = repo.createPage('testland', { title: 'Alaric', category: 'characters' })
+    const first = await repo.createPage('testland', { title: 'Alaric', category: 'characters' })
+    const second = await repo.createPage('testland', { title: 'Alaric', category: 'characters' })
     expect(first.slug).toBe('alaric-2')
     expect(second.slug).toBe('alaric-3')
   })
 
-  it('stamps created and updated as ISO strings on creation', () => {
+  it('stamps created and updated as ISO strings on creation', async () => {
     const repo = freshRepo()
-    const created = repo.createPage('testland', { title: 'New Page', category: 'events' })
+    const created = await repo.createPage('testland', { title: 'New Page', category: 'events' })
     expect(created.created).toMatch(/^\d{4}-\d{2}-\d{2}T/)
     expect(created.updated).toBe(created.created)
   })
 
-  it('renaming a page changes only the title — slug is immutable', () => {
+  it('renaming a page changes only the title — slug is immutable', async () => {
     const repo = freshRepo()
-    const renamed = repo.updatePage('testland', 'alaric', { title: 'Alaric the Bold' })
+    const renamed = await repo.updatePage('testland', 'alaric', { title: 'Alaric the Bold' })
     expect(renamed.slug).toBe('alaric')
     expect(renamed.title).toBe('Alaric the Bold')
   })
 
-  it('maintains updated on every mutation while created never changes', () => {
+  it('maintains updated on every mutation while created never changes', async () => {
     const repo = freshRepo()
-    const before = repo.getPage('testland', 'alaric')!
-    const after = repo.updatePage('testland', 'alaric', { summary: 'Updated summary.' })
+    const before = (await repo.getPage('testland', 'alaric'))!
+    const after = await repo.updatePage('testland', 'alaric', { summary: 'Updated summary.' })
     expect(after.created).toBe(before.created)
     expect(after.updated).not.toBe(before.updated)
   })
 
-  it('deleting a page removes it but leaves other pages untouched (ghost-on-delete)', () => {
+  it('ignores explicitly-undefined patch keys instead of blanking required Properties', async () => {
     const repo = freshRepo()
-    repo.createPage('testland', { title: 'Bystander', category: 'characters' })
-    repo.deletePage('testland', 'alaric')
-    expect(repo.getPage('testland', 'alaric')).toBeUndefined()
-    const remaining = repo.listPages('testland')
+    const patched = await repo.updatePage('testland', 'alaric', { title: undefined, summary: 'New summary.' })
+    expect(patched.title).toBe('Alaric')
+    expect(patched.summary).toBe('New summary.')
+    // Same rule at the World level.
+    const world = await repo.updateWorld('testland', { name: undefined, activeEra: 'era-one' })
+    expect(world.name).toBe('Testland')
+  })
+
+  it('deleting a page removes it but leaves other pages untouched (ghost-on-delete)', async () => {
+    const repo = freshRepo()
+    await repo.createPage('testland', { title: 'Bystander', category: 'characters' })
+    await repo.deletePage('testland', 'alaric')
+    expect(await repo.getPage('testland', 'alaric')).toBeUndefined()
+    const remaining = await repo.listPages('testland')
     expect(remaining.map((p) => p.slug)).toEqual(['bystander'])
     expect(remaining[0].title).toBe('Bystander')
+  })
+
+  it('ghost reconnect: recreating a deleted slug reconnects references without any rewrites', async () => {
+    const repo = freshRepo()
+    await repo.createPage('testland', { title: 'Referencer', category: 'stories', body: 'See [[alaric]] for details.\n' })
+
+    await repo.deletePage('testland', 'alaric')
+    // The reference is now a Ghost link: the referencing body is untouched, the target is gone.
+    expect((await repo.getPage('testland', 'referencer'))?.body).toContain('[[alaric]]')
+    expect(await repo.getPage('testland', 'alaric')).toBeUndefined()
+
+    // Recreating the same title regenerates the same slug — the Ghost link reconnects.
+    const recreated = await repo.createPage('testland', { title: 'Alaric', category: 'characters' })
+    expect(recreated.slug).toBe('alaric')
+    expect((await repo.getPage('testland', 'referencer'))?.body).toContain('[[alaric]]')
+    expect((await repo.getPage('testland', 'alaric'))?.title).toBe('Alaric')
   })
 })
 
 describe('LocalStorageWorldRepository — World mutations', () => {
-  it('persists era order, active era, templates, maps and pins via updateWorld', () => {
+  it('persists era order, active era, templates, maps and pins via updateWorld', async () => {
     const repo = new LocalStorageWorldRepository(storage, fixturesFor(baseWorld, [basePage]))
-    const updated = repo.updateWorld('testland', {
+    const updated = await repo.updateWorld('testland', {
       eraOrder: ['era-one', 'era-two'],
       activeEra: 'era-two',
     })
     expect(updated.eraOrder).toEqual(['era-one', 'era-two'])
     expect(updated.activeEra).toBe('era-two')
-    expect(repo.getWorld('testland')?.activeEra).toBe('era-two')
+    expect((await repo.getWorld('testland'))?.activeEra).toBe('era-two')
   })
 })
