@@ -8,6 +8,7 @@ import type { WorldRepository } from '../../repository/WorldRepository'
 import { getRepository } from '../../state/repository'
 import { TimelinePanel } from '../../timeline/TimelinePanel'
 import { GraphPanel } from '../../graph/GraphPanel'
+import { icons } from '../../icons'
 import { CATEGORY_META, categoryMeta } from './categoryMeta'
 import { SpotlightSearch } from './SpotlightSearch'
 import styles from './DashboardShell.module.css'
@@ -211,7 +212,7 @@ export function DashboardShell() {
               aria-pressed={readOnly}
               onClick={() => setReadOnly((value) => !value)}
             >
-              {readOnly ? '🔒' : '🔓'}
+              {readOnly ? <icons.lock /> : <icons.unlock />}
             </button>
             <button type="button" className={styles.topbarButton} aria-label="Enter focus mode" onClick={() => setFocusMode(true)}>◎</button>
             <UserMenu />
