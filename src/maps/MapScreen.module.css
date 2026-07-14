@@ -30,7 +30,8 @@
 @keyframes era-crossfade { from { opacity: 0; transform: scale(1.035); } to { opacity: 1; transform: scale(1); } }
 @keyframes era-crossfade-out { from { opacity: 1; } to { opacity: 0; } }
 .noImage { display: grid; width: 100%; height: 100%; place-items: center; color: var(--text-faint); font: 14px var(--font-serif); background: #0b0a09; }
-.pin { --pin-scale: 1; position: absolute; display: grid; width: 38px; height: 46px; place-items: center; padding: 0; border: 0; background: transparent; color: var(--pin-color); cursor: pointer; transform: translate(-50%,-100%) scale(var(--pin-scale)); transform-origin: 50% 100%; transition: filter calc(var(--mo,1) * 180ms),opacity calc(var(--mo,1) * 180ms); }
+.pin { --pin-scale: 1; position: absolute; display: grid; width: 38px; height: 46px; place-items: center; padding: 0; border: 0; background: transparent; color: var(--pin-color); cursor: pointer; transform: translate(-50%,-100%) scale(var(--pin-scale)); transform-origin: 50% 100%; transition: filter calc(var(--mo,1) * 180ms),opacity calc(var(--mo,1) * 180ms); animation: pin-appear calc(var(--mo,1) * 320ms) ease both; }
+@keyframes pin-appear { from { opacity: 0; } to { opacity: 1; } }
 .pin > i { display: grid; width: 32px; height: 32px; place-items: center; border: 2px solid color-mix(in oklab,var(--pin-color) 78%,white); border-radius: 50% 50% 50% 6px; background: color-mix(in oklab,var(--pin-color) 22%,#100e0c); box-shadow: 0 4px 18px #000a; font-style: normal; transform: rotate(-45deg); }
 .pin > i > em { display: grid; place-items: center; font-style: normal; transform: rotate(45deg); }
 .pin > span { position: absolute; top: 48px; left: 50%; display: none; width: max-content; max-width: 180px; padding: 5px 8px; border: 1px solid color-mix(in oklab,var(--pin-color) 35%,transparent); border-radius: 6px; background: #0b0a09e8; color: var(--text-hi); font: 11px var(--font-sans); transform: translateX(-50%); }
@@ -44,7 +45,7 @@
 .pin[data-editing] > span { display: block; opacity: .74; }
 @keyframes pin-pulse { 0%,100% { box-shadow: 0 0 0 0 color-mix(in oklab,var(--pin-color) 42%,transparent),0 4px 18px #000a; } 55% { box-shadow: 0 0 0 14px transparent,0 4px 18px #000a; } }
 .pin > b { position: absolute; top: -5px; right: -5px; display: grid; width: 16px; height: 16px; place-items: center; border-radius: 50%; background: var(--bronze); color: #090806; font-size: 10px; }
-.inspector,.reader { position: absolute; z-index: 8; top: 18px; bottom: 18px; width: 310px; overflow: auto; border: 1px solid var(--hairline-strong); border-radius: 12px; background: color-mix(in oklab,var(--panel-1) 94%,transparent); box-shadow: 0 20px 70px #000a; backdrop-filter: blur(20px); animation: drawer-in calc(var(--mo,1) * 280ms) var(--ease-house) both; }
+.inspector,.reader { position: absolute; z-index: 8; top: 18px; bottom: 18px; width: 310px; overflow: auto; border: 1px solid var(--hairline-strong); border-radius: 12px; background: color-mix(in oklab,var(--panel-1) 94%,transparent); box-shadow: 0 20px 70px #000a; backdrop-filter: blur(20px); animation: drawer-in calc(var(--mo,1) * 300ms) var(--ease-house) both; }
 .inspector { right: 18px; padding: 16px; }
 .reader { right: 346px; padding: 20px 24px; }
 @keyframes drawer-in { from { opacity: 0; transform: translateX(18px); } to { opacity: 1; transform: translateX(0); } }
