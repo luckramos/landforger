@@ -33,7 +33,8 @@
 .remove { padding-top: 7px; }
 .propertyFooter { position: relative; display: flex; gap: 14px; padding: 8px 4px 0 132px; }
 .typePicker { position: absolute; top: 100%; left: 132px; }
-.dialog { position: fixed; z-index: 90; top: 50%; left: 50%; width: min(560px, calc(100vw - 32px)); max-height: 80vh; overflow: auto; padding: 22px; border: 1px solid var(--hairline-strong); border-radius: 12px; background: var(--panel-1); box-shadow: 0 30px 90px rgba(0,0,0,.7); transform: translate(-50%, -50%); animation: properties-dialog-in calc(var(--mo, 1) * 180ms) var(--ease-house); }
+.dialogScrim { position: fixed; z-index: 90; inset: 0; display: grid; place-items: center; padding: 16px; background: #0009; animation: lf-fade-in calc(var(--mo, 1) * 160ms) ease backwards; }
+.dialog { width: min(560px, calc(100vw - 32px)); max-height: 80vh; overflow: auto; padding: 22px; border: 1px solid var(--hairline-strong); border-radius: 12px; background: var(--panel-1); box-shadow: 0 30px 90px rgba(0,0,0,.7); animation: properties-dialog-in calc(var(--mo, 1) * 180ms) var(--ease-house); }
 .dialog h2 { margin: 0 0 14px; color: var(--text-hi); font-family: var(--font-serif); font-weight: 400; }
 .dialog p { color: var(--text-faint); font-size: 11px; }
 .dialog > label { display: grid; gap: 5px; margin: 12px 0; color: var(--text-faint); font-size: 10px; }
@@ -48,6 +49,6 @@
 .definitionEditor small { margin-left: 6px; color: var(--bronze); }
 .categoryChecks { display: flex; flex-wrap: wrap; gap: 5px 9px; padding-top: 3px; }
 .categoryChecks label { display: flex; align-items: center; gap: 3px; font-size: 8px; }
-@keyframes properties-dialog-in { from { opacity: 0; transform: translate(-50%, calc(-50% + 8px)) scale(.98); } }
+@keyframes properties-dialog-in { from { opacity: 0; transform: translateY(8px) scale(.98); } }
 @media (max-width: 620px) { .sharedRow, .propertyRow { grid-template-columns: 90px minmax(0, 1fr) 24px; } .propertyFooter { padding-left: 102px; } }
-@media (prefers-reduced-motion: reduce) { .dialog { animation-duration: .01ms; } }
+@media (prefers-reduced-motion: reduce) { .dialog, .dialogScrim { animation-duration: .01ms; } }

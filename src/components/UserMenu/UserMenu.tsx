@@ -90,7 +90,7 @@ export function UserMenu() {
             style={{ top: position.top, right: position.right }}
             role="menu"
             initial={false}
-            exit={{ opacity: 0 }}
+            exit={{ opacity: 0, y: -4, scale: 0.98 }}
             transition={overlayExitTransition(motionScale)}
           >
             <div className={styles.userBlock}>

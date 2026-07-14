@@ -46,7 +46,7 @@
 .pin[data-editing] > span { display: block; opacity: .74; }
 @keyframes pin-pulse { 0%,100% { box-shadow: 0 0 0 0 color-mix(in oklab,var(--pin-color) 42%,transparent),0 4px 18px #000a; } 55% { box-shadow: 0 0 0 14px transparent,0 4px 18px #000a; } }
 .pin > b { position: absolute; top: -5px; right: -5px; display: grid; width: 16px; height: 16px; place-items: center; border-radius: 50%; background: var(--bronze); color: #090806; font-size: 10px; }
-.inspector,.reader { position: absolute; z-index: 8; top: 18px; bottom: 18px; width: 310px; overflow: auto; border: 1px solid var(--hairline-strong); border-radius: 12px; background: color-mix(in oklab,var(--panel-1) 94%,transparent); box-shadow: 0 20px 70px #000a; backdrop-filter: blur(20px); animation: drawer-in calc(var(--mo,1) * 300ms) var(--ease-house) both; }
+.inspector,.reader { position: absolute; z-index: 8; top: 18px; bottom: 18px; width: 310px; overflow: auto; border: 1px solid var(--hairline-strong); border-radius: 12px; background: color-mix(in oklab,var(--panel-1) 94%,transparent); box-shadow: 0 20px 70px #000a; backdrop-filter: blur(20px); animation: drawer-in calc(var(--mo,1) * 300ms) var(--ease-house) backwards; }
 .inspector { right: 18px; padding: 16px; }
 .reader { right: 346px; padding: 20px 24px; }
 @keyframes drawer-in { from { opacity: 0; transform: translateX(18px); } to { opacity: 1; transform: translateX(0); } }
@@ -98,10 +98,10 @@
 .state span { color: var(--bronze); font: 10px var(--font-mono); letter-spacing: .14em; text-transform: uppercase; }
 .state h1 { margin: 0; color: var(--text-hi); font: 400 36px var(--font-serif); }
 .state a { font-size: 12px; }
-.placingBanner { position: fixed; z-index: 30; top: 84px; left: 50%; display: flex; align-items: center; gap: 18px; padding: 11px 16px; border: 1px solid color-mix(in oklab,var(--bronze) 48%,transparent); border-radius: 9px; background: var(--panel-2); box-shadow: 0 12px 40px #0009; color: var(--bronze-light); font: 11px var(--font-mono); transform: translateX(-50%); animation: lf-banner-pop calc(var(--mo,1) * 240ms) var(--ease-house) both; }
+.placingBanner { position: fixed; z-index: 30; top: 84px; left: 50%; display: flex; align-items: center; gap: 18px; padding: 11px 16px; border: 1px solid color-mix(in oklab,var(--bronze) 48%,transparent); border-radius: 9px; background: var(--panel-2); box-shadow: 0 12px 40px #0009; color: var(--bronze-light); font: 11px var(--font-mono); transform: translateX(-50%); animation: lf-banner-pop calc(var(--mo,1) * 240ms) var(--ease-house) backwards; }
 .placingBanner button { border: 0; background: transparent; color: var(--text-dim); cursor: pointer; }
-.scrim { position: fixed; z-index: 40; inset: 0; display: grid; place-items: center; background: #0009; animation: lf-fade-in calc(var(--mo,1) * 160ms) ease both; }
-.modal { width: min(480px,calc(100vw - 40px)); max-height: 72vh; padding: 20px; border: 1px solid var(--hairline-strong); border-radius: 13px; background: var(--panel-1); box-shadow: 0 30px 90px #000c; animation: lf-modal-pop calc(var(--mo,1) * 240ms) var(--ease-house) both; }
+.scrim { position: fixed; z-index: 40; inset: 0; display: grid; place-items: center; background: #0009; animation: lf-fade-in calc(var(--mo,1) * 160ms) ease backwards; }
+.modal { width: min(480px,calc(100vw - 40px)); max-height: 72vh; padding: 20px; border: 1px solid var(--hairline-strong); border-radius: 13px; background: var(--panel-1); box-shadow: 0 30px 90px #000c; animation: lf-modal-pop calc(var(--mo,1) * 240ms) var(--ease-house) backwards; }
 .modal header,.settings header { display: flex; align-items: center; justify-content: space-between; }
 .modal h2,.settings h2 { margin: 0; color: var(--text-hi); font: 400 22px var(--font-serif); }
 .modal header button,.settings header button { border: 0; background: transparent; color: var(--text-dim); font-size: 20px; cursor: pointer; }
@@ -112,7 +112,7 @@
 .pagePicker button { display: flex; gap: 10px; padding: 10px; border: 0; border-bottom: 1px solid var(--hairline); background: transparent; color: var(--text); text-align: left; cursor: pointer; }
 .pagePicker button:hover { background: var(--panel-3); }
 .pagePicker p { color: var(--text-faint); text-align: center; }
-.settings { position: fixed; z-index: 35; top: 82px; right: 20px; width: 360px; max-height: calc(100vh - 220px); overflow: auto; padding: 18px; border: 1px solid var(--hairline-strong); border-radius: 12px; background: var(--panel-1); box-shadow: 0 24px 70px #000b; animation: lf-modal-pop calc(var(--mo,1) * 240ms) var(--ease-house) both; }
+.settings { position: fixed; z-index: 35; top: 82px; right: 20px; width: 360px; max-height: calc(100vh - 220px); overflow: auto; padding: 18px; border: 1px solid var(--hairline-strong); border-radius: 12px; background: var(--panel-1); box-shadow: 0 24px 70px #000b; animation: lf-modal-pop calc(var(--mo,1) * 240ms) var(--ease-house) backwards; }
 .toggle { display: flex; align-items: center; gap: 10px; margin: 18px 0; padding: 12px; border: 1px solid var(--hairline); border-radius: 8px; color: var(--text); font-size: 11px; }
 .toggle input { accent-color: var(--bronze); }
 .imageSlots { display: grid; gap: 8px; }

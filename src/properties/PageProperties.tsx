@@ -171,7 +171,8 @@ export function PageProperties({
 
       <AnimatePresence>
       {actionsOpen && (
-        <motion.div className={styles.dialog} role="dialog" aria-label="Page lifecycle" initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={overlayExitTransition(motionScale)}>
+        <motion.div className={styles.dialogScrim} role="presentation" initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={overlayExitTransition(motionScale)} onClick={() => setActionsOpen(false)}>
+        <motion.div className={styles.dialog} role="dialog" aria-label="Page lifecycle" initial={false} exit={{ opacity: 0, y: 6, scale: 0.985 }} transition={overlayExitTransition(motionScale)} onClick={(event) => event.stopPropagation()}>
           <h2>Page details</h2>
           <label>Page title<input aria-label="Page title" value={titleDraft} onChange={(event) => setTitleDraft(event.target.value)} /></label>
           <label>Category<select aria-label="Category" value={categoryDraft} onChange={(event) => setCategoryDraft(event.target.value as Category)}>{CATEGORIES.map((category) => <option key={category} value={category}>{category}</option>)}</select></label>
@@ -181,12 +182,14 @@ export function PageProperties({
             <button type="button" onClick={() => { onLifecycleChange(titleDraft.trim(), categoryDraft, applyTemplate); setActionsOpen(false) }}>Save page details</button>
           </div>
         </motion.div>
+        </motion.div>
       )}
       </AnimatePresence>
 
       <AnimatePresence>
       {templateOpen && (
-        <motion.div className={styles.dialog} role="dialog" aria-label={`${page.category} Category Template`} initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={overlayExitTransition(motionScale)}>
+        <motion.div className={styles.dialogScrim} role="presentation" initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={overlayExitTransition(motionScale)} onClick={() => setTemplateOpen(false)}>
+        <motion.div className={styles.dialog} role="dialog" aria-label={`${page.category} Category Template`} initial={false} exit={{ opacity: 0, y: 6, scale: 0.985 }} transition={overlayExitTransition(motionScale)} onClick={(event) => event.stopPropagation()}>
           <h2>{page.category} template</h2>
           <p>Changes seed future Pages only.</p>
           {templateDraft.map((definition, index) => (
@@ -201,6 +204,7 @@ export function PageProperties({
           ))}
           <div className={styles.typePicker}>{PROPERTY_TYPES.map((type) => <button type="button" key={type} aria-label={`Add ${type} to template`} onClick={() => addTemplateProperty(type)}>{typeLabel(type)}</button>)}</div>
           <div className={styles.dialogActions}><button type="button" onClick={() => setTemplateOpen(false)}>Cancel</button><button type="button" onClick={() => { onTemplateChange(page.category, templateDraft); setTemplateOpen(false) }}>Save Category Template</button></div>
+        </motion.div>
         </motion.div>
       )}
       </AnimatePresence>

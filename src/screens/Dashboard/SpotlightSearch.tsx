@@ -51,11 +51,14 @@ export function SpotlightSearch({ pages, worldSlug, onClose }: SpotlightSearchPr
 
   return (
     <motion.div className={styles.scrim} role="presentation" onMouseDown={onClose} initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={overlayExitTransition(motionScale)}>
-      <section
+      <motion.section
         className={styles.panel}
         role="dialog"
         aria-modal="true"
         aria-label="Search the World"
+        initial={false}
+        exit={{ opacity: 0, y: -6, scale: 0.985 }}
+        transition={overlayExitTransition(motionScale)}
         onMouseDown={(event) => event.stopPropagation()}
         onKeyDown={(event) => {
           if (event.key === 'Escape') {
@@ -123,7 +126,7 @@ export function SpotlightSearch({ pages, worldSlug, onClose }: SpotlightSearchPr
           <span><kbd>↵</kbd> Open</span>
           <span><kbd>ESC</kbd> Close</span>
         </footer>
-      </section>
+      </motion.section>
     </motion.div>
   )
 }

@@ -53,11 +53,14 @@ export function CreateWorldModal({ onCancel, onCreate }: CreateWorldModalProps) 
 
   return (
     <motion.div className={styles.scrim} onClick={onCancel} initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={overlayExitTransition(motionScale)}>
-      <div
+      <motion.div
         className={styles.panel}
         role="dialog"
         aria-modal="true"
         aria-label="Forge a new world"
+        initial={false}
+        exit={{ opacity: 0, y: 10, scale: 0.98 }}
+        transition={overlayExitTransition(motionScale)}
         onClick={(e) => e.stopPropagation()}
       >
         <div className={styles.formColumn}>
@@ -159,7 +162,7 @@ export function CreateWorldModal({ onCancel, onCreate }: CreateWorldModalProps) 
           <span className={styles.previewLabel}>Preview</span>
           <WorldCard world={previewWorld(name, logline, genre, color)} entryCount={0} interactive={false} />
         </div>
-      </div>
+      </motion.div>
     </motion.div>
   )
 }
