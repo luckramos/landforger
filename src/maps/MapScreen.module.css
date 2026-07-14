@@ -61,7 +61,7 @@
 .membership { display: grid; gap: 7px; margin: 20px 0; padding: 14px 0; border-block: 1px solid var(--hairline); }
 .membership h3 { margin: 0 0 4px; color: var(--text-faint); font: 9px var(--font-mono); letter-spacing: .12em; text-transform: uppercase; }
 .membership > span,.membership > label { display: flex; align-items: center; gap: 8px; color: var(--text-faint); font-size: 11px; cursor: pointer; }
-.membership > span i,.membership > label i { width: 7px; height: 7px; border: 1px solid var(--text-faint); border-radius: 50%; }
+.membership > span i,.membership > label i { width: 7px; height: 7px; border: 1px solid var(--ornament-faint); border-radius: 50%; }
 .membership > span[data-included],.membership > label[data-included] { color: var(--cat-eras); }
 .membership > span[data-included] i,.membership > label[data-included] i { border-color: var(--cat-eras); background: var(--cat-eras); box-shadow: 0 0 8px color-mix(in oklab,var(--cat-eras) 55%,transparent); }
 .membership > label input { position: absolute; opacity: 0; pointer-events: none; }
