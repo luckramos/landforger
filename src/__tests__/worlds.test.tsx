@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
+import { act } from 'react'
 import { MemoryRouter } from 'react-router-dom'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppRoutes } from '../routes'
 import { LocalStorageWorldRepository } from '../repository/LocalStorageWorldRepository'
 import { fixtureFiles } from '../repository/fixtures'
@@ -26,6 +27,7 @@ beforeEach(() => {
 
 afterEach(() => {
   setRepository(undefined)
+  vi.useRealTimers()
 })
 
 describe('Worlds screen', () => {
@@ -122,11 +124,45 @@ describe('Worlds screen', () => {
     expect(await again.listPages('hollow-sea')).toEqual([])
   })
 
-  it('clicking a world card navigates to its dashboard route', async () => {
+  it('clicking a world card plays a burst in the World color anchored at the card, then navigates to its dashboard route', async () => {
     renderWorlds()
     const card = (await screen.findByText('Marrowmoor')).closest('button')!
+    vi.useFakeTimers()
     fireEvent.click(card)
+
+    // Burst overlay is up, colored by the World, anchored at the card — no hard cut yet.
+    const overlay = screen.getByRole('status', { name: 'Opening Marrowmoor' })
+    expect(overlay.getAttribute('style')).toContain('oklch(0.68 0.1 350)')
+    expect(screen.queryByRole('link', { name: 'Marrowmoor home' })).toBeNull()
+
+    act(() => {
+      vi.advanceTimersByTime(639)
+    })
+    expect(screen.queryByRole('link', { name: 'Marrowmoor home' })).toBeNull()
+
+    act(() => {
+      vi.advanceTimersByTime(1)
+    })
+    vi.useRealTimers()
     expect(await screen.findByRole('heading', { name: 'Marrowmoor' })).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Marrowmoor home' })).toBeTruthy()
+  })
+
+  it('keyboard activation (native button click) plays the same burst as a pointer click', async () => {
+    renderWorlds()
+    const card = (await screen.findByText('Aeon Drift')).closest('button')!
+    vi.useFakeTimers()
+    // A focused <button>'s Enter/Space activation fires a native `click`
+    // event, exercised the same way as a pointer click here.
+    card.focus()
+    fireEvent.click(card)
+
+    expect(screen.getByRole('status', { name: 'Opening Aeon Drift' })).toBeTruthy()
+
+    act(() => {
+      vi.advanceTimersByTime(640)
+    })
+    vi.useRealTimers()
+    expect(await screen.findByRole('heading', { name: 'Aeon Drift' })).toBeTruthy()
   })
 })
