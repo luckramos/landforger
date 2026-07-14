@@ -1,6 +1,7 @@
 import { motion } from 'motion/react'
 import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { icons } from '../../icons'
 import { useUiStore } from '../../state/uiStore'
 import { EASE_HOUSE, overlayExitTransition, prefersReducedMotion } from '../motionPrefs'
 import styles from './DockableWindow.module.css'
@@ -72,7 +73,7 @@ export function DockableWindow({
   onClose,
   toolbar,
   initialState = 'fullscreen',
-  icon = '▱',
+  icon = <icons.panel size={16} aria-hidden="true" />,
   accent = 'var(--bronze)',
 }: DockableWindowProps) {
   const [mode, setMode] = useState<'fullscreen' | 'floating'>(initialState)
@@ -166,7 +167,7 @@ export function DockableWindow({
         {!minimized && toolbar}
         <div className={styles.controls}>
           {minimized ? (
-            <button type="button" aria-label="Restore window" onClick={() => setMinimized(false)}>⌃</button>
+            <button type="button" aria-label="Restore window" onClick={() => setMinimized(false)}><icons.windowRestore size={16} aria-hidden="true" /></button>
           ) : (
             <>
               <button
@@ -174,12 +175,12 @@ export function DockableWindow({
                 aria-label={mode === 'fullscreen' ? 'Float window' : 'Maximize window'}
                 onClick={() => setMode((current) => (current === 'fullscreen' ? 'floating' : 'fullscreen'))}
               >
-                {mode === 'fullscreen' ? '◱' : '□'}
+                {mode === 'fullscreen' ? <icons.windowFloat size={16} aria-hidden="true" /> : <icons.windowMaximize size={16} aria-hidden="true" />}
               </button>
-              <button type="button" aria-label="Minimize window" onClick={() => setMinimized(true)}>−</button>
+              <button type="button" aria-label="Minimize window" onClick={() => setMinimized(true)}><icons.windowMinimize size={16} aria-hidden="true" /></button>
             </>
           )}
-          <button type="button" aria-label={`Close ${title}`} onClick={onClose}>×</button>
+          <button type="button" aria-label={`Close ${title}`} onClick={onClose}><icons.windowClose size={16} aria-hidden="true" /></button>
         </div>
       </header>
       <div className={styles.body} aria-hidden={minimized || undefined}>{children}</div>

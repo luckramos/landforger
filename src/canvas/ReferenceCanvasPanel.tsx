@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { DockableWindow } from '../components/DockableWindow/DockableWindow'
 import { prefersReducedMotion } from '../components/motionPrefs'
 import type { World } from '../domain/types'
+import { icons } from '../icons'
 import type { WorldRepository } from '../repository/WorldRepository'
 import {
   eraseItemsAlongSegment,
@@ -45,43 +46,45 @@ type PointerOperation =
   | { kind: 'erase'; previous: CanvasPoint }
   | { kind: 'laser' }
 
+type SemanticIcon = (typeof icons)[keyof typeof icons]
+
 interface ToolDefinition {
   tool: CanvasTool
   label: string
-  icon: string
+  icon: SemanticIcon
 }
 
 const TOOLS: ToolDefinition[] = [
-  { tool: 'select', label: 'Select / pan', icon: '↖' },
-  { tool: 'pencil', label: 'Pencil', icon: '✎' },
-  { tool: 'arrow', label: 'Arrow', icon: '➜' },
-  { tool: 'line', label: 'Line', icon: '╱' },
-  { tool: 'dashed', label: 'Dashed line', icon: '┄' },
-  { tool: 'shape', label: 'Shape', icon: '◇' },
-  { tool: 'text', label: 'Text', icon: 'T' },
-  { tool: 'sticky', label: 'Sticky note', icon: '▰' },
-  { tool: 'eraser', label: 'Eraser', icon: '⌫' },
-  { tool: 'laser', label: 'Laser pointer', icon: '•' },
+  { tool: 'select', label: 'Select / pan', icon: icons.toolSelect },
+  { tool: 'pencil', label: 'Pencil', icon: icons.toolPencil },
+  { tool: 'arrow', label: 'Arrow', icon: icons.toolArrow },
+  { tool: 'line', label: 'Line', icon: icons.toolLine },
+  { tool: 'dashed', label: 'Dashed line', icon: icons.toolDashed },
+  { tool: 'shape', label: 'Shape', icon: icons.toolShape },
+  { tool: 'text', label: 'Text', icon: icons.toolText },
+  { tool: 'sticky', label: 'Sticky note', icon: icons.toolSticky },
+  { tool: 'eraser', label: 'Eraser', icon: icons.toolEraser },
+  { tool: 'laser', label: 'Laser pointer', icon: icons.toolLaser },
 ]
 
 interface ShapeDefinition {
   shape: CanvasShape
   label: string
-  icon: string
+  icon: SemanticIcon
   clipPath?: string
   rounded?: boolean
 }
 
 const SHAPE_META: Record<CanvasShape, ShapeDefinition> = {
-  rectangle: { shape: 'rectangle', label: 'Rectangle shape', icon: '□' },
-  rounded: { shape: 'rounded', label: 'Rounded shape', icon: '▢', rounded: true },
-  circle: { shape: 'circle', label: 'Circle shape', icon: '○', clipPath: 'circle(50%)' },
-  ellipse: { shape: 'ellipse', label: 'Ellipse shape', icon: '⬭', clipPath: 'ellipse(50% 42% at 50% 50%)' },
-  diamond: { shape: 'diamond', label: 'Diamond shape', icon: '◇', clipPath: 'polygon(50% 0, 100% 50%, 50% 100%, 0 50%)' },
-  triangle: { shape: 'triangle', label: 'Triangle shape', icon: '△', clipPath: 'polygon(50% 0, 100% 100%, 0 100%)' },
-  pentagon: { shape: 'pentagon', label: 'Pentagon shape', icon: '⬠', clipPath: 'polygon(50% 0, 100% 38%, 82% 100%, 18% 100%, 0 38%)' },
-  hexagon: { shape: 'hexagon', label: 'Hexagon shape', icon: '⬡', clipPath: 'polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%)' },
-  star: { shape: 'star', label: 'Star shape', icon: '☆', clipPath: 'polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 94%, 50% 72%, 21% 94%, 32% 57%, 2% 35%, 39% 35%)' },
+  rectangle: { shape: 'rectangle', label: 'Rectangle shape', icon: icons.shapeRectangle },
+  rounded: { shape: 'rounded', label: 'Rounded shape', icon: icons.shapeRounded, rounded: true },
+  circle: { shape: 'circle', label: 'Circle shape', icon: icons.shapeCircle, clipPath: 'circle(50%)' },
+  ellipse: { shape: 'ellipse', label: 'Ellipse shape', icon: icons.shapeEllipse, clipPath: 'ellipse(50% 42% at 50% 50%)' },
+  diamond: { shape: 'diamond', label: 'Diamond shape', icon: icons.shapeDiamond, clipPath: 'polygon(50% 0, 100% 50%, 50% 100%, 0 50%)' },
+  triangle: { shape: 'triangle', label: 'Triangle shape', icon: icons.shapeTriangle, clipPath: 'polygon(50% 0, 100% 100%, 0 100%)' },
+  pentagon: { shape: 'pentagon', label: 'Pentagon shape', icon: icons.shapePentagon, clipPath: 'polygon(50% 0, 100% 38%, 82% 100%, 18% 100%, 0 38%)' },
+  hexagon: { shape: 'hexagon', label: 'Hexagon shape', icon: icons.shapeHexagon, clipPath: 'polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%)' },
+  star: { shape: 'star', label: 'Star shape', icon: icons.shapeStar, clipPath: 'polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 94%, 50% 72%, 21% 94%, 32% 57%, 2% 35%, 39% 35%)' },
 }
 const SHAPES = Object.values(SHAPE_META)
 
@@ -436,7 +439,6 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
     <DockableWindow
       title="Reference canvas"
       subtitle={`${items.length} items · ${Math.round(viewport.zoom * 100)}%`}
-      icon="▱"
       accent="var(--bronze)"
       onClose={onClose}
     >
@@ -452,7 +454,7 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
                 title={definition.label}
                 onClick={() => selectTool(definition.tool)}
               >
-                <span>{definition.icon}</span>
+                <definition.icon size={14} aria-hidden="true" />
               </button>
             ))}
           </div>
@@ -468,7 +470,7 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
                   title={entry.label}
                   onClick={() => setShape(entry.shape)}
                 >
-                  {entry.icon}
+                  <entry.icon size={14} aria-hidden="true" />
                 </button>
               ))}
             </div>
@@ -490,9 +492,9 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
             ))}
           </div>
           <div className={styles.zoomControls} aria-label="Canvas zoom controls">
-            <button type="button" aria-label="Zoom out" onClick={() => zoomFromCenter(1 / 1.15)}>−</button>
+            <button type="button" aria-label="Zoom out" onClick={() => zoomFromCenter(1 / 1.15)}><icons.zoomOut size={10} aria-hidden="true" /></button>
             <button type="button" aria-label="Reset zoom" onClick={() => setViewport(INITIAL_VIEWPORT)}>{Math.round(viewport.zoom * 100)}%</button>
-            <button type="button" aria-label="Zoom in" onClick={() => zoomFromCenter(1.15)}>＋</button>
+            <button type="button" aria-label="Zoom in" onClick={() => zoomFromCenter(1.15)}><icons.zoomIn size={10} aria-hidden="true" /></button>
           </div>
           <p>Drag blank space to select · hold Space to pan</p>
         </div>

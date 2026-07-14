@@ -68,7 +68,9 @@
 .palette button[aria-pressed='true'] { outline: 2px solid var(--text-hi); outline-offset: 1px; }
 .zoomControls { display: grid; grid-template-columns: 18px 1fr 18px; gap: 2px; }
 .zoomControls button {
+  display: grid;
   min-width: 0;
+  place-items: center;
   padding: 3px 1px;
   border: 1px solid var(--hairline);
   border-radius: 4px;
