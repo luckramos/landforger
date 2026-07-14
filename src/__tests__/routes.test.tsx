@@ -83,9 +83,9 @@ describe('routes', () => {
     expect(await screen.findByRole('dialog', { name: 'Timeline' })).toBeTruthy()
   })
 
-  it('?panel=graph keeps the graph placeholder until its slice lands', () => {
+  it('?panel=graph renders the refresh-safe relationship graph', () => {
     renderAt('/w/ninth-vale?panel=graph')
-    return screen.findByText('panel: graph (placeholder)').then((element) => expect(element).toBeTruthy())
+    return screen.findByRole('dialog', { name: 'Relationship graph' }).then((element) => expect(element).toBeTruthy())
   })
 
   it('unknown routes render the soft 404', () => {

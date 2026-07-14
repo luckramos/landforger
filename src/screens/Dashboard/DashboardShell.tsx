@@ -5,6 +5,7 @@ import type { Page, World } from '../../domain/types'
 import type { WorldRepository } from '../../repository/WorldRepository'
 import { getRepository } from '../../state/repository'
 import { TimelinePanel } from '../../timeline/TimelinePanel'
+import { GraphPanel } from '../../graph/GraphPanel'
 import { CATEGORY_META, categoryMeta } from './categoryMeta'
 import { SpotlightSearch } from './SpotlightSearch'
 import styles from './DashboardShell.module.css'
@@ -24,7 +25,7 @@ export function DashboardShell() {
   const navigate = useNavigate()
   const searchParams = new URLSearchParams(location.search)
   const panel = searchParams.get('panel')
-  const focusedTimelinePage = searchParams.get('focus') ?? undefined
+  const focusedPageSlug = searchParams.get('focus') ?? undefined
   const repository = getRepository()
   const [loadState, setLoadState] = useState<LoadState>('loading')
   const [world, setWorld] = useState<World>()
@@ -216,7 +217,6 @@ export function DashboardShell() {
 
         <div key={`${location.pathname}${location.search}`} className={styles.view} data-route-key={location.pathname}>
           <Outlet context={{ world, pages, repository, readOnly } satisfies DashboardOutletContext} />
-          {panel === 'graph' && <div className={styles.panelPlaceholder}>panel: graph (placeholder)</div>}
         </div>
       </div>
 
@@ -225,9 +225,19 @@ export function DashboardShell() {
           world={world}
           pages={pages}
           repository={repository}
-          focusPage={focusedTimelinePage}
+          focusPage={focusedPageSlug}
           onClose={closePanel}
           onNavigatePage={(slug) => navigate(`/w/${world.slug}/p/${slug}?panel=timeline`)}
+        />
+      )}
+
+      {panel === 'graph' && (
+        <GraphPanel
+          world={world}
+          pages={pages}
+          focalSlug={pageSlug}
+          onClose={closePanel}
+          onNavigatePage={(slug) => navigate(`/w/${world.slug}/p/${slug}`)}
         />
       )}
 

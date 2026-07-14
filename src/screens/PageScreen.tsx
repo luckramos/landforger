@@ -230,6 +230,14 @@ export function PageScreen({ repository, onEditorReady }: PageScreenProps) {
         <span className={styles.eyebrow}>{page.category}</span>
         <h1 className={styles.title}>{page.title}</h1>
         <p className={styles.summary}>{page.summary}</p>
+        <button
+          type="button"
+          className={styles.graphButton}
+          aria-label="Open local relationship graph"
+          onClick={() => navigate(`/w/${world}/p/${page.slug}?panel=graph`)}
+        >
+          ✳ <span>Connections</span>
+        </button>
         <span className={styles.saveState} data-save-state={saveState}>
           {saveState === 'saving' ? 'Saving' : saveState === 'saved' ? 'Saved' : ''}
         </span>
