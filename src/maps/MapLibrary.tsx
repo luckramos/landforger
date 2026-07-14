@@ -130,7 +130,7 @@ export function MapLibrary() {
       <AnimatePresence>
       {mapPendingDeletion && (
         <motion.div className={styles.scrim} initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={overlayExitTransition(motionScale)}>
-          <section role="dialog" aria-label={`Delete ${mapPendingDeletion.title}`} className={styles.confirm}>
+          <motion.section role="dialog" aria-label={`Delete ${mapPendingDeletion.title}`} className={styles.confirm} initial={false} exit={{ opacity: 0, y: 7, scale: 0.98 }} transition={overlayExitTransition(motionScale)}>
             <span>Delete Map</span>
             <h2>{mapPendingDeletion.title}</h2>
             <p>Its Pins will vanish. Direct child Maps will return to the Library.</p>
@@ -146,7 +146,7 @@ export function MapLibrary() {
                 }}
               >Delete Map</button>
             </div>
-          </section>
+          </motion.section>
         </motion.div>
       )}
       </AnimatePresence>

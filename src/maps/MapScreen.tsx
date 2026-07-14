@@ -452,7 +452,7 @@ export function MapScreen() {
 
         <AnimatePresence>
         {selectedPin && selectedPage && (
-          <motion.aside className={styles.inspector} aria-label="Pin inspector" initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={overlayExitTransition(motionScale)}>
+          <motion.aside className={styles.inspector} aria-label="Pin inspector" initial={{ opacity: 1 }} exit={{ opacity: 0, x: 12 }} transition={overlayExitTransition(motionScale)}>
             <button type="button" className={styles.closeInspector} aria-label="Close Pin inspector" onClick={() => { setSelectedPinId(undefined); setReaderOpen(false) }}>×</button>
             {selectedPage.cover ? (
               <img src={selectedPage.cover} alt="" />
@@ -516,7 +516,7 @@ export function MapScreen() {
 
         <AnimatePresence>
         {readerOpen && selectedPage && (
-          <motion.aside className={styles.reader} aria-label="Docked reader" initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={overlayExitTransition(motionScale)}>
+          <motion.aside className={styles.reader} aria-label="Docked reader" initial={{ opacity: 1 }} exit={{ opacity: 0, x: 12 }} transition={overlayExitTransition(motionScale)}>
             <header><span>Docked reader</span><button type="button" aria-label="Close reader" onClick={() => setReaderOpen(false)}>×</button></header>
             <h2>{selectedPage.title}</h2>
             {readerParagraphs(selectedPage.body).map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
@@ -545,7 +545,7 @@ export function MapScreen() {
       <AnimatePresence>
       {pickerOpen && (
         <motion.div className={styles.scrim} role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setPickerOpen(false)} initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={overlayExitTransition(motionScale)}>
-          <section className={styles.modal} role="dialog" aria-label="Add Pin">
+          <motion.section className={styles.modal} role="dialog" aria-label="Add Pin" initial={false} exit={{ opacity: 0, y: 7, scale: 0.98 }} transition={overlayExitTransition(motionScale)}>
             <header><h2>Add Pin</h2><button type="button" aria-label="Close Add Pin" onClick={() => setPickerOpen(false)}>×</button></header>
             <input type="search" aria-label="Search Pages" value={pageQuery} onChange={(event) => setPageQuery(event.target.value)} autoFocus />
             <div className={styles.pagePicker}>
@@ -566,14 +566,14 @@ export function MapScreen() {
               })}
               {pickerPages.length === 0 && <p>No Pages match that search.</p>}
             </div>
-          </section>
+          </motion.section>
         </motion.div>
       )}
       </AnimatePresence>
 
       <AnimatePresence>
       {settingsOpen && (
-        <motion.section className={styles.settings} role="dialog" aria-label="Map settings" initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={overlayExitTransition(motionScale)}>
+        <motion.section className={styles.settings} role="dialog" aria-label="Map settings" initial={{ opacity: 1 }} exit={{ opacity: 0, y: 7, scale: 0.98 }} transition={overlayExitTransition(motionScale)}>
           <header><h2>Map settings</h2><button type="button" aria-label="Close Map settings" onClick={() => setSettingsOpen(false)}>×</button></header>
           <label className={styles.toggle}>
             <input

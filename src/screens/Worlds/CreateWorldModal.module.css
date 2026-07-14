@@ -7,7 +7,9 @@
   padding: 24px;
   background: rgba(8, 8, 7, 0.7);
   backdrop-filter: blur(10px);
-  animation: cw-fade calc(var(--mo, 1) * 200ms) ease both;
+  /* backwards (not both): the finished entrance must not override the
+     Motion exit's inline opacity/transform. */
+  animation: cw-fade calc(var(--mo, 1) * 200ms) ease backwards;
 }
 
 @keyframes cw-fade {
@@ -30,7 +32,7 @@
   border: 1px solid var(--hairline);
   border-radius: 16px;
   background: var(--panel-1);
-  animation: cw-modalIn calc(var(--mo, 1) * 320ms) var(--ease-house) both;
+  animation: cw-modalIn calc(var(--mo, 1) * 320ms) var(--ease-house) backwards;
 }
 
 @keyframes cw-modalIn {
