@@ -1,12 +1,14 @@
 import { pageFromMarkdown, pageToMarkdown } from '../domain/page'
 import { deriveBacklinks, type Backlink } from '../domain/backlinks'
+import { mergeTemplateProperties, templatePropertiesFor } from '../domain/properties'
 import { resolveSlugCollision, slugify } from '../domain/slug'
-import type { CategoryTemplate, Page, World } from '../domain/types'
+import type { Category, CategoryTemplate, Page, World } from '../domain/types'
 import { worldFromMarkdown, worldToMarkdown } from '../domain/world'
 import type {
   CreatePageInput,
   CreateWorldInput,
   RepositoryMutation,
+  RecategorizePageOptions,
   UpdatePageInput,
   WorldMutationInput,
   WorldRepository,
@@ -166,6 +168,20 @@ export class LocalStorageWorldRepository implements WorldRepository {
     this.storage.setItem(worldKey(world.slug), worldToMarkdown(world))
   }
 
+  private syncEraLifecycle(world: World, pageSlug: string, category: Category): World {
+    const eraOrder = category === 'eras'
+      ? world.eraOrder.includes(pageSlug) ? world.eraOrder : [...world.eraOrder, pageSlug]
+      : world.eraOrder.filter((slug) => slug !== pageSlug)
+    const activeEra = eraOrder.includes(world.activeEra) ? world.activeEra : (eraOrder.at(-1) ?? '')
+    const orderUnchanged =
+      eraOrder.length === world.eraOrder.length &&
+      eraOrder.every((slug, index) => slug === world.eraOrder[index])
+    if (orderUnchanged && activeEra === world.activeEra) return world
+    const updated = { ...world, eraOrder, activeEra, updated: new Date().toISOString() }
+    this.writeWorld(updated)
+    return updated
+  }
+
   async listWorlds(): Promise<World[]> {
     return this.worldSlugs()
       .map((slug) => this.readWorld(slug))
@@ -250,6 +266,8 @@ export class LocalStorageWorldRepository implements WorldRepository {
   }
 
   async createPage(worldSlug: string, input: CreatePageInput): Promise<Page> {
+    const world = this.readWorld(worldSlug)
+    if (!world) throw new Error(`No such World: ${worldSlug}`)
     const existingSlugs = this.pageSlugs(worldSlug)
     const slug = resolveSlugCollision(slugify(input.title), existingSlugs)
     this.notifyMutation({ kind: 'createPage', worldSlug, pageSlug: slug })
@@ -264,11 +282,17 @@ export class LocalStorageWorldRepository implements WorldRepository {
       eras: input.eras ?? [],
       created: now,
       updated: now,
-      customProperties: input.customProperties ?? [],
+      customProperties:
+        input.customProperties ??
+        mergeTemplateProperties(
+          [],
+          templatePropertiesFor(world, input.category),
+        ),
       body: input.body ?? '',
     }
     this.writePage(worldSlug, page)
     this.writePageSlugs(worldSlug, [...existingSlugs, slug])
+    this.syncEraLifecycle(world, slug, page.category)
     return page
   }
 
@@ -287,12 +311,33 @@ export class LocalStorageWorldRepository implements WorldRepository {
     return updated
   }
 
+  async recategorizePage(
+    worldSlug: string,
+    pageSlug: string,
+    category: Category,
+    options: RecategorizePageOptions = {},
+  ): Promise<Page> {
+    const page = this.readPage(worldSlug, pageSlug)
+    if (!page) throw new Error(`No such Page: ${worldSlug}/${pageSlug}`)
+    const world = this.readWorld(worldSlug)
+    if (!world) throw new Error(`No such World: ${worldSlug}`)
+    const definitions = options.applyTemplate ? templatePropertiesFor(world, category) : []
+    this.syncEraLifecycle(world, pageSlug, category)
+    return this.updatePage(worldSlug, pageSlug, {
+      category,
+      customProperties: mergeTemplateProperties(page.customProperties, definitions),
+    })
+  }
+
   async deletePage(worldSlug: string, pageSlug: string): Promise<void> {
+    const page = this.readPage(worldSlug, pageSlug)
+    const world = this.readWorld(worldSlug)
     this.notifyMutation({ kind: 'deletePage', worldSlug, pageSlug })
     this.storage.removeItem(pageKey(worldSlug, pageSlug))
     this.writePageSlugs(
       worldSlug,
       this.pageSlugs(worldSlug).filter((slug) => slug !== pageSlug),
     )
+    if (page?.category === 'eras' && world) this.syncEraLifecycle(world, pageSlug, 'events')
   }
 }

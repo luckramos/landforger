@@ -1,4 +1,4 @@
-import type { Page, World } from '../domain/types'
+import type { Category, Page, World } from '../domain/types'
 import type { Backlink } from '../domain/backlinks'
 
 /** Slug is generated (never supplied); `created`/`updated` are system-maintained. */
@@ -7,6 +7,11 @@ export type CreatePageInput = Pick<Page, 'title' | 'category'> &
 
 /** Everything but `slug` (immutable) and `created`/`updated` (system-maintained). */
 export type UpdatePageInput = Partial<Omit<Page, 'slug' | 'created' | 'updated'>>
+
+export interface RecategorizePageOptions {
+  /** Append missing Properties from the target Category Template; existing Properties always win. */
+  applyTemplate?: boolean
+}
 
 /** World-level mutations: era order, Category Templates, Maps & Pins, Active Era, and world meta. */
 export type WorldMutationInput = Partial<Omit<World, 'slug' | 'created' | 'updated'>>
@@ -60,6 +65,13 @@ export interface WorldRepository {
   /** Slug is generated from `title` (kebab-case, collision-suffixed) — never provided by the caller. */
   createPage(worldSlug: string, input: CreatePageInput): Promise<Page>
   updatePage(worldSlug: string, pageSlug: string, patch: UpdatePageInput): Promise<Page>
+  /** Changes Category with Properties intact, optionally appending the target template's missing Properties. */
+  recategorizePage(
+    worldSlug: string,
+    pageSlug: string,
+    category: Category,
+    options?: RecategorizePageOptions,
+  ): Promise<Page>
   /** Leaves references to this Page as Ghost links — deletion never rewrites other Pages. */
   deletePage(worldSlug: string, pageSlug: string): Promise<void>
 }

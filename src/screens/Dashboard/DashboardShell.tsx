@@ -147,7 +147,7 @@ export function DashboardShell() {
             </button>
           </div>
 
-          <Link className={styles.newPage} to={`/w/${world.slug}/p/untitled-page`}>
+          <Link className={styles.newPage} to={`/w/${world.slug}/new`}>
             <span>＋</span><span className={styles.expandedOnly}>New page</span>
           </Link>
 

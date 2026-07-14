@@ -1,0 +1,53 @@
+.properties { position: relative; width: var(--page-editor-width, min(760px, calc(100vw - 32px))); margin: 12px auto 24px; padding: 14px 0; border-block: 1px solid var(--hairline-soft); color: var(--text-dim); }
+.topActions { display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 8px; }
+.topActions button, .propertyFooter > button { border: 0; background: transparent; color: var(--text-faint); cursor: pointer; font-size: 11px; }
+.sharedRow, .propertyRow { position: relative; display: grid; grid-template-columns: 120px minmax(0, 1fr) 28px; gap: 12px; align-items: start; min-height: 38px; padding: 5px 4px; }
+.label, .labelInput { padding-top: 7px; color: var(--text-faint); font-family: var(--font-mono); font-size: 10px; letter-spacing: .05em; }
+.labelInput { width: 100%; border: 0; border-bottom: 1px solid transparent; outline: 0; background: transparent; }
+.labelInput:focus { border-color: var(--bronze); color: var(--text); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; min-height: 30px; align-items: center; }
+.tagChip, .eraChip, .relationChip, .ghostChip { display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; border: 1px solid var(--hairline); border-radius: 999px; background: var(--panel-2); color: var(--text-dim); font-size: 11px; }
+.eraChip { border-color: color-mix(in oklab, var(--cat-eras) 45%, transparent); color: var(--cat-eras); }
+.relationChip { color: var(--bronze-light); }
+.ghostChip { border-style: dashed; color: var(--text-faint); text-decoration: line-through; }
+.tagChip button, .eraChip button, .relationChip button, .ghostChip button, .remove { border: 0; background: transparent; color: inherit; cursor: pointer; }
+.addChip { padding: 4px 8px; border: 1px dashed var(--hairline-strong); border-radius: 999px; background: transparent; color: var(--text-faint); cursor: pointer; font-size: 10px; }
+.timelineChip { padding: 4px 9px; border: 1px solid color-mix(in oklab, var(--cat-eras) 40%, transparent); border-radius: 999px; background: transparent; color: var(--cat-eras); cursor: pointer; font-size: 9px; }
+.input, .textarea, .inlinePopover input, .dialog input, .dialog select, .templateRow input { width: 100%; min-height: 31px; padding: 6px 8px; border: 1px solid transparent; border-radius: 6px; outline: 0; background: transparent; color: var(--text); font: inherit; }
+.input:hover, .textarea:hover, .input:focus, .textarea:focus, .dialog input, .dialog select, .templateRow input { border-color: var(--hairline); background: var(--panel-2); }
+.textarea { min-height: 62px; resize: vertical; }
+.imageField { display: grid; grid-template-columns: 72px 1fr; gap: 10px; align-items: center; }
+.imagePreview { width: 72px; height: 72px; border-radius: 8px; object-fit: cover; }
+.coverSlot { display: grid; grid-template-columns: 72px 1fr; gap: 9px; align-items: center; }
+.coverSlot:not(:has(img)) { grid-template-columns: 1fr; }
+.coverSlot img { width: 72px; height: 48px; border-radius: 7px; object-fit: cover; }
+.coverSlot input { min-height: 31px; padding: 6px 8px; border: 1px solid transparent; border-radius: 6px; outline: 0; background: transparent; color: var(--text); }
+.coverSlot input:focus, .coverSlot input:hover { border-color: var(--hairline); background: var(--panel-2); }
+.relation { position: relative; }
+.popover, .inlinePopover, .typePicker { z-index: 12; display: flex; flex-wrap: wrap; gap: 5px; padding: 8px; border: 1px solid var(--hairline); border-radius: 8px; background: var(--panel-3); box-shadow: 0 12px 35px rgba(0,0,0,.35); }
+.popover { position: absolute; top: calc(100% + 4px); left: 0; min-width: 220px; flex-direction: column; }
+.popover button, .inlinePopover button, .typePicker button, .dialog button { padding: 6px 9px; border: 1px solid var(--hairline); border-radius: 6px; background: var(--panel-2); color: var(--text-dim); cursor: pointer; }
+.popover button { display: flex; gap: 7px; text-align: left; }
+.inlinePopover { grid-column: 2; }
+.empty { padding: 7px; color: var(--text-faint); font-size: 11px; }
+.remove { padding-top: 7px; }
+.propertyFooter { position: relative; display: flex; gap: 14px; padding: 8px 4px 0 132px; }
+.typePicker { position: absolute; top: 100%; left: 132px; }
+.dialog { position: fixed; z-index: 90; top: 50%; left: 50%; width: min(560px, calc(100vw - 32px)); max-height: 80vh; overflow: auto; padding: 22px; border: 1px solid var(--hairline-strong); border-radius: 12px; background: var(--panel-1); box-shadow: 0 30px 90px rgba(0,0,0,.7); transform: translate(-50%, -50%); animation: properties-dialog-in calc(var(--mo, 1) * 180ms) var(--ease-house); }
+.dialog h2 { margin: 0 0 14px; color: var(--text-hi); font-family: var(--font-serif); font-weight: 400; }
+.dialog p { color: var(--text-faint); font-size: 11px; }
+.dialog > label { display: grid; gap: 5px; margin: 12px 0; color: var(--text-faint); font-size: 10px; }
+.dialog > .checkbox { display: flex; grid-template-columns: auto 1fr; flex-direction: row; align-items: center; }
+.checkbox input { width: auto; }
+.dialogActions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+.dialogActions .danger { margin-right: auto; border-color: color-mix(in oklab, crimson 50%, transparent); color: #ee9a9a; }
+.templateRow { display: grid; grid-template-columns: 1fr 90px 30px; gap: 8px; align-items: center; margin: 6px 0; }
+.definitionEditor { display: grid; gap: 5px; margin: 5px 0 8px; padding: 0; border: 0; color: var(--text-faint); font-family: var(--font-mono); font-size: 9px; }
+.definitionEditor > input { width: 100%; padding: 5px 7px; border: 1px solid var(--hairline-soft); border-radius: 5px; background: var(--panel-2); color: var(--text-dim); }
+.definitionEditor legend { padding: 0; }
+.definitionEditor small { margin-left: 6px; color: var(--bronze); }
+.categoryChecks { display: flex; flex-wrap: wrap; gap: 5px 9px; padding-top: 3px; }
+.categoryChecks label { display: flex; align-items: center; gap: 3px; font-size: 8px; }
+@keyframes properties-dialog-in { from { opacity: 0; transform: translate(-50%, calc(-50% + 8px)) scale(.98); } }
+@media (max-width: 620px) { .sharedRow, .propertyRow { grid-template-columns: 90px minmax(0, 1fr) 24px; } .propertyFooter { padding-left: 102px; } }
+@media (prefers-reduced-motion: reduce) { .dialog { animation-duration: .01ms; } }
