@@ -3,7 +3,7 @@
 
 import type { Editor } from '@tiptap/core'
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate, useOutletContext, useParams } from 'react-router-dom'
+import { Link, useNavigate, useOutletContext, useParams } from 'react-router-dom'
 import type { Backlink } from '../domain/backlinks'
 import type { Category, CustomProperty, Page, PropertyDef, World } from '../domain/types'
 import { PageEditor } from '../editor/PageEditor'
@@ -230,6 +230,9 @@ export function PageScreen({ repository, onEditorReady }: PageScreenProps) {
         <span className={styles.eyebrow}>{page.category}</span>
         <h1 className={styles.title}>{page.title}</h1>
         <p className={styles.summary}>{page.summary}</p>
+        {worldData.pins.some((pin) => pin.pageSlug === page.slug) && (
+          <Link aria-label="See on map" className={styles.seeOnMap} to={`/w/${world}/map?page=${encodeURIComponent(page.slug)}`}>⌖ See on map</Link>
+        )}
         <span className={styles.saveState} data-save-state={saveState}>
           {saveState === 'saving' ? 'Saving' : saveState === 'saved' ? 'Saved' : ''}
         </span>

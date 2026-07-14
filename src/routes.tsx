@@ -6,8 +6,9 @@ import { DashboardShell } from './screens/Dashboard/DashboardShell'
 import { DashboardHome, DashboardList } from './screens/Dashboard/DashboardViews'
 import { Worlds } from './screens/Worlds/Worlds'
 import { NewPageScreen } from './screens/NewPageScreen'
+import { MapScreen } from './maps/MapScreen'
 
-/** The PRD's full URL scheme, each route a placeholder until its slice lands. */
+/** The PRD's full URL scheme; unfinished slices retain the shared placeholder. */
 export function AppRoutes() {
   return (
     <Routes>
@@ -21,8 +22,8 @@ export function AppRoutes() {
         <Route path="c/:category" element={<DashboardList />} />
         <Route path="t/:tag" element={<DashboardList />} />
       </Route>
-      <Route path="/w/:world/map" element={<Placeholder name="Root Map" />} />
-      <Route path="/w/:world/map/:mapId" element={<Placeholder name="Map" />} />
+      <Route path="/w/:world/map" element={<MapScreen />} />
+      <Route path="/w/:world/map/:mapId" element={<MapScreen />} />
       <Route path="/w/:world/library" element={<Placeholder name="Map Library" />} />
       <Route path="*" element={<NotFound />} />
     </Routes>

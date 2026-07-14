@@ -40,6 +40,7 @@
 }
 
 .summary { max-width: 680px; margin: 4px 0; color: var(--text-dim); font-family: var(--font-serif); font-size: 17px; line-height: 1.5; }
+.seeOnMap { justify-self: start; margin-top: 4px; padding: 5px 9px; border: 1px solid color-mix(in oklab,var(--cat-locations) 30%,transparent); border-radius: 999px; background: color-mix(in oklab,var(--cat-locations) 7%,transparent); color: var(--cat-locations); font: 10px var(--font-sans); text-decoration: none; }
 .tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 5px 0 8px; }
 .tags span { padding: 4px 9px; border: 1px solid var(--hairline); border-radius: 999px; color: var(--text-faint); font-size: 10px; }
 

@@ -26,11 +26,7 @@ afterEach(() => {
 
 describe('routes', () => {
   // Routes still on the shared Placeholder frame until their slices land.
-  const placeholderCases: Array<[path: string, heading: string]> = [
-    ['/w/ninth-vale/map', 'Root Map'],
-    ['/w/ninth-vale/map/duskwater', 'Map'],
-    ['/w/ninth-vale/library', 'Map Library'],
-  ]
+  const placeholderCases: Array<[path: string, heading: string]> = [['/w/ninth-vale/library', 'Map Library']]
 
   it.each(placeholderCases)('%s renders the %s placeholder', (path, heading) => {
     renderAt(path)
@@ -67,10 +63,12 @@ describe('routes', () => {
     expect(await screen.findByRole('heading', { name: 'Sera Valen' })).toBeTruthy()
   })
 
-  it('echoes route params on the placeholder', () => {
+  it('renders root and explicit Map routes from _world.md', async () => {
+    const root = renderAt('/w/ninth-vale/map')
+    expect(await screen.findByRole('heading', { name: 'The Drowned Coast' })).toBeTruthy()
+    root.unmount()
     renderAt('/w/ninth-vale/map/duskwater')
-    expect(screen.getByText(/world: ninth-vale/)).toBeTruthy()
-    expect(screen.getByText(/mapId: duskwater/)).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: 'Duskwater' })).toBeTruthy()
   })
 
   it('/ redirects to /login', () => {
