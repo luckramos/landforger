@@ -50,6 +50,10 @@ describe('fixtures — seeded worlds', () => {
       }
     }
   })
+
+  it('seeds the reference canvas with six Ninth Vale examples', () => {
+    expect(worlds.find((world) => world.slug === 'ninth-vale')?.canvas?.items).toHaveLength(6)
+  })
 })
 
 describe('fixtures — no pipe tables or code fences in any body (all worlds)', () => {

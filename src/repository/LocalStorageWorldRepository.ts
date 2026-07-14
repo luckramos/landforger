@@ -214,6 +214,7 @@ export class LocalStorageWorldRepository implements WorldRepository {
       categoryTemplates: input.template === 'starter' ? structuredClone(DEFAULT_CATEGORY_TEMPLATES) : [],
       maps: [],
       pins: [],
+      canvas: { items: [] },
       created: now,
       updated: now,
       body: '',
