@@ -38,3 +38,14 @@
     transform: translateY(0);
   }
 }
+
+.panelBadge {
+  margin-top: 12px;
+  justify-self: center;
+  padding: 4px 12px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--bronze-light);
+}

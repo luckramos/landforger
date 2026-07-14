@@ -40,6 +40,11 @@ describe('route skeleton', () => {
     expect(screen.getByRole('heading', { name: 'Auth' })).toBeTruthy()
   })
 
+  it.each([['timeline'], ['graph']])('?panel=%s renders the panel placeholder', (panel) => {
+    renderAt(`/w/ninth-vale?panel=${panel}`)
+    expect(screen.getByText(`panel: ${panel} (placeholder)`)).toBeTruthy()
+  })
+
   it('unknown routes render the soft 404', () => {
     renderAt('/definitely/not/a/route')
     expect(screen.getByText(/soft 404/)).toBeTruthy()

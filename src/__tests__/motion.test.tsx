@@ -20,9 +20,27 @@ describe('motion scale root sync', () => {
     act(() => useUiStore.getState().setMotionScale(1))
   })
 
-  it('placeholder screens scale their entrance by --mo (multiply-is-slower)', () => {
+  it('placeholder screens scale their entrance by --mo (multiply-is-slower)', async () => {
     const css = readFileSync('src/screens/Placeholder.module.css', 'utf8')
     expect(css).toContain('calc(var(--mo, 1) * 300ms)')
     expect(css).toContain('var(--ease-house)')
+
+    // and the animated class is actually applied by the component
+    const { MemoryRouter } = await import('react-router-dom')
+    const { NotFound } = await import('../screens/Placeholder')
+    const styles = (await import('../screens/Placeholder.module.css')).default
+    const { container } = render(
+      <MemoryRouter>
+        <NotFound />
+      </MemoryRouter>,
+    )
+    expect(container.querySelector('main')?.className).toBe(styles.screen)
+  })
+
+  it('global.css collapses animation under prefers-reduced-motion', () => {
+    const css = readFileSync('src/styles/global.css', 'utf8')
+    expect(css).toContain('@media (prefers-reduced-motion: reduce)')
+    expect(css).toContain('animation-duration: 0.01ms !important')
+    expect(css).toContain('transition-duration: 0.01ms !important')
   })
 })
