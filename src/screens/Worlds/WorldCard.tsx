@@ -17,7 +17,7 @@ interface WorldCardProps {
 export function WorldCard({ world, entryCount, index = 0, onClick, interactive = true }: WorldCardProps) {
   const style = {
     '--card-color': world.color,
-    animationDelay: interactive ? `${index * 70}ms` : '0ms',
+    animationDelay: interactive ? `calc(var(--mo, 1) * ${index * 70}ms)` : '0ms',
   } as CSSProperties
 
   return (

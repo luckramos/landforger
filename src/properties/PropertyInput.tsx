@@ -1,4 +1,7 @@
 import { useState } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
+import { overlayExitTransition } from '../components/motionPrefs'
+import { useUiStore } from '../state/uiStore'
 import type { CustomProperty, Page } from '../domain/types'
 import styles from './Properties.module.css'
 
@@ -11,6 +14,7 @@ interface PropertyInputProps {
 
 /** Public form seam shared by inline Page Properties and per-Category create forms. */
 export function PropertyInput({ property, pages, disabled = false, onChange }: PropertyInputProps) {
+  const motionScale = useUiStore((state) => state.motionScale)
   const [pickerOpen, setPickerOpen] = useState(false)
   const scalar = Array.isArray(property.value) ? '' : property.value
 
@@ -38,15 +42,17 @@ export function PropertyInput({ property, pages, disabled = false, onChange }: P
           })}
           {!disabled && <button type="button" className={styles.addChip} aria-label={`Add ${property.label}`} onClick={() => setPickerOpen((open) => !open)}>＋</button>}
         </div>
+        <AnimatePresence>
         {pickerOpen && (
-          <div className={styles.popover} aria-label={`${property.label} choices`}>
+          <motion.div className={styles.popover} aria-label={`${property.label} choices`} initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={overlayExitTransition(motionScale)}>
             {targets.length > 0 ? targets.map((target) => (
               <button key={target.slug} type="button" aria-label={target.title} onClick={() => { onChange([...slugs, target.slug]); setPickerOpen(false) }}>
                 <span style={{ color: `var(--cat-${target.category})` }}>●</span>{target.title}
               </button>
             )) : <span className={styles.empty}>No matching Pages</span>}
-          </div>
+          </motion.div>
         )}
+        </AnimatePresence>
       </div>
     )
   }

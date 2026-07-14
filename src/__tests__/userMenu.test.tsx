@@ -6,15 +6,19 @@ import { LocalStorageWorldRepository } from '../repository/LocalStorageWorldRepo
 import { fixtureFiles } from '../repository/fixtures'
 import { setRepository } from '../state/repository'
 import { useSessionStore } from '../state/sessionStore'
+import { DEFAULT_USER_SETTINGS, setUiStorage, useUiStore } from '../state/uiStore'
 import { createInMemoryStorage } from './testStorage'
 
 beforeEach(() => {
   setRepository(new LocalStorageWorldRepository(createInMemoryStorage(), fixtureFiles))
+  setUiStorage(createInMemoryStorage())
+  useUiStore.setState({ activeUserId: undefined, settingsByUser: {}, ...DEFAULT_USER_SETTINGS })
   useSessionStore.setState({ user: { name: 'Sera Valen', email: 'sera@landforger.io' } })
 })
 
 afterEach(() => {
   setRepository(undefined)
+  setUiStorage(null)
 })
 
 describe('UserMenu', () => {
@@ -57,5 +61,18 @@ describe('UserMenu', () => {
 
     expect(await screen.findByRole('heading', { name: 'Chart your worlds.' })).toBeTruthy()
     expect(useSessionStore.getState().user).toBeNull()
+  })
+
+  it('applies motion intensity and Page body font live from Settings', async () => {
+    renderWorlds()
+    await screen.findByText('The Ninth Vale')
+    fireEvent.click(screen.getByRole('button', { name: 'User menu' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Settings' }))
+
+    fireEvent.change(screen.getByRole('slider', { name: 'Motion intensity' }), { target: { value: '1.5' } })
+    expect(useUiStore.getState().motionScale).toBe(1.5)
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Sans' }))
+    expect(useUiStore.getState().bodyFont).toBe('sans')
   })
 })

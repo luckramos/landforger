@@ -52,7 +52,7 @@
   border-radius: 9px;
   background: var(--panel-2);
   box-shadow: 0 14px 38px rgba(0, 0, 0, .55);
-  animation: canvas-pop 150ms ease-out;
+  animation: canvas-pop calc(var(--mo, 1) * 150ms) ease-out;
 }
 
 .palette { display: grid; gap: 4px; margin-top: auto; }
@@ -104,7 +104,7 @@
   position: absolute;
   box-sizing: border-box;
   color: #161412;
-  transition: left 260ms cubic-bezier(.22,.61,.36,1), top 260ms cubic-bezier(.22,.61,.36,1), width 260ms cubic-bezier(.22,.61,.36,1), height 260ms cubic-bezier(.22,.61,.36,1), box-shadow 200ms ease;
+  transition: left calc(var(--mo, 1) * 260ms) cubic-bezier(.22,.61,.36,1), top calc(var(--mo, 1) * 260ms) cubic-bezier(.22,.61,.36,1), width calc(var(--mo, 1) * 260ms) cubic-bezier(.22,.61,.36,1), height calc(var(--mo, 1) * 260ms) cubic-bezier(.22,.61,.36,1), box-shadow calc(var(--mo, 1) * 200ms) ease;
   user-select: none;
 }
 .stage[data-live-item='true'] .item { transition: none; }

@@ -20,27 +20,32 @@
 .viewport { position: absolute; inset: 0; overflow: hidden; cursor: grab; background: radial-gradient(circle at 50% 45%,#17140f,#070706 70%); touch-action: none; }
 .viewport[data-dragging] { cursor: grabbing; }
 .stage { position: absolute; left: calc(50% - 800px); top: calc(50% - 540px); width: 1600px; height: 1080px; will-change: transform; transition: transform calc(var(--mo,1) * 180ms) var(--ease-house); }
-.stage[data-transition="in"] { animation: map-zoom-in calc(var(--mo,1) * 480ms) var(--ease-map-zoom) both; }
-.stage[data-transition="out"] { animation: map-zoom-out calc(var(--mo,1) * 420ms) var(--ease-map-zoom) both; }
-@keyframes map-zoom-in { from { opacity: 0; transform: scale(.72); filter: blur(6px); } to { opacity: 1; filter: blur(0); } }
-@keyframes map-zoom-out { from { opacity: 0; transform: scale(1.28); filter: blur(6px); } to { opacity: 1; filter: blur(0); } }
+.stage[data-transition="in"] { animation: map-zoom-in calc(var(--mo,1) * 600ms) var(--ease-map-zoom) both; }
+.stage[data-transition="out"] { animation: map-zoom-out calc(var(--mo,1) * 600ms) var(--ease-map-zoom) both; }
+@keyframes map-zoom-in { from { opacity: 0; transform: scale(1.55); } to { opacity: 1; transform: scale(1); } }
+@keyframes map-zoom-out { from { opacity: 0; transform: scale(.72); } to { opacity: 1; transform: scale(1); } }
 .mapImage,.previousMapImage { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; user-select: none; pointer-events: none; }
-.mapImage { animation: era-crossfade calc(var(--mo,1) * 440ms) var(--ease-house) both; }
-.previousMapImage { animation: era-crossfade-out calc(var(--mo,1) * 440ms) var(--ease-house) both; }
-@keyframes era-crossfade { from { opacity: .18; filter: saturate(.45); } to { opacity: 1; filter: saturate(1); } }
+.mapImage { animation: era-crossfade calc(var(--mo,1) * 520ms) ease both; }
+.previousMapImage { animation: era-crossfade-out calc(var(--mo,1) * 520ms) ease both; }
+@keyframes era-crossfade { from { opacity: 0; transform: scale(1.035); } to { opacity: 1; transform: scale(1); } }
 @keyframes era-crossfade-out { from { opacity: 1; } to { opacity: 0; } }
 .noImage { display: grid; width: 100%; height: 100%; place-items: center; color: var(--text-faint); font: 14px var(--font-serif); background: #0b0a09; }
-.pin { --pin-scale: 1; position: absolute; display: grid; width: 38px; height: 46px; place-items: center; padding: 0; border: 0; background: transparent; color: var(--pin-color); cursor: pointer; transform: translate(-50%,-100%) scale(var(--pin-scale)); transform-origin: 50% 100%; transition: filter calc(var(--mo,1) * 180ms),opacity calc(var(--mo,1) * 180ms); }
+.pin { --pin-scale: 1; position: absolute; display: grid; width: 38px; height: 46px; place-items: center; padding: 0; border: 0; background: transparent; color: var(--pin-color); cursor: pointer; transform: translate(-50%,-100%) scale(var(--pin-scale)); transform-origin: 50% 100%; transition: filter calc(var(--mo,1) * 180ms),opacity calc(var(--mo,1) * 180ms); animation: pin-appear calc(var(--mo,1) * 320ms) ease both; }
+@keyframes pin-appear { from { opacity: 0; } to { opacity: 1; } }
 .pin > i { display: grid; width: 32px; height: 32px; place-items: center; border: 2px solid color-mix(in oklab,var(--pin-color) 78%,white); border-radius: 50% 50% 50% 6px; background: color-mix(in oklab,var(--pin-color) 22%,#100e0c); box-shadow: 0 4px 18px #000a; font-style: normal; transform: rotate(-45deg); }
 .pin > i > em { display: grid; place-items: center; font-style: normal; transform: rotate(45deg); }
 .pin > span { position: absolute; top: 48px; left: 50%; display: none; width: max-content; max-width: 180px; padding: 5px 8px; border: 1px solid color-mix(in oklab,var(--pin-color) 35%,transparent); border-radius: 6px; background: #0b0a09e8; color: var(--text-hi); font: 11px var(--font-sans); transform: translateX(-50%); }
+.pin > i { transition: transform calc(var(--mo,1) * 170ms) var(--ease-overshoot),box-shadow calc(var(--mo,1) * 170ms),border-color calc(var(--mo,1) * 170ms); }
+.pin > span { opacity: 0; transition: opacity calc(var(--mo,1) * 150ms),transform calc(var(--mo,1) * 150ms); }
+.pin:hover > i { border-color: white; box-shadow: 0 9px 26px #000d; transform: rotate(-45deg) translateY(-4px) scale(1.14); }
+.pin:hover > span,.pin[data-selected] > span { display: block; opacity: 1; transform: translateX(-50%) translateY(-5px); }
 .pin[data-selected] > span { display: block; }
-.pin[data-selected] > i { animation: pin-pulse calc(var(--mo,1) * 1.6s) ease-out infinite; }
+.pin[data-selected] > i { animation: pin-pulse calc(var(--mo,1) * 1.4s) ease-out infinite; }
 .pin[data-editing] { cursor: move; }
 .pin[data-editing] > span { display: block; opacity: .74; }
 @keyframes pin-pulse { 0%,100% { box-shadow: 0 0 0 0 color-mix(in oklab,var(--pin-color) 42%,transparent),0 4px 18px #000a; } 55% { box-shadow: 0 0 0 14px transparent,0 4px 18px #000a; } }
 .pin > b { position: absolute; top: -5px; right: -5px; display: grid; width: 16px; height: 16px; place-items: center; border-radius: 50%; background: var(--bronze); color: #090806; font-size: 10px; }
-.inspector,.reader { position: absolute; z-index: 8; top: 18px; bottom: 18px; width: 310px; overflow: auto; border: 1px solid var(--hairline-strong); border-radius: 12px; background: color-mix(in oklab,var(--panel-1) 94%,transparent); box-shadow: 0 20px 70px #000a; backdrop-filter: blur(20px); animation: drawer-in calc(var(--mo,1) * 280ms) var(--ease-house) both; }
+.inspector,.reader { position: absolute; z-index: 8; top: 18px; bottom: 18px; width: 310px; overflow: auto; border: 1px solid var(--hairline-strong); border-radius: 12px; background: color-mix(in oklab,var(--panel-1) 94%,transparent); box-shadow: 0 20px 70px #000a; backdrop-filter: blur(20px); animation: drawer-in calc(var(--mo,1) * 300ms) var(--ease-house) both; }
 .inspector { right: 18px; padding: 16px; }
 .reader { right: 346px; padding: 20px 24px; }
 @keyframes drawer-in { from { opacity: 0; transform: translateX(18px); } to { opacity: 1; transform: translateX(0); } }
@@ -76,12 +81,18 @@
 .eraRail::before { content: ''; position: absolute; top: 14px; left: 7%; right: 7%; height: 1px; background: var(--hairline-strong); }
 .eraRail button { position: relative; display: grid; justify-items: center; gap: 6px; border: 0; background: transparent; color: var(--text-faint); cursor: pointer; }
 .eraRail button > i { z-index: 1; width: 10px; height: 10px; margin-top: 9px; border: 2px solid var(--panel-1); border-radius: 50%; background: #4a4440; box-shadow: 0 0 0 1px var(--hairline-strong); }
+.eraRail button > i { transition: all calc(var(--mo,1) * 220ms) var(--ease-overshoot); }
+.eraRail button > span,.eraRail strong,.eraRail small { transition: color calc(var(--mo,1) * 200ms); }
 .eraRail button > i[data-past] { background: var(--cat-eras); }
 .eraRail button[aria-pressed="true"] > i { width: 14px; height: 14px; margin-top: 7px; box-shadow: 0 0 0 4px color-mix(in oklab,var(--cat-eras) 16%,transparent),0 0 14px color-mix(in oklab,var(--cat-eras) 55%,transparent); }
 .eraRail button > span { display: grid; gap: 1px; }
 .eraRail strong { color: var(--text); font: 10px var(--font-sans); }
 .eraRail small { color: var(--text-faint); font: 8px var(--font-mono); }
 .eraRail button[aria-pressed="true"] strong { color: var(--cat-eras); }
+.navigationBurst { position: fixed; z-index: 100; inset: 0; display: grid; place-items: center; overflow: hidden; background: #080807; color: var(--text-hi); }
+.navigationBurst i { position: absolute; width: 20px; height: 20px; border-radius: 50%; background: var(--burst-color); animation: map-navigation-burst calc(var(--mo,1) * 620ms) var(--ease-burst) forwards; }
+.navigationBurst span { z-index: 1; font: 11px var(--font-mono); letter-spacing: .08em; animation: lf-fade-in calc(var(--mo,1) * 300ms) ease calc(var(--mo,1) * 200ms) both; }
+@keyframes map-navigation-burst { from { opacity: .9; transform: scale(0); } to { opacity: 1; transform: scale(60); } }
 .state { display: grid; min-height: 100%; place-content: center; gap: 8px; text-align: center; }
 .state span { color: var(--bronze); font: 10px var(--font-mono); letter-spacing: .14em; text-transform: uppercase; }
 .state h1 { margin: 0; color: var(--text-hi); font: 400 36px var(--font-serif); }
@@ -108,4 +119,4 @@
 .imageSlots span { display: grid; gap: 3px; }
 .imageSlots small { color: var(--text-faint); font: 8px var(--font-mono); }
 .imageSlots input { max-width: 150px; color: var(--text-faint); font-size: 8px; }
-@media (prefers-reduced-motion:reduce) { .stage,.mapImage,.previousMapImage,.pin,.inspector,.reader,.placingBanner,.scrim,.modal,.settings { animation-duration: 0ms; transition-duration: 0ms; } }
+@media (prefers-reduced-motion:reduce) { .stage,.mapImage,.previousMapImage,.pin,.pin > i,.pin > span,.inspector,.reader,.placingBanner,.scrim,.modal,.settings,.eraRail button > i,.eraRail button > span,.eraRail strong,.eraRail small,.navigationBurst i,.navigationBurst span { animation-duration: .01ms; transition-duration: .01ms; } }

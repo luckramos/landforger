@@ -2,6 +2,7 @@ import { useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { prefersReducedMotion } from '../../components/motionPrefs'
 import { useSessionStore } from '../../state/sessionStore'
+import { useUiStore } from '../../state/uiStore'
 import styles from './Auth.module.css'
 import { useFieldStagger } from './useFieldStagger'
 
@@ -51,6 +52,7 @@ const COPY: Record<Mode, { eyebrow: string; heading: string; subtext: string; su
 export function Auth() {
   const navigate = useNavigate()
   const login = useSessionStore((s) => s.login)
+  const motionScale = useUiStore((state) => state.motionScale)
 
   const [mode, setMode] = useState<Mode>('login')
   const [name, setName] = useState('')
@@ -99,7 +101,7 @@ export function Auth() {
     setError(null)
     setSubmitting(true)
     login({ name: 'Sera Valen', email })
-    window.setTimeout(() => navigate('/worlds'), prefersReducedMotion() ? 120 : 780)
+    window.setTimeout(() => navigate('/worlds'), prefersReducedMotion() ? 120 : 780 * motionScale)
   }
 
   const imageTransform = mode === 'signup' ? 'translateX(100%)' : 'translateX(0%)'

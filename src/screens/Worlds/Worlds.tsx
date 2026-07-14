@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { AnimatePresence } from 'motion/react'
 import { useNavigate } from 'react-router-dom'
 import { UserMenu } from '../../components/UserMenu/UserMenu'
 import type { World } from '../../domain/types'
@@ -118,7 +119,9 @@ export function Worlds() {
         )}
       </section>
 
-      {creating && <CreateWorldModal onCancel={() => setCreating(false)} onCreate={handleCreate} />}
+      <AnimatePresence>
+        {creating && <CreateWorldModal onCancel={() => setCreating(false)} onCreate={handleCreate} />}
+      </AnimatePresence>
     </main>
   )
 }

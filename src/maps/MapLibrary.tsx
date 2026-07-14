@@ -1,14 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
 import { Link, useParams } from 'react-router-dom'
 import type { Page, World } from '../domain/types'
 import { getRepository } from '../state/repository'
 import { deleteMap, reparentMap, resolveMapImage, setRootMap, type MapCollectionState } from './mapDomain'
 import { persistMapCollection } from './mapPersistence'
 import styles from './MapLibrary.module.css'
+import { overlayExitTransition } from '../components/motionPrefs'
+import { useUiStore } from '../state/uiStore'
 
 type LoadState = 'loading' | 'ready' | 'missing' | 'error'
 
 export function MapLibrary() {
+  const motionScale = useUiStore((state) => state.motionScale)
   const { world: worldSlug = '' } = useParams()
   const repository = getRepository()
   const [loadState, setLoadState] = useState<LoadState>('loading')
@@ -123,8 +127,9 @@ export function MapLibrary() {
         </section>
       )}
 
+      <AnimatePresence>
       {mapPendingDeletion && (
-        <div className={styles.scrim}>
+        <motion.div className={styles.scrim} initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={overlayExitTransition(motionScale)}>
           <section role="dialog" aria-label={`Delete ${mapPendingDeletion.title}`} className={styles.confirm}>
             <span>Delete Map</span>
             <h2>{mapPendingDeletion.title}</h2>
@@ -142,8 +147,9 @@ export function MapLibrary() {
               >Delete Map</button>
             </div>
           </section>
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
     </main>
   )
 }

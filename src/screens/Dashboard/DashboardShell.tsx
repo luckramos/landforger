@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { AnimatePresence } from 'motion/react'
 import { Link, matchPath, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ReferenceCanvasPanel } from '../../canvas/ReferenceCanvasPanel'
 import { UserMenu } from '../../components/UserMenu/UserMenu'
@@ -221,6 +222,7 @@ export function DashboardShell() {
         </div>
       </div>
 
+      <AnimatePresence>
       {panel === 'timeline' && (
         <TimelinePanel
           world={world}
@@ -249,6 +251,7 @@ export function DashboardShell() {
       {searchOpen && (
         <SpotlightSearch pages={pages} worldSlug={world.slug} onClose={() => setSearchOpen(false)} />
       )}
+      </AnimatePresence>
     </div>
   )
 }

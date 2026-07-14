@@ -2,7 +2,8 @@ import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSessionStore } from '../../state/sessionStore'
-import { prefersReducedMotion } from '../motionPrefs'
+import { useUiStore } from '../../state/uiStore'
+import { overlayExitTransition } from '../motionPrefs'
 import styles from './UserMenu.module.css'
 
 const FALLBACK_USER = { name: 'Sera Valen', email: 'sera@landforger.io' }
@@ -27,11 +28,19 @@ export function UserMenu() {
   const navigate = useNavigate()
   const user = useSessionStore((s) => s.user) ?? FALLBACK_USER
   const logout = useSessionStore((s) => s.logout)
+  const motionScale = useUiStore((s) => s.motionScale)
+  const bodyFont = useUiStore((s) => s.bodyFont)
+  const activateUser = useUiStore((s) => s.activateUser)
+  const setMotionScale = useUiStore((s) => s.setMotionScale)
+  const setBodyFont = useUiStore((s) => s.setBodyFont)
 
   const [open, setOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [position, setPosition] = useState({ top: 0, right: 0 })
   const buttonRef = useRef<HTMLButtonElement>(null)
   const popRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => activateUser(user.email), [activateUser, user.email])
 
   function toggle() {
     if (!open) {
@@ -82,7 +91,7 @@ export function UserMenu() {
             role="menu"
             initial={false}
             exit={{ opacity: 0 }}
-            transition={{ duration: prefersReducedMotion() ? 0 : 0.14, ease: 'easeOut' }}
+            transition={overlayExitTransition(motionScale)}
           >
             <div className={styles.userBlock}>
               <span className={styles.userName}>{user.name}</span>
@@ -91,9 +100,48 @@ export function UserMenu() {
             <button type="button" role="menuitem" className={styles.item}>
               Profile
             </button>
-            <button type="button" role="menuitem" className={styles.item}>
+            <button
+              type="button"
+              role="menuitem"
+              className={styles.item}
+              aria-expanded={settingsOpen}
+              onClick={() => setSettingsOpen((current) => !current)}
+            >
               Settings
             </button>
+            {settingsOpen && (
+              <section className={styles.settings} aria-label="User settings">
+                <label className={styles.motionSetting}>
+                  <span><b>Motion intensity</b><output>{motionScale.toFixed(1)}×</output></span>
+                  <input
+                    type="range"
+                    min="0.5"
+                    max="1.5"
+                    step="0.1"
+                    value={motionScale}
+                    aria-label="Motion intensity"
+                    onChange={(event) => setMotionScale(event.currentTarget.valueAsNumber)}
+                  />
+                  <small>Higher values make transitions slower.</small>
+                </label>
+                <fieldset className={styles.fontSetting}>
+                  <legend>Page body font</legend>
+                  {(['serif', 'sans'] as const).map((font) => (
+                    <label key={font} data-selected={bodyFont === font || undefined}>
+                      <input
+                        type="radio"
+                        name="body-font"
+                        value={font}
+                        checked={bodyFont === font}
+                        aria-label={font === 'serif' ? 'Serif' : 'Sans'}
+                        onChange={() => setBodyFont(font)}
+                      />
+                      {font === 'serif' ? 'Serif' : 'Sans'}
+                    </label>
+                  ))}
+                </fieldset>
+              </section>
+            )}
             <div className={styles.divider} role="separator" />
             <button type="button" role="menuitem" className={`${styles.item} ${styles.danger}`} onClick={handleLogout}>
               Log out

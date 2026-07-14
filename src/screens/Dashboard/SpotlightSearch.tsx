@@ -1,4 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { motion } from 'motion/react'
+import { overlayExitTransition } from '../../components/motionPrefs'
+import { useUiStore } from '../../state/uiStore'
 import { useNavigate } from 'react-router-dom'
 import type { Page } from '../../domain/types'
 import type { SpotlightResult } from '../../search/spotlightSearch'
@@ -20,6 +23,7 @@ function HighlightedTitle({ title, indices }: { title: string; indices: readonly
 }
 
 export function SpotlightSearch({ pages, worldSlug, onClose }: SpotlightSearchProps) {
+  const motionScale = useUiStore((state) => state.motionScale)
   const [query, setQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -46,7 +50,7 @@ export function SpotlightSearch({ pages, worldSlug, onClose }: SpotlightSearchPr
   }
 
   return (
-    <div className={styles.scrim} role="presentation" onMouseDown={onClose}>
+    <motion.div className={styles.scrim} role="presentation" onMouseDown={onClose} initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={overlayExitTransition(motionScale)}>
       <section
         className={styles.panel}
         role="dialog"
@@ -120,6 +124,6 @@ export function SpotlightSearch({ pages, worldSlug, onClose }: SpotlightSearchPr
           <span><kbd>ESC</kbd> Close</span>
         </footer>
       </section>
-    </div>
+    </motion.div>
   )
 }

@@ -85,7 +85,7 @@ describe('relationship graph panel', () => {
 
     fireEvent.click(sera)
     expect(await screen.findByRole('heading', { name: 'Sera Valen' })).toBeTruthy()
-    expect(screen.queryByRole('dialog', { name: 'Relationship graph' })).toBeNull()
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Relationship graph' })).toBeNull())
   })
 
   it('updates edges after repository mutations and supports pan/zoom controls', async () => {

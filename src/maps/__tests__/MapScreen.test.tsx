@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { LocalStorageWorldRepository } from '../../repository/LocalStorageWorldRepository'
 import { fixtureFiles } from '../../repository/fixtures'
 import { AppRoutes } from '../../routes'
@@ -102,6 +102,19 @@ describe('Maps viewing screen', () => {
     expect(await screen.findByRole('heading', { name: 'The Drowned Coast' })).toBeTruthy()
     expect(screen.getByTestId('map-stage').getAttribute('data-transition')).toBe('out')
     expect(screen.getByTestId('map-stage').style.transformOrigin).toBe('40% 58%')
+  })
+
+  it('plays the Maps navigation burst before opening a full Page', async () => {
+    await renderAt('/w/ninth-vale/map')
+    fireEvent.click(await screen.findByRole('button', { name: 'Duskwater' }))
+    const inspector = screen.getByRole('complementary', { name: 'Pin inspector' })
+    vi.useFakeTimers()
+    fireEvent.click(within(inspector).getByRole('link', { name: 'Open full page' }))
+
+    expect(screen.getByRole('status', { name: 'Opening Duskwater' })).toBeTruthy()
+    await act(async () => vi.advanceTimersByTime(640))
+    vi.useRealTimers()
+    expect(await screen.findByRole('heading', { name: 'Duskwater' })).toBeTruthy()
   })
 
   it('resolves a Page deep link to its Map with the matching Pin selected', async () => {
@@ -224,7 +237,13 @@ describe('Maps viewing screen', () => {
     })
     const firstImage = screen.getByRole('img', { name: 'Map of The Drowned Coast' }).getAttribute('src')!
     fireEvent.change(within(dialog).getByLabelText('Upload image for All Eras'), { target: { files: [new File(['replacement'], 'new.png', { type: 'image/png' })] } })
-    await waitFor(() => expect(screen.getByRole('img', { name: 'Map of The Drowned Coast' }).getAttribute('src')).not.toBe(firstImage))
-    expect(document.querySelector(`img[src="${firstImage}"]`)).toBeTruthy()
+    // Both conditions must be observed in the same poll: the new image having
+    // swapped in and the old one still crossfading out (560ms*motionScale+40ms
+    // window, see MapScreen's `fadingFromImage`). Checking them separately
+    // leaves a gap where the crossfade can finish before the second check runs.
+    await waitFor(() => {
+      expect(screen.getByRole('img', { name: 'Map of The Drowned Coast' }).getAttribute('src')).not.toBe(firstImage)
+      expect(document.querySelector(`img[src="${firstImage}"]`)).toBeTruthy()
+    })
   })
 })
