@@ -237,7 +237,13 @@ describe('Maps viewing screen', () => {
     })
     const firstImage = screen.getByRole('img', { name: 'Map of The Drowned Coast' }).getAttribute('src')!
     fireEvent.change(within(dialog).getByLabelText('Upload image for All Eras'), { target: { files: [new File(['replacement'], 'new.png', { type: 'image/png' })] } })
-    await waitFor(() => expect(screen.getByRole('img', { name: 'Map of The Drowned Coast' }).getAttribute('src')).not.toBe(firstImage))
-    expect(document.querySelector(`img[src="${firstImage}"]`)).toBeTruthy()
+    // Both conditions must be observed in the same poll: the new image having
+    // swapped in and the old one still crossfading out (560ms*motionScale+40ms
+    // window, see MapScreen's `fadingFromImage`). Checking them separately
+    // leaves a gap where the crossfade can finish before the second check runs.
+    await waitFor(() => {
+      expect(screen.getByRole('img', { name: 'Map of The Drowned Coast' }).getAttribute('src')).not.toBe(firstImage)
+      expect(document.querySelector(`img[src="${firstImage}"]`)).toBeTruthy()
+    })
   })
 })
