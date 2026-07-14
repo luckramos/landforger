@@ -19,6 +19,7 @@
 .mapArea { position: relative; min-height: 0; overflow: hidden; }
 .viewport { position: absolute; inset: 0; overflow: hidden; cursor: grab; background: radial-gradient(circle at 50% 45%,#17140f,#070706 70%); touch-action: none; }
 .viewport[data-dragging] { cursor: grabbing; }
+.viewport[data-dragging] .stage { transition: none; }
 .stage { position: absolute; left: calc(50% - 800px); top: calc(50% - 540px); width: 1600px; height: 1080px; will-change: transform; transition: transform calc(var(--mo,1) * 180ms) var(--ease-house); }
 .stage[data-transition="in"] { animation: map-zoom-in calc(var(--mo,1) * 600ms) var(--ease-map-zoom) both; }
 .stage[data-transition="out"] { animation: map-zoom-out calc(var(--mo,1) * 600ms) var(--ease-map-zoom) both; }
