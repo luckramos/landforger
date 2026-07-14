@@ -162,7 +162,7 @@ export class LocalStorageWorldRepository implements WorldRepository {
     const raw = this.storage.getItem(worldKey(worldSlug))
     if (!raw) return undefined
     const parsed = worldFromMarkdown(raw)
-    const normalized = normalizeWorldTimeline(parsed)
+    const normalized = normalizeWorldTimeline(parsed, this.eraPageSlugs(worldSlug))
     if (normalized !== parsed) this.writeWorld(normalized)
     return normalized
   }
@@ -191,7 +191,7 @@ export class LocalStorageWorldRepository implements WorldRepository {
       slug: world.slug,
       created: world.created,
       updated: new Date().toISOString(),
-    })
+    }, this.eraPageSlugs(worldSlug))
     this.writeWorld(updated)
     return updated
   }
@@ -240,6 +240,18 @@ export class LocalStorageWorldRepository implements WorldRepository {
     this.storage.setItem(pageKey(worldSlug, page.slug), pageToMarkdown(page))
   }
 
+  private eraPageSlugs(worldSlug: string): string[] {
+    return this.pageSlugs(worldSlug).filter((slug) => this.readPage(worldSlug, slug)?.category === 'eras')
+  }
+
+  private setEraMembership(worldSlug: string, pageSlug: string, isEra: boolean, updated: string): void {
+    const world = this.readWorld(worldSlug)
+    if (!world) throw new Error(`No such World: ${worldSlug}`)
+    const withoutPage = world.eraOrder.filter((slug) => slug !== pageSlug)
+    const eraOrder = isEra ? [...withoutPage, pageSlug] : withoutPage
+    this.writeWorld(normalizeWorldTimeline({ ...world, eraOrder, updated }, this.eraPageSlugs(worldSlug)))
+  }
+
   async listPages(worldSlug: string): Promise<Page[]> {
     return this.pageSlugs(worldSlug)
       .map((slug) => this.readPage(worldSlug, slug))
@@ -274,17 +286,7 @@ export class LocalStorageWorldRepository implements WorldRepository {
     }
     this.writePage(worldSlug, page)
     this.writePageSlugs(worldSlug, [...existingSlugs, slug])
-    if (page.category === 'eras') {
-      const world = this.readWorld(worldSlug)
-      if (!world) throw new Error(`No such World: ${worldSlug}`)
-      this.writeWorld(
-        normalizeWorldTimeline({
-          ...world,
-          eraOrder: [...world.eraOrder, page.slug],
-          updated: now,
-        }),
-      )
-    }
+    if (page.category === 'eras') this.setEraMembership(worldSlug, page.slug, true, now)
     return page
   }
 
@@ -301,14 +303,7 @@ export class LocalStorageWorldRepository implements WorldRepository {
     }
     this.writePage(worldSlug, updated)
     if (page.category !== updated.category && (page.category === 'eras' || updated.category === 'eras')) {
-      const world = this.readWorld(worldSlug)
-      if (world) {
-        const eraOrder =
-          updated.category === 'eras'
-            ? [...world.eraOrder.filter((slug) => slug !== pageSlug), pageSlug]
-            : world.eraOrder.filter((slug) => slug !== pageSlug)
-        this.writeWorld(normalizeWorldTimeline({ ...world, eraOrder, updated: updated.updated }))
-      }
+      this.setEraMembership(worldSlug, pageSlug, updated.category === 'eras', updated.updated)
     }
     return updated
   }
@@ -323,15 +318,7 @@ export class LocalStorageWorldRepository implements WorldRepository {
     )
     const world = this.readWorld(worldSlug)
     if (world?.eraOrder.includes(pageSlug) || page?.category === 'eras') {
-      if (world) {
-        this.writeWorld(
-          normalizeWorldTimeline({
-            ...world,
-            eraOrder: world.eraOrder.filter((slug) => slug !== pageSlug),
-            updated: new Date().toISOString(),
-          }),
-        )
-      }
+      this.setEraMembership(worldSlug, pageSlug, false, new Date().toISOString())
     }
   }
 }

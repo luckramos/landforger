@@ -13,9 +13,15 @@ export function normalizeActiveEra(eraOrder: string[], activeEra: string): strin
   return eraOrder.at(-1) ?? ''
 }
 
-export function normalizeWorldTimeline(world: World): World {
+export function normalizeWorldTimeline(world: World, actualEraSlugs?: readonly string[]): World {
   const eraOrder = [...new Set(world.eraOrder)]
-  const activeEra = normalizeActiveEra(eraOrder, world.activeEra)
+  // When Page documents are available, Active Era must resolve to a real Era
+  // Page. The fallback without this list keeps the codec/domain helper useful
+  // while a repository is in the middle of an atomic Era creation.
+  const eligibleOrder = actualEraSlugs !== undefined
+    ? eraOrder.filter((slug) => actualEraSlugs.includes(slug))
+    : eraOrder
+  const activeEra = normalizeActiveEra(eligibleOrder, world.activeEra)
   return eraOrder.length === world.eraOrder.length && activeEra === world.activeEra
     ? world
     : { ...world, eraOrder, activeEra }

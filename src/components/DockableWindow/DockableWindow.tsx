@@ -1,6 +1,7 @@
 import { motion } from 'motion/react'
-import type { PointerEvent as ReactPointerEvent, ReactNode } from 'react'
+import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useUiStore } from '../../state/uiStore'
 import { prefersReducedMotion } from '../motionPrefs'
 import styles from './DockableWindow.module.css'
 
@@ -25,6 +26,8 @@ export interface DockableWindowProps {
   onClose: () => void
   toolbar?: ReactNode
   initialState?: 'fullscreen' | 'floating'
+  icon?: ReactNode
+  accent?: string
 }
 
 const MIN_WIDTH = 560
@@ -69,12 +72,15 @@ export function DockableWindow({
   onClose,
   toolbar,
   initialState = 'fullscreen',
+  icon = '▱',
+  accent = 'var(--bronze)',
 }: DockableWindowProps) {
   const [mode, setMode] = useState<'fullscreen' | 'floating'>(initialState)
   const [minimized, setMinimized] = useState(false)
   const [floating, setFloating] = useState(defaultFloatingGeometry)
   const [pointerOperation, setPointerOperation] = useState<PointerOperation>()
   const floatingRef = useRef(floating)
+  const motionScale = useUiStore((state) => state.motionScale)
   floatingRef.current = floating
 
   useEffect(() => {
@@ -121,6 +127,7 @@ export function DockableWindow({
 
   const beginPointerOperation = (kind: PointerOperation['kind'], event: ReactPointerEvent) => {
     if (mode !== 'floating' || minimized || event.button !== 0) return
+    if (kind === 'drag' && (event.target as HTMLElement).closest('button, input, textarea, select, a, [role="button"]')) return
     event.preventDefault()
     setPointerOperation({ kind, startX: event.clientX, startY: event.clientY, geometry: floatingRef.current })
   }
@@ -136,17 +143,17 @@ export function DockableWindow({
       aria-label={title}
       data-dock-state={dockState}
       data-dragging={pointerOperation ? 'true' : undefined}
-      initial={{ ...geometry, opacity: 0, borderRadius: mode === 'fullscreen' && !minimized ? 0 : 12 }}
-      animate={{ ...geometry, opacity: 1, borderRadius: mode === 'fullscreen' && !minimized ? 0 : 12 }}
-      exit={{ opacity: 0, transition: { duration: reduced ? 0 : 0.14, ease: 'easeOut' } }}
-      transition={{ duration: reduced || pointerOperation ? 0 : 0.34, ease: [0.22, 0.61, 0.36, 1] }}
+      style={{ '--dock-accent': accent } as CSSProperties}
+      initial={false}
+      animate={{ ...geometry, borderRadius: mode === 'fullscreen' && !minimized ? 0 : 12 }}
+      transition={{ duration: reduced || pointerOperation ? 0 : 0.34 * motionScale, ease: [0.22, 0.61, 0.36, 1] }}
     >
       <header
         className={styles.header}
         data-testid="dockable-drag-handle"
         onPointerDown={(event) => beginPointerOperation('drag', event)}
       >
-        <span className={styles.mark}>◴</span>
+        <span className={styles.mark}>{icon}</span>
         <div className={styles.heading}>
           <h2>{title}</h2>
           {subtitle && <p>{subtitle}</p>}
@@ -170,7 +177,7 @@ export function DockableWindow({
           <button type="button" aria-label={`Close ${title}`} onClick={onClose}>×</button>
         </div>
       </header>
-      {!minimized && <div className={styles.body}>{children}</div>}
+      <div className={styles.body} aria-hidden={minimized || undefined}>{children}</div>
       {!minimized && mode === 'floating' && (
         <button
           type="button"

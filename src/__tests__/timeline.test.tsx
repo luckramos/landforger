@@ -71,10 +71,13 @@ describe('Timeline panel', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: 'Manage order' }))
 
     const first = within(dialog).getByTestId('manage-era-era-founding')
+    const displaced = within(dialog).getByTestId('manage-era-era-charts')
     const last = within(dialog).getByTestId('manage-era-era-saltcinder')
-    fireEvent.dragStart(first)
-    fireEvent.dragEnter(last)
-    fireEvent.dragEnd(first)
+    fireEvent.pointerDown(within(first).getByRole('button', { name: 'Reorder The Founding Tides' }), { clientY: 100 })
+    fireEvent.pointerMove(document, { clientY: 292 })
+    expect(displaced.style.transform).toBe('translateY(-64px)')
+    expect(last.getAttribute('data-drop-before')).toBe('true')
+    fireEvent.pointerUp(document)
 
     await waitFor(async () =>
       expect((await repository.getWorld('ninth-vale'))?.eraOrder).toEqual([

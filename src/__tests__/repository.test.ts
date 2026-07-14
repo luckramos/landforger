@@ -35,6 +35,20 @@ const basePage: Page = {
   body: 'A character for tests.\n',
 }
 
+const baseEraPage: Page = {
+  ...basePage,
+  slug: 'era-one',
+  category: 'eras',
+  title: 'The First Era',
+  eras: [],
+}
+
+const secondEraPage: Page = {
+  ...baseEraPage,
+  slug: 'era-two',
+  title: 'The Second Era',
+}
+
 function fixturesFor(world: World, pages: Page[]): FixtureFiles {
   const files: FixtureFiles = { [`/src/fixtures/worlds/${world.slug}/_world.md`]: worldToMarkdown(world) }
   for (const page of pages) {
@@ -186,7 +200,7 @@ describe('LocalStorageWorldRepository — Page CRUD', () => {
 
 describe('LocalStorageWorldRepository — World mutations', () => {
   it('persists era order, active era, templates, maps and pins via updateWorld', async () => {
-    const repo = new LocalStorageWorldRepository(storage, fixturesFor(baseWorld, [basePage]))
+    const repo = new LocalStorageWorldRepository(storage, fixturesFor(baseWorld, [basePage, baseEraPage, secondEraPage]))
     const updated = await repo.updateWorld('testland', {
       eraOrder: ['era-one', 'era-two'],
       activeEra: 'era-two',
@@ -198,24 +212,31 @@ describe('LocalStorageWorldRepository — World mutations', () => {
 
   it('defaults an invalid Active Era to the last Era and keeps it across repository reloads', async () => {
     const world = { ...baseWorld, eraOrder: ['era-one', 'era-two'], activeEra: 'missing-era' }
-    const repo = new LocalStorageWorldRepository(storage, fixturesFor(world, [basePage]))
+    const repo = new LocalStorageWorldRepository(storage, fixturesFor(world, [basePage, baseEraPage, secondEraPage]))
 
     expect((await repo.getWorld('testland'))?.activeEra).toBe('era-two')
-    const reloaded = new LocalStorageWorldRepository(storage, fixturesFor(baseWorld, [basePage]))
+    const reloaded = new LocalStorageWorldRepository(storage, fixturesFor(baseWorld, [basePage, baseEraPage, secondEraPage]))
     expect((await reloaded.getWorld('testland'))?.activeEra).toBe('era-two')
   })
 
+  it('never treats a non-Era Page in eraOrder as the Active Era', async () => {
+    const world = { ...baseWorld, eraOrder: ['era-one', 'alaric'], activeEra: 'alaric' }
+    const repo = new LocalStorageWorldRepository(storage, fixturesFor(world, [basePage, baseEraPage]))
+
+    expect((await repo.getWorld('testland'))?.activeEra).toBe('era-one')
+  })
+
   it('persists reordered Eras while preserving the current Active Era', async () => {
-    const repo = new LocalStorageWorldRepository(storage, fixturesFor(baseWorld, [basePage]))
+    const repo = new LocalStorageWorldRepository(storage, fixturesFor(baseWorld, [basePage, baseEraPage, secondEraPage]))
     await repo.updateWorld('testland', { eraOrder: ['era-two', 'era-one'] })
 
-    const reloaded = new LocalStorageWorldRepository(storage, fixturesFor(baseWorld, [basePage]))
+    const reloaded = new LocalStorageWorldRepository(storage, fixturesFor(baseWorld, [basePage, baseEraPage, secondEraPage]))
     expect((await reloaded.getWorld('testland'))?.eraOrder).toEqual(['era-two', 'era-one'])
     expect((await reloaded.getWorld('testland'))?.activeEra).toBe('era-one')
   })
 
   it('adds newly created Era Pages to the timeline and removes deleted Eras from it', async () => {
-    const repo = new LocalStorageWorldRepository(storage, fixturesFor(baseWorld, [basePage]))
+    const repo = new LocalStorageWorldRepository(storage, fixturesFor(baseWorld, [basePage, baseEraPage]))
     const created = await repo.createPage('testland', {
       title: 'The Second Era',
       category: 'eras',
@@ -228,7 +249,7 @@ describe('LocalStorageWorldRepository — World mutations', () => {
   })
 
   it('keeps the timeline coherent when a Page changes to or from the Eras Category', async () => {
-    const repo = new LocalStorageWorldRepository(storage, fixturesFor(baseWorld, [basePage]))
+    const repo = new LocalStorageWorldRepository(storage, fixturesFor(baseWorld, [basePage, baseEraPage]))
     const promoted = await repo.createPage('testland', { title: 'Promoted Chapter', category: 'events' })
 
     await repo.updatePage('testland', promoted.slug, { category: 'eras' })

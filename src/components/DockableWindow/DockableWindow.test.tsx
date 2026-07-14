@@ -18,7 +18,8 @@ describe('DockableWindow', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Minimize window' }))
     expect(window.getAttribute('data-dock-state')).toBe('minimized')
-    expect(screen.queryByText('Timeline body')).toBeNull()
+    expect(screen.getByText('Timeline body')).toBeTruthy()
+    expect(screen.getByText('Timeline body').parentElement?.getAttribute('aria-hidden')).toBe('true')
 
     fireEvent.click(screen.getByRole('button', { name: 'Restore window' }))
     expect(window.getAttribute('data-dock-state')).toBe('floating')
@@ -39,5 +40,14 @@ describe('DockableWindow', () => {
     fireEvent.pointerMove(document, { clientX: 240, clientY: 130 })
     fireEvent.pointerUp(document)
     expect(window.getAttribute('data-dragging')).toBeNull()
+
+    const maximize = screen.getByRole('button', { name: 'Maximize window' })
+    fireEvent.pointerDown(maximize, { clientX: 10, clientY: 10 })
+    expect(window.getAttribute('data-dragging')).toBeNull()
+
+    const resize = screen.getByRole('button', { name: 'Resize window' })
+    fireEvent.pointerDown(resize, { clientX: 800, clientY: 600 })
+    expect(window.getAttribute('data-dragging')).toBe('true')
+    fireEvent.pointerUp(document)
   })
 })

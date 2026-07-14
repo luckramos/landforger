@@ -1,10 +1,11 @@
-import type { FormEvent } from 'react'
+import type { FormEvent, PointerEvent as ReactPointerEvent } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { DockableWindow } from '../components/DockableWindow/DockableWindow'
 import { prefersReducedMotion } from '../components/motionPrefs'
 import { buildTimeline, reorderEras } from '../domain/timeline'
 import type { Page, World } from '../domain/types'
 import type { WorldRepository } from '../repository/WorldRepository'
+import { useUiStore } from '../state/uiStore'
 import styles from './TimelinePanel.module.css'
 
 export interface TimelinePanelProps {
@@ -17,6 +18,7 @@ export interface TimelinePanelProps {
 }
 
 type Mode = 'timeline' | 'manage'
+interface EraDrag { from: number; over: number; dy: number }
 
 export function TimelinePanel({ world, pages, repository, focusPage, onClose, onNavigatePage }: TimelinePanelProps) {
   const [currentWorld, setCurrentWorld] = useState(world)
@@ -26,17 +28,19 @@ export function TimelinePanel({ world, pages, repository, focusPage, onClose, on
   const [occurrence, setOccurrence] = useState(0)
   const [pulseEra, setPulseEra] = useState<string>()
   const [createOpen, setCreateOpen] = useState(false)
-  const [dragOver, setDragOver] = useState<number>()
-  const dragFromRef = useRef<number | undefined>(undefined)
-  const dragOverRef = useRef<number | undefined>(undefined)
+  const [eraDrag, setEraDrag] = useState<EraDrag>()
+  const eraDragRef = useRef<EraDrag | undefined>(undefined)
+  const eraDragCleanupRef = useRef<() => void>(() => {})
   const scrollRef = useRef<HTMLDivElement>(null)
+  const motionScale = useUiStore((state) => state.motionScale)
 
   useEffect(() => setCurrentWorld(world), [world])
   useEffect(() => setCurrentPages(pages), [pages])
+  useEffect(() => () => eraDragCleanupRef.current(), [])
 
   const timeline = useMemo(() => buildTimeline(currentWorld, currentPages), [currentPages, currentWorld])
   const focus = focusPage ? currentPages.find((page) => page.slug === focusPage) : undefined
-  const occurrences = focus ? currentWorld.eraOrder.filter((eraSlug) => focus.eras.includes(eraSlug)) : []
+  const occurrences = focus ? timeline.map((era) => era.page.slug).filter((eraSlug) => focus.eras.includes(eraSlug)) : []
   const activeEraTitle = timeline.find((era) => era.page.slug === currentWorld.activeEra)?.page.title
 
   useEffect(() => setOccurrence(0), [focusPage])
@@ -45,36 +49,65 @@ export function TimelinePanel({ world, pages, repository, focusPage, onClose, on
     const eraSlug = occurrences[occurrence]
     if (!eraSlug) return
     let cancelScroll = () => {}
+    const reduced = prefersReducedMotion()
     setExpanded((current) => new Set(current).add(eraSlug))
-    setPulseEra(eraSlug)
-    const pulseTimer = window.setTimeout(() => setPulseEra((current) => (current === eraSlug ? undefined : current)), 1000)
+    if (!reduced) setPulseEra(eraSlug)
+    const pulseTimer = window.setTimeout(
+      () => setPulseEra((current) => (current === eraSlug ? undefined : current)),
+      reduced ? 0 : 1000 * motionScale,
+    )
     const scrollTimer = window.setTimeout(() => {
-      cancelScroll = scrollToEra(scrollRef.current, eraSlug)
-    }, 90)
+      cancelScroll = scrollToEra(scrollRef.current, eraSlug, motionScale)
+    }, reduced ? 0 : 90 * motionScale)
     return () => {
       window.clearTimeout(pulseTimer)
       window.clearTimeout(scrollTimer)
       cancelScroll()
     }
-  }, [occurrence, occurrences.join('|')])
+  }, [motionScale, occurrence, occurrences.join('|')])
 
   const setActiveEra = async (eraSlug: string) => {
     const updated = await repository.updateWorld(currentWorld.slug, { activeEra: eraSlug })
     setCurrentWorld(updated)
   }
 
-  const finishReorder = async () => {
-    const from = dragFromRef.current
-    const to = dragOverRef.current
-    dragFromRef.current = undefined
-    dragOverRef.current = undefined
-    setDragOver(undefined)
-    if (from === undefined || to === undefined) return
+  const persistReorder = async (from: number, to: number) => {
     const eraOrder = reorderEras(currentWorld.eraOrder, from, to)
     if (eraOrder === currentWorld.eraOrder) return
     setCurrentWorld((current) => ({ ...current, eraOrder }))
     const updated = await repository.updateWorld(currentWorld.slug, { eraOrder })
     setCurrentWorld(updated)
+  }
+
+  const beginEraDrag = (from: number, event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (event.button !== 0) return
+    event.preventDefault()
+    eraDragCleanupRef.current()
+    const startY = event.clientY
+    const initial = { from, over: from, dy: 0 }
+    eraDragRef.current = initial
+    setEraDrag(initial)
+    const move = (pointerEvent: PointerEvent) => {
+      const dy = pointerEvent.clientY - startY
+      const over = Math.max(0, Math.min(currentWorld.eraOrder.length - 1, from + Math.round(dy / 64)))
+      const next = { from, over, dy }
+      eraDragRef.current = next
+      setEraDrag(next)
+    }
+    const finish = () => {
+      eraDragCleanupRef.current()
+      const completed = eraDragRef.current
+      eraDragRef.current = undefined
+      setEraDrag(undefined)
+      if (completed) void persistReorder(completed.from, completed.over)
+    }
+    document.addEventListener('pointermove', move)
+    document.addEventListener('pointerup', finish, { once: true })
+    eraDragCleanupRef.current = () => {
+      document.removeEventListener('pointermove', move)
+      document.removeEventListener('pointerup', finish)
+      eraDragCleanupRef.current = () => {}
+    }
   }
 
   const createEra = async (input: { title: string; dateLabel: string; summary: string }) => {
@@ -115,6 +148,8 @@ export function TimelinePanel({ world, pages, repository, focusPage, onClose, on
       subtitle={`${timeline.length} ${timeline.length === 1 ? 'Era' : 'Eras'}`}
       onClose={onClose}
       toolbar={toolbar}
+      icon="◴"
+      accent="var(--cat-eras)"
     >
       <div className={styles.panel}>
         <div className={styles.activeBar}>
@@ -137,7 +172,7 @@ export function TimelinePanel({ world, pages, repository, focusPage, onClose, on
                   data-pulse={pulseEra === era.page.slug ? 'true' : undefined}
                   data-testid={`timeline-era-${era.page.slug}`}
                   data-era={era.page.slug}
-                  style={{ animationDelay: `${Math.min(index, 8) * 55}ms` }}
+                  style={{ animationDelay: `calc(var(--mo, 1) * ${Math.min(index, 8) * 55}ms)` }}
                 >
                   <div className={styles.rail} aria-hidden="true"><i /><span /></div>
                   <div className={styles.card}>
@@ -205,21 +240,11 @@ export function TimelinePanel({ world, pages, repository, focusPage, onClose, on
                 key={era.page.slug}
                 className={styles.manageRow}
                 data-testid={`manage-era-${era.page.slug}`}
-                data-drop-before={dragOver === index || undefined}
-                draggable
-                onDragStart={() => {
-                  dragFromRef.current = index
-                  dragOverRef.current = index
-                }}
-                onDragEnter={(event) => {
-                  event.preventDefault()
-                  dragOverRef.current = index
-                  setDragOver(index)
-                }}
-                onDragOver={(event) => event.preventDefault()}
-                onDragEnd={() => void finishReorder()}
+                data-drop-before={eraDrag?.over === index || undefined}
+                data-dragging={eraDrag?.from === index || undefined}
+                style={{ transform: manageRowTransform(index, eraDrag) }}
               >
-                <span className={styles.grip}>⠿</span>
+                <button type="button" className={styles.grip} aria-label={`Reorder ${era.page.title}`} onPointerDown={(event) => beginEraDrag(index, event)}>⠿</button>
                 <span className={styles.order}>{String(index + 1).padStart(2, '0')}</span>
                 <span><strong>{era.page.title}</strong><small>{era.dateLabel}</small></span>
                 {currentWorld.activeEra === era.page.slug && <b>Active Era</b>}
@@ -277,7 +302,7 @@ function toggleSet(current: Set<string>, value: string): Set<string> {
   return next
 }
 
-function scrollToEra(container: HTMLDivElement | null, eraSlug: string): () => void {
+function scrollToEra(container: HTMLDivElement | null, eraSlug: string, motionScale: number): () => void {
   const target = container?.querySelector<HTMLElement>(`[data-era="${eraSlug}"]`)
   if (!container || !target) return () => {}
   const destination = Math.max(0, target.offsetTop - 24)
@@ -287,7 +312,7 @@ function scrollToEra(container: HTMLDivElement | null, eraSlug: string): () => v
   }
   const start = container.scrollTop
   const distance = destination - start
-  const duration = Math.min(560, 220 + Math.abs(distance) * 0.45)
+  const duration = Math.min(560, 220 + Math.abs(distance) * 0.45) * motionScale
   const startedAt = performance.now()
   let frame = 0
   const tick = (now: number) => {
@@ -297,4 +322,13 @@ function scrollToEra(container: HTMLDivElement | null, eraSlug: string): () => v
   }
   frame = requestAnimationFrame(tick)
   return () => cancelAnimationFrame(frame)
+}
+
+function manageRowTransform(index: number, drag?: EraDrag): string | undefined {
+  if (!drag) return undefined
+  if (index === drag.from) return `translateY(${drag.dy}px) scale(1.01)`
+  if (drag.from === drag.over) return undefined
+  if (drag.from < drag.over && index > drag.from && index <= drag.over) return 'translateY(-64px)'
+  if (drag.from > drag.over && index >= drag.over && index < drag.from) return 'translateY(64px)'
+  return undefined
 }

@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AnimatePresence } from 'motion/react'
 import { Link, matchPath, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { UserMenu } from '../../components/UserMenu/UserMenu'
 import type { Page, World } from '../../domain/types'
@@ -220,19 +219,16 @@ export function DashboardShell() {
         </div>
       </div>
 
-      <AnimatePresence>
-        {panel === 'timeline' && (
-          <TimelinePanel
-            key="timeline"
-            world={world}
-            pages={pages}
-            repository={repository}
-            focusPage={focusedTimelinePage}
-            onClose={closePanel}
-            onNavigatePage={(slug) => navigate(`/w/${world.slug}/p/${slug}?panel=timeline`)}
-          />
-        )}
-      </AnimatePresence>
+      {panel === 'timeline' && (
+        <TimelinePanel
+          world={world}
+          pages={pages}
+          repository={repository}
+          focusPage={focusedTimelinePage}
+          onClose={closePanel}
+          onNavigatePage={(slug) => navigate(`/w/${world.slug}/p/${slug}?panel=timeline`)}
+        />
+      )}
 
       {searchOpen && (
         <div className={styles.searchScrim} role="presentation" onMouseDown={() => setSearchOpen(false)}>

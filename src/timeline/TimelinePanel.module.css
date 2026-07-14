@@ -16,7 +16,7 @@
 .rail i { position: relative; z-index: 2; width: 13px; height: 13px; margin-top: 24px; border: 3px solid var(--bg); border-radius: 50%; background: var(--cat-eras); box-shadow: 0 0 0 1px color-mix(in oklab, var(--cat-eras) 50%, transparent); }
 .rail span { position: absolute; top: 36px; bottom: -42px; width: 1px; background: color-mix(in oklab, var(--cat-eras) 28%, transparent); }
 .era:last-child .rail span { display: none; }
-.era[data-pulse] .rail i { animation: timeline-glow 1000ms var(--ease-house) both; }
+.era[data-pulse] .rail i { animation: timeline-glow calc(var(--mo, 1) * 1000ms) var(--ease-house) both; }
 .card { position: relative; padding: 14px 16px; border: 1px solid var(--hairline); border-radius: 11px; background: color-mix(in oklab, var(--panel-1) 96%, transparent); transition: transform calc(var(--mo, 1) * 200ms), border-color calc(var(--mo, 1) * 200ms), box-shadow calc(var(--mo, 1) * 200ms); }
 .card:hover, .era[data-active] .card { border-color: color-mix(in oklab, var(--cat-eras) 34%, var(--hairline)); box-shadow: 0 8px 28px rgba(0,0,0,.25); }
 .era[data-occurrence] .card::before { position: absolute; top: 12px; right: 13px; width: 5px; height: 5px; border-radius: 50%; background: var(--cat-eras); box-shadow: 0 0 10px var(--cat-eras); content: ''; }
@@ -41,9 +41,10 @@
 .manage { height: calc(100% - 44px); max-width: 760px; margin: 0 auto; padding: 30px 40px; overflow: auto; }
 .manage > header { display: flex; justify-content: space-between; margin-bottom: 12px; color: var(--text-faint); font-size: 11px; }
 .manage > header b { font-family: var(--font-mono); font-size: 9px; font-weight: 400; }
-.manageRow { position: relative; display: grid; min-height: 64px; grid-template-columns: 30px 42px 1fr auto; align-items: center; border-bottom: 1px solid var(--hairline); background: var(--panel-1); cursor: grab; transition: transform calc(var(--mo, 1) * 220ms) var(--ease-house); }
+.manageRow { position: relative; display: grid; min-height: 64px; grid-template-columns: 30px 42px 1fr auto; align-items: center; border-bottom: 1px solid var(--hairline); background: var(--panel-1); transition: transform calc(var(--mo, 1) * 220ms) var(--ease-house); }
+.manageRow[data-dragging] { z-index: 2; background: var(--panel-3); box-shadow: 0 12px 30px rgba(0,0,0,.42); transition: none; }
 .manageRow[data-drop-before]::before { position: absolute; top: -2px; right: 0; left: 0; height: 2px; background: var(--cat-eras); box-shadow: 0 0 10px var(--cat-eras); content: ''; }
-.grip { color: var(--text-faint); font-size: 17px; text-align: center; }
+.grip { border: 0; background: transparent; color: var(--text-faint); font-size: 17px; text-align: center; cursor: grab; }
 .order { color: var(--cat-eras); font-family: var(--font-mono); font-size: 10px; }
 .manageRow > span:nth-child(3) { display: grid; gap: 3px; }
 .manageRow strong { color: var(--text-hi); font-family: var(--font-serif); font-size: 16px; font-weight: 500; }
@@ -67,4 +68,4 @@
 @keyframes member-in { from { opacity: 0; transform: scale(.92); } }
 @keyframes timeline-glow { 22% { box-shadow: 0 0 0 3px rgba(200,160,230,.55), 0 0 30px 6px rgba(200,160,230,.4); } }
 @keyframes form-in { from { opacity: 0; transform: translateY(8px) scale(.98); } }
-@media (prefers-reduced-motion: reduce) { .era, .members a, .createForm { animation-duration: .01ms; animation-delay: 0ms !important; } .card, .caret, .caretOpen, .manageRow { transition-duration: .01ms; } }
+@media (prefers-reduced-motion: reduce) { .era, .members a, .createForm, .era[data-pulse] .rail i { animation-duration: .01ms; animation-delay: 0ms !important; } .card, .caret, .caretOpen, .manageRow { transition-duration: .01ms; } }
