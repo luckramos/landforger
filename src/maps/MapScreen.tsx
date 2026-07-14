@@ -29,7 +29,7 @@ interface DragStart { pointerX: number; pointerY: number; pan: Pan }
 interface MapPositionPercent { x: number; y: number }
 interface MapTransition { mapTransition?: 'in' | 'out'; origin?: MapPositionPercent }
 interface MapImageState { mapId: string; activeEra: string; image?: string }
-interface PinDrag { pinId: string; originalPins: Pin[] }
+interface PinDrag { pinId: string; originalPins: Pin[]; element: HTMLButtonElement }
 interface NavigationBurst { to: string; label: string; color: string }
 
 const MIN_ZOOM = 0.6
@@ -87,6 +87,8 @@ export function MapScreen() {
   const [navigationBurst, setNavigationBurst] = useState<NavigationBurst>()
   const motionScale = useUiStore((state) => state.motionScale)
   const dragRef = useRef<DragStart | undefined>(undefined)
+  const livePanRef = useRef<Pan | undefined>(undefined)
+  const livePinPositionRef = useRef<{ x: number; y: number } | undefined>(undefined)
   const viewportRef = useRef<HTMLDivElement>(null)
   const stageRef = useRef<HTMLDivElement>(null)
   const worldRef = useRef<World | undefined>(undefined)
@@ -135,13 +137,17 @@ export function MapScreen() {
       const start = dragRef.current
       if (!start) return
       const rect = viewportRef.current?.getBoundingClientRect()
-      setPan(clampMapPan(
+      const next = clampMapPan(
         { x: start.pan.x + event.clientX - start.pointerX, y: start.pan.y + event.clientY - start.pointerY },
         zoom,
         { width: rect?.width ?? window.innerWidth, height: rect?.height ?? window.innerHeight },
-      ))
+      )
+      livePanRef.current = next
+      if (stageRef.current) stageRef.current.style.transform = `translate(${next.x}px, ${next.y}px) scale(${zoom})`
     }
     const end = () => {
+      if (livePanRef.current) setPan(livePanRef.current)
+      livePanRef.current = undefined
       dragRef.current = undefined
       setDragStart(undefined)
     }
@@ -162,16 +168,19 @@ export function MapScreen() {
         x: ((event.clientX - rect.left) / rect.width) * 100,
         y: ((event.clientY - rect.top) / rect.height) * 100,
       })
-      setWorld((current) => current ? {
-        ...current,
-        pins: current.pins.map((pin) => pin.id === pinDrag.pinId ? { ...pin, ...position } : pin),
-      } : current)
+      livePinPositionRef.current = position
+      pinDrag.element.style.left = `${position.x}%`
+      pinDrag.element.style.top = `${position.y}%`
     }
     const end = () => {
-      const latest = worldRef.current
+      const position = livePinPositionRef.current
+      livePinPositionRef.current = undefined
       setPinDrag(undefined)
-      if (!latest) return
-      void repository.updateWorld(latest.slug, { pins: latest.pins })
+      const latest = worldRef.current
+      if (!latest || !position) return
+      const pins = latest.pins.map((pin) => pin.id === pinDrag.pinId ? { ...pin, ...position } : pin)
+      setWorld({ ...latest, pins })
+      void repository.updateWorld(latest.slug, { pins })
         .then(setWorld)
         .catch(() => setWorld((current) => current ? { ...current, pins: pinDrag.originalPins } : current))
     }
@@ -428,7 +437,7 @@ export function MapScreen() {
                     if (!editing || event.button !== 0) return
                     event.preventDefault()
                     event.stopPropagation()
-                    setPinDrag({ pinId: pin.id, originalPins: world.pins })
+                    setPinDrag({ pinId: pin.id, originalPins: world.pins, element: event.currentTarget })
                   }}
                   onClick={(event) => { event.stopPropagation(); setSelectedPinId(pin.id); setReaderOpen(false) }}
                 >
