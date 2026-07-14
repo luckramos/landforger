@@ -6,7 +6,7 @@
 
 .root {
   /* Overridable by the caller (the sidebar arrives in #19 and will track it). */
-  --page-editor-width: min(760px, calc(100vw - 32px));
+  --page-editor-width: min(760px, calc(100vw - var(--dashboard-sidebar-width, 0px) - 32px));
 }
 
 .content {
@@ -137,7 +137,7 @@
 
 .toolbar {
   position: fixed;
-  left: 50%;
+  left: calc((100vw + var(--dashboard-sidebar-width, 0px)) / 2);
   transform: translateX(-50%);
   top: 66px;
   z-index: 40;
@@ -151,7 +151,18 @@
   background: var(--panel-3);
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
   /* Anchor swap: top 66px ↔ calc(100vh − 58px), mo×340ms, house curve. */
-  transition: top calc(var(--mo, 1) * 340ms) var(--ease-house);
+  transition:
+    top calc(var(--mo, 1) * 340ms) var(--ease-house),
+    left calc(var(--mo, 1) * 300ms) var(--ease-house),
+    max-width calc(var(--mo, 1) * 300ms) var(--ease-house),
+    opacity calc(var(--mo, 1) * 200ms) var(--ease-house),
+    transform calc(var(--mo, 1) * 200ms) var(--ease-house);
+}
+
+.root[data-read-only] .toolbar {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(-6px) scale(.98);
 }
 
 .toolbarBottom {

@@ -4,12 +4,13 @@
 
 import type { Editor } from '@tiptap/core'
 import { useEffect, useRef, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useOutletContext, useParams } from 'react-router-dom'
 import type { Page } from '../domain/types'
 import { PageEditor } from '../editor/PageEditor'
 import type { WorldRepository } from '../repository/WorldRepository'
 import { getRepository } from '../state/repository'
 import styles from './PageScreen.module.css'
+import type { DashboardOutletContext } from './Dashboard/DashboardShell'
 
 const SAVE_DEBOUNCE_MS = 800
 
@@ -25,7 +26,8 @@ export interface PageScreenProps {
 
 export function PageScreen({ repository, onEditorReady }: PageScreenProps) {
   const { world = '', slug = '' } = useParams()
-  const repo = repository ?? getRepository()
+  const dashboard = useOutletContext<DashboardOutletContext | undefined>()
+  const repo = repository ?? dashboard?.repository ?? getRepository()
 
   const [status, setStatus] = useState<Status>('loading')
   const [page, setPage] = useState<Page>()
@@ -156,8 +158,11 @@ export function PageScreen({ repository, onEditorReady }: PageScreenProps) {
   return (
     <main className={styles.screen}>
       <header className={styles.header}>
+        {page.cover && <img className={styles.cover} src={page.cover} alt="" />}
         <span className={styles.eyebrow}>{page.category}</span>
         <h1 className={styles.title}>{page.title}</h1>
+        <p className={styles.summary}>{page.summary}</p>
+        <div className={styles.tags} aria-label="Tags">{page.tags.map((tag) => <span key={tag}>#{tag}</span>)}</div>
         <span className={styles.saveState} data-save-state={saveState}>
           {saveState === 'saving' ? 'Saving' : saveState === 'saved' ? 'Saved' : ''}
         </span>
@@ -167,6 +172,7 @@ export function PageScreen({ repository, onEditorReady }: PageScreenProps) {
         body={page.body}
         resolveTitle={(s) => titles.get(s)}
         onBodyChange={handleBodyChange}
+        readOnly={dashboard?.readOnly}
         onEditorReady={onEditorReady}
       />
     </main>

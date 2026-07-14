@@ -25,6 +25,14 @@ export interface CreateWorldInput {
   template: CreateWorldTemplate
 }
 
+export type RepositoryMutationKind = 'createWorld' | 'updateWorld' | 'createPage' | 'updatePage' | 'deletePage'
+
+export interface RepositoryMutation {
+  kind: RepositoryMutationKind
+  worldSlug: string
+  pageSlug?: string
+}
+
 /**
  * The app's single data seam: Worlds and Pages as Markdown documents.
  * Callers never see raw frontmatter — every method takes and returns
@@ -35,6 +43,8 @@ export interface CreateWorldInput {
  * can replace `LocalStorageWorldRepository` without rewriting call sites.
  */
 export interface WorldRepository {
+  /** Observe mutation starts; used by shell-level feedback without coupling screens to storage. */
+  subscribeToMutations(listener: (mutation: RepositoryMutation) => void): () => void
   listWorlds(): Promise<World[]>
   getWorld(worldSlug: string): Promise<World | undefined>
   /** Persists world-level mutations (era order, templates, maps & pins, active era, meta). */

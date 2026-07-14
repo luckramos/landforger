@@ -91,9 +91,9 @@ describe('Worlds screen', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: /Starter structure/ }))
     fireEvent.click(within(dialog).getByRole('button', { name: 'Create world' }))
 
-    // Navigated into the new world (placeholder Dashboard for now).
-    expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeTruthy()
-    expect(screen.getByText(/world: gloamreach/)).toBeTruthy()
+    // Navigated into the new World's real Dashboard.
+    expect(await screen.findByRole('heading', { name: 'Gloamreach' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Gloamreach home' })).toBeTruthy()
 
     // Persisted: a second repository over the same storage sees it.
     const again = new LocalStorageWorldRepository(storage, fixtureFiles)
@@ -113,7 +113,7 @@ describe('Worlds screen', () => {
     fireEvent.change(within(dialog).getByLabelText('Name'), { target: { value: 'Hollow Sea' } })
     fireEvent.click(within(dialog).getByRole('button', { name: /Blank cosmos/ }))
     fireEvent.click(within(dialog).getByRole('button', { name: 'Create world' }))
-    await screen.findByRole('heading', { name: 'Dashboard' })
+    await screen.findByRole('heading', { name: 'Hollow Sea' })
 
     const again = new LocalStorageWorldRepository(storage, fixtureFiles)
     const created = (await again.listWorlds()).find((w) => w.slug === 'hollow-sea')
@@ -126,7 +126,7 @@ describe('Worlds screen', () => {
     renderWorlds()
     const card = (await screen.findByText('Marrowmoor')).closest('button')!
     fireEvent.click(card)
-    expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeTruthy()
-    expect(screen.getByText(/world: marrowmoor/)).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: 'Marrowmoor' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Marrowmoor home' })).toBeTruthy()
   })
 })
