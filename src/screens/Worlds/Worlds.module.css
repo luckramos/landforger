@@ -130,7 +130,8 @@
   transition:
     border-color calc(var(--mo, 1) * 180ms),
     background calc(var(--mo, 1) * 180ms),
-    box-shadow calc(var(--mo, 1) * 180ms);
+    box-shadow calc(var(--mo, 1) * 180ms),
+    transform calc(var(--mo, 1) * 160ms) var(--ease-house);
 }
 
 .createCard:hover {
@@ -139,14 +140,14 @@
   box-shadow: 0 8px 34px -14px color-mix(in oklch, var(--bronze) 45%, transparent);
 }
 
+.createCard:active {
+  transform: scale(0.97);
+}
+
 @keyframes wf-cardIn {
   from {
     opacity: 0;
     transform: translateY(12px) scale(0.985);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
   }
 }
 

@@ -8,6 +8,7 @@
 .categories { display: grid; grid-template-columns: repeat(7, minmax(105px, 1fr)); gap: 9px; margin-top: 42px; }
 .categoryCard { position: relative; display: grid; min-height: 132px; padding: 16px; border: 1px solid var(--hairline); border-radius: 10px; background: linear-gradient(145deg, color-mix(in oklab, var(--category-color) 8%, var(--panel-2)), var(--panel-1)); color: var(--text); text-decoration: none; animation: card-in calc(var(--mo, 1) * 360ms) var(--ease-house) both; transition: transform calc(var(--mo, 1) * 180ms), border-color calc(var(--mo, 1) * 180ms); }
 .categoryCard:hover { transform: translateY(-3px); border-color: color-mix(in oklab, var(--category-color) 55%, transparent); }
+.categoryCard:active { transform: translateY(-1px) scale(0.98); }
 .categoryCard > span { color: var(--category-color); font-size: 20px; }
 .categoryCard h2 { margin: auto 0 4px; color: var(--text-hi); font-family: var(--font-serif); font-size: 17px; font-weight: 500; }
 .categoryCard b { position: absolute; top: 15px; right: 14px; color: var(--text-dim); font-family: var(--font-mono); font-size: 12px; }
@@ -31,6 +32,7 @@
 .pageGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 28px; }
 .pageCard { min-height: 190px; overflow: hidden; border: 1px solid var(--hairline); border-radius: 11px; background: var(--panel-1); color: var(--text); text-decoration: none; transition: border-color calc(var(--mo, 1) * 180ms), transform calc(var(--mo, 1) * 180ms); }
 .pageCard:hover { transform: translateY(-2px); border-color: var(--hairline-strong); }
+.pageCard:active { transform: translateY(-1px) scale(0.98); }
 .cover { height: 112px; background-position: center; background-size: cover; }
 .cardBody { padding: 17px; }
 .cardBody h2 { margin: 5px 0 7px; color: var(--text-hi); font-family: var(--font-serif); font-size: 23px; font-weight: 400; }
@@ -39,7 +41,7 @@
 .chips span { padding: 3px 7px; border: 1px solid var(--hairline-soft); border-radius: var(--radius-pill); color: var(--text-faint); font-size: 9px; }
 .empty { margin-top: 60px; text-align: center; color: var(--text-faint); }
 
-@keyframes card-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@keyframes card-in { from { opacity: 0; transform: translateY(12px); } }
 
 @media (max-width: 1050px) { .categories { grid-template-columns: repeat(4, 1fr); } }
 @media (max-width: 720px) { .home, .list { width: calc(100% - 28px); padding-top: 36px; } .categories { grid-template-columns: repeat(2, 1fr); } .pageGrid { grid-template-columns: 1fr; } .recent a { grid-template-columns: 26px 1fr auto; } .recent a > span:nth-of-type(2) { display: none; } }
