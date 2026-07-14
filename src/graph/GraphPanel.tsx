@@ -3,6 +3,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { DockableWindow } from '../components/DockableWindow/DockableWindow'
 import { prefersReducedMotion } from '../components/motionPrefs'
 import { CATEGORIES, type Category, type Page, type World } from '../domain/types'
+import { icons } from '../icons'
 import { CATEGORY_META } from '../screens/Dashboard/categoryMeta'
 import { useUiStore } from '../state/uiStore'
 import { createForceSimulation, type ForceSimulation } from './forceSimulation'
@@ -297,9 +298,9 @@ export function GraphCanvas({ graph, onNavigate }: GraphCanvasProps) {
   return (
     <div className={styles.canvasWrap} data-large={graph.nodes.length > 300 || undefined}>
       <div className={styles.zoomControls}>
-        <button type="button" aria-label="Zoom in" onClick={() => zoomBy(1.18)}>＋</button>
-        <button type="button" aria-label="Zoom out" onClick={() => zoomBy(1 / 1.18)}>−</button>
-        <button type="button" aria-label="Reset graph view" onClick={() => { transformRef.current = { x: 0, y: 0, zoom: 1 }; applyTransform() }}>⌂</button>
+        <button type="button" aria-label="Zoom in" onClick={() => zoomBy(1.18)}><icons.zoomIn size={16} aria-hidden="true" /></button>
+        <button type="button" aria-label="Zoom out" onClick={() => zoomBy(1 / 1.18)}><icons.zoomOut size={16} aria-hidden="true" /></button>
+        <button type="button" aria-label="Reset graph view" onClick={() => { transformRef.current = { x: 0, y: 0, zoom: 1 }; applyTransform() }}><icons.resetView size={16} aria-hidden="true" /></button>
       </div>
       <svg ref={svgRef} className={styles.canvas} viewBox={`0 0 ${WIDTH} ${HEIGHT}`} onPointerDown={beginPan} onWheel={onWheel}>
         <g ref={stageRef} data-testid="graph-stage">

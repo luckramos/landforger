@@ -25,7 +25,7 @@
 .scopeToggle button { padding: 4px 9px; border: 0; border-radius: 5px; font-size: 10px; cursor: pointer; }
 .scopeToggle button[aria-pressed='true'] { background: color-mix(in oklab, var(--bronze) 16%, var(--panel-2)); color: var(--bronze-hi); }
 .zoomControls { position: absolute; z-index: 2; top: 68px; right: 16px; display: grid; gap: 4px; }
-.zoomControls button { width: 32px; height: 32px; border-radius: 8px; color: var(--text-dim); cursor: pointer; }
+.zoomControls button { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 8px; color: var(--text-dim); cursor: pointer; }
 .zoomControls button:hover { color: var(--text-hi); border-color: var(--hairline-strong); }
 .legend { position: absolute; z-index: 2; right: 18px; bottom: 14px; left: 18px; display: flex; justify-content: space-between; color: var(--text-faint); font-family: var(--font-mono); font-size: 9px; letter-spacing: .03em; pointer-events: none; }
 .legend span { display: flex; align-items: center; gap: 6px; }
