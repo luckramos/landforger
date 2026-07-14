@@ -7,6 +7,7 @@ import { Link, useNavigate, useOutletContext, useParams } from 'react-router-dom
 import type { Backlink } from '../domain/backlinks'
 import type { Category, CustomProperty, Page, PropertyDef, World } from '../domain/types'
 import { PageEditor } from '../editor/PageEditor'
+import { icons } from '../icons'
 import { PageProperties } from '../properties/PageProperties'
 import type { WorldRepository } from '../repository/WorldRepository'
 import { getRepository } from '../state/repository'
@@ -231,7 +232,7 @@ export function PageScreen({ repository, onEditorReady }: PageScreenProps) {
         <h1 className={styles.title}>{page.title}</h1>
         <p className={styles.summary}>{page.summary}</p>
         {worldData.pins.some((pin) => pin.pageSlug === page.slug) && (
-          <Link aria-label="See on map" className={styles.seeOnMap} to={`/w/${world}/map?page=${encodeURIComponent(page.slug)}`}>⌖ See on map</Link>
+          <Link aria-label="See on map" className={styles.seeOnMap} to={`/w/${world}/map?page=${encodeURIComponent(page.slug)}`}><icons.map size={14} /> See on map</Link>
         )}
         <button
           type="button"
@@ -239,7 +240,7 @@ export function PageScreen({ repository, onEditorReady }: PageScreenProps) {
           aria-label="Open local relationship graph"
           onClick={() => navigate(`/w/${world}/p/${page.slug}?panel=graph`)}
         >
-          ✳ <span>Connections</span>
+          <icons.graph size={14} /> <span>Connections</span>
         </button>
         <span className={styles.saveState} data-save-state={saveState}>
           {saveState === 'saving' ? 'Saving' : saveState === 'saved' ? 'Saved' : ''}
@@ -295,7 +296,7 @@ function BacklinksPanel({ backlinks, onNavigate }: { backlinks: Backlink[]; onNa
         aria-controls="page-backlinks"
         onClick={() => setOpen((value) => !value)}
       >
-        <span className={open ? styles.backlinksCaretOpen : styles.backlinksCaret}>▶</span>
+        <span className={open ? styles.backlinksCaretOpen : styles.backlinksCaret}><icons.caretRight size={12} /></span>
         <span>Mentioned in</span>
         <span className={styles.backlinksCount}>{backlinks.length}</span>
       </button>

@@ -3,6 +3,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { DockableWindow } from '../components/DockableWindow/DockableWindow'
 import { prefersReducedMotion } from '../components/motionPrefs'
 import { CATEGORIES, type Category, type Page, type World } from '../domain/types'
+import { icons } from '../icons'
 import { CATEGORY_META } from '../screens/Dashboard/categoryMeta'
 import { useUiStore } from '../state/uiStore'
 import { createForceSimulation, type ForceSimulation } from './forceSimulation'
@@ -55,7 +56,7 @@ export function GraphPanel({ world, pages, focalSlug, onClose, onNavigatePage }:
       initialState={focalSlug ? 'floating' : 'fullscreen'}
       onClose={onClose}
       toolbar={toolbar}
-      icon="✳"
+      icon={<icons.graph />}
       accent="var(--bronze)"
     >
       <div className={styles.panel}>
@@ -71,7 +72,7 @@ export function GraphPanel({ world, pages, focalSlug, onClose, onNavigatePage }:
                 aria-label={`${meta.label} (${count})`}
                 onClick={() => toggleCategory(meta.category)}
               >
-                <span style={{ color: `var(--cat-${meta.category})` }}>{meta.icon}</span>{meta.label}<small>{count}</small>
+                <span style={{ color: `var(--cat-${meta.category})` }}><meta.icon size={12} /></span>{meta.label}<small>{count}</small>
               </button>
             )
           })}

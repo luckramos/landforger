@@ -72,7 +72,7 @@ export function NewPageScreen({ repository }: NewPageScreenProps) {
     <main className={styles.screen}>
       <header><span>New Page</span><h1>{category ? `New ${SINGULAR[category]}` : 'What are you charting?'}</h1><p>Choose a Category, then begin with this World’s current template.</p></header>
       <div className={styles.categoryGrid} aria-label="Page category">
-        {CATEGORY_META.map((meta) => <button type="button" key={meta.category} aria-label={meta.label} aria-pressed={category === meta.category} onClick={() => selectCategory(meta.category)}><span style={{ color: `var(--cat-${meta.category})` }}>{meta.icon}</span>{meta.label}</button>)}
+        {CATEGORY_META.map((meta) => <button type="button" key={meta.category} aria-label={meta.label} aria-pressed={category === meta.category} onClick={() => selectCategory(meta.category)}><span style={{ color: `var(--cat-${meta.category})` }}><meta.icon size={21} /></span>{meta.label}</button>)}
       </div>
       {category && (
         <form className={styles.form} onSubmit={(event) => { event.preventDefault(); void createPage() }}>

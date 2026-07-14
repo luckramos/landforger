@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import { overlayExitTransition } from '../components/motionPrefs'
 import { useUiStore } from '../state/uiStore'
 import type { CustomProperty, Page } from '../domain/types'
+import { icons } from '../icons'
 import styles from './Properties.module.css'
 
 interface PropertyInputProps {
@@ -35,19 +36,19 @@ export function PropertyInput({ property, pages, disabled = false, onChange }: P
               <span key={slug} className={target ? styles.relationChip : styles.ghostChip}>
                 {target?.title ?? slug}
                 {!disabled && (
-                  <button type="button" aria-label={`Remove ${target?.title ?? slug} from ${property.label}`} onClick={() => onChange(slugs.filter((item) => item !== slug))}>×</button>
+                  <button type="button" aria-label={`Remove ${target?.title ?? slug} from ${property.label}`} onClick={() => onChange(slugs.filter((item) => item !== slug))}><icons.close size={12} /></button>
                 )}
               </span>
             )
           })}
-          {!disabled && <button type="button" className={styles.addChip} aria-label={`Add ${property.label}`} onClick={() => setPickerOpen((open) => !open)}>＋</button>}
+          {!disabled && <button type="button" className={styles.addChip} aria-label={`Add ${property.label}`} onClick={() => setPickerOpen((open) => !open)}><icons.add size={14} /></button>}
         </div>
         <AnimatePresence>
         {pickerOpen && (
           <motion.div className={styles.popover} aria-label={`${property.label} choices`} initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={overlayExitTransition(motionScale)}>
             {targets.length > 0 ? targets.map((target) => (
               <button key={target.slug} type="button" aria-label={target.title} onClick={() => { onChange([...slugs, target.slug]); setPickerOpen(false) }}>
-                <span style={{ color: `var(--cat-${target.category})` }}>●</span>{target.title}
+                <span style={{ color: `var(--cat-${target.category})` }}><icons.circle size={10} weight="fill" /></span>{target.title}
               </button>
             )) : <span className={styles.empty}>No matching Pages</span>}
           </motion.div>

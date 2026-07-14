@@ -4,6 +4,7 @@ import { overlayExitTransition } from '../components/motionPrefs'
 import { useUiStore } from '../state/uiStore'
 import { CATEGORIES, type Category, type CustomProperty, type CustomPropertyType, type Page, type PropertyDef, type World } from '../domain/types'
 import { propertyFromDefinition, templatePropertiesFor, uniquePropertyKey } from '../domain/properties'
+import { icons } from '../icons'
 import { PropertyInput } from './PropertyInput'
 import { PropertyDefinitionEditor } from './PropertyDefinitionEditor'
 import styles from './Properties.module.css'
@@ -93,14 +94,14 @@ export function PageProperties({
   return (
     <section className={styles.properties} aria-label="Page properties">
       <div className={styles.topActions}>
-        {!readOnly && <button type="button" aria-label="Page actions" onClick={() => setActionsOpen((open) => !open)}>•••</button>}
+        {!readOnly && <button type="button" aria-label="Page actions" onClick={() => setActionsOpen((open) => !open)}><icons.moreHorizontal /></button>}
       </div>
 
       <div className={styles.sharedRow}>
         <span className={styles.label}>Tags</span>
         <div className={styles.chips}>
-          {page.tags.map((tag) => <span key={tag} className={styles.tagChip}>#{tag}<button type="button" disabled={readOnly} aria-label={`Remove tag ${tag}`} onClick={() => onTagsChange((tags) => tags.filter((item) => item !== tag))}>×</button></span>)}
-          {!readOnly && <button type="button" className={styles.addChip} aria-label="Add tag" onClick={() => setTagOpen((open) => !open)}>＋ tag</button>}
+          {page.tags.map((tag) => <span key={tag} className={styles.tagChip}>#{tag}<button type="button" disabled={readOnly} aria-label={`Remove tag ${tag}`} onClick={() => onTagsChange((tags) => tags.filter((item) => item !== tag))}><icons.close size={12} /></button></span>)}
+          {!readOnly && <button type="button" className={styles.addChip} aria-label="Add tag" onClick={() => setTagOpen((open) => !open)}><icons.add size={14} /> tag</button>}
         </div>
         <AnimatePresence>
         {tagOpen && (
@@ -124,10 +125,10 @@ export function PageProperties({
           <div className={styles.chips}>
             {page.eras.map((slug) => {
               const era = eraPages.find((candidate) => candidate.slug === slug)
-              return <span key={slug} className={era ? styles.eraChip : styles.ghostChip}>{era?.title ?? slug}<button type="button" disabled={readOnly} aria-label={`Remove era ${era?.title ?? slug}`} onClick={() => onErasChange((eras) => eras.filter((item) => item !== slug))}>×</button></span>
+              return <span key={slug} className={era ? styles.eraChip : styles.ghostChip}>{era?.title ?? slug}<button type="button" disabled={readOnly} aria-label={`Remove era ${era?.title ?? slug}`} onClick={() => onErasChange((eras) => eras.filter((item) => item !== slug))}><icons.close size={12} /></button></span>
             })}
-            {!readOnly && <button type="button" className={styles.addChip} aria-label="Add era" onClick={() => setEraOpen((open) => !open)}>＋ era</button>}
-            {page.eras.length > 0 && <button type="button" role="link" aria-label="See on timeline" className={styles.timelineChip} onClick={onSeeTimeline}>See on timeline →</button>}
+            {!readOnly && <button type="button" className={styles.addChip} aria-label="Add era" onClick={() => setEraOpen((open) => !open)}><icons.add size={14} /> era</button>}
+            {page.eras.length > 0 && <button type="button" role="link" aria-label="See on timeline" className={styles.timelineChip} onClick={onSeeTimeline}>See on timeline <icons.arrowRight size={12} /></button>}
           </div>
           <AnimatePresence>{eraOpen && <motion.div className={styles.inlinePopover} initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={overlayExitTransition(motionScale)}>{eraPages.filter((era) => !page.eras.includes(era.slug)).map((era) => <button key={era.slug} type="button" onClick={() => { onErasChange((eras) => [...eras, era.slug]); setEraOpen(false) }}>{era.title}</button>)}</motion.div>}</AnimatePresence>
         </div>
@@ -156,14 +157,14 @@ export function PageProperties({
               <PropertyInput property={property} pages={pages.filter((candidate) => candidate.slug !== page.slug)} disabled={readOnly} onChange={(value) => updateProperty(property.key, (current) => ({ ...current, value }))} />
               <PropertyDefinitionEditor definition={property} disabled={readOnly} onChange={(definition) => updateProperty(property.key, (current) => ({ ...current, ...definition }))} />
             </div>
-            {!readOnly && <button type="button" className={styles.remove} aria-label={`Remove ${property.label}`} onClick={() => onPropertiesChange((properties) => properties.filter((candidate) => candidate.key !== property.key))}>×</button>}
+            {!readOnly && <button type="button" className={styles.remove} aria-label={`Remove ${property.label}`} onClick={() => onPropertiesChange((properties) => properties.filter((candidate) => candidate.key !== property.key))}><icons.close size={12} /></button>}
           </div>
         ))}
       </div>
 
       {!readOnly && (
         <div className={styles.propertyFooter}>
-          <button type="button" aria-label="Add property" onClick={() => setTypePickerOpen((open) => !open)}>＋ add property</button>
+          <button type="button" aria-label="Add property" onClick={() => setTypePickerOpen((open) => !open)}><icons.add size={14} /> add property</button>
           <button type="button" aria-label={`Edit ${page.category} template`} onClick={openTemplate}>Edit Category Template</button>
           <AnimatePresence>{typePickerOpen && <motion.div className={styles.typePicker} initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={overlayExitTransition(motionScale)}>{PROPERTY_TYPES.map((type) => <button type="button" key={type} aria-label={`Add ${type} property`} onClick={() => addProperty(type)}>{typeLabel(type)}</button>)}</motion.div>}</AnimatePresence>
         </div>
@@ -196,7 +197,7 @@ export function PageProperties({
                 <PropertyDefinitionEditor definition={definition} onChange={(changed) => setTemplateDraft((properties) => properties.map((property, propertyIndex) => propertyIndex === index ? changed : property))} />
               </div>
               <span>{definition.type}</span>
-              <button type="button" aria-label={`Remove ${definition.label} from template`} onClick={() => setTemplateDraft((properties) => properties.filter((_, propertyIndex) => propertyIndex !== index))}>×</button>
+              <button type="button" aria-label={`Remove ${definition.label} from template`} onClick={() => setTemplateDraft((properties) => properties.filter((_, propertyIndex) => propertyIndex !== index))}><icons.close size={12} /></button>
             </div>
           ))}
           <div className={styles.typePicker}>{PROPERTY_TYPES.map((type) => <button type="button" key={type} aria-label={`Add ${type} to template`} onClick={() => addTemplateProperty(type)}>{typeLabel(type)}</button>)}</div>
