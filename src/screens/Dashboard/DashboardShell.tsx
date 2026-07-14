@@ -5,6 +5,7 @@ import type { Page, World } from '../../domain/types'
 import type { WorldRepository } from '../../repository/WorldRepository'
 import { getRepository } from '../../state/repository'
 import { CATEGORY_META, categoryMeta } from './categoryMeta'
+import { SpotlightSearch } from './SpotlightSearch'
 import styles from './DashboardShell.module.css'
 
 export interface DashboardOutletContext {
@@ -210,14 +211,7 @@ export function DashboardShell() {
       </div>
 
       {searchOpen && (
-        <div className={styles.searchScrim} role="presentation" onMouseDown={() => setSearchOpen(false)}>
-          <section className={styles.searchPanel} role="dialog" aria-modal="true" aria-label="Search the World" onMouseDown={(event) => event.stopPropagation()}>
-            <span className={styles.searchGlyph}>⌕</span>
-            <h2>Search the World</h2>
-            <p>Spotlight search arrives in the next charting pass.</p>
-            <button type="button" onClick={() => setSearchOpen(false)}>Close</button>
-          </section>
-        </div>
+        <SpotlightSearch pages={pages} worldSlug={world.slug} onClose={() => setSearchOpen(false)} />
       )}
     </div>
   )

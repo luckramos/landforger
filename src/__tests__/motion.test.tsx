@@ -43,4 +43,11 @@ describe('motion scale root sync', () => {
     expect(css).toContain('animation-duration: 0.01ms !important')
     expect(css).toContain('transition-duration: 0.01ms !important')
   })
+
+  it('Spotlight uses the design open motion scaled by --mo', () => {
+    const css = readFileSync('src/screens/Dashboard/SpotlightSearch.module.css', 'utf8')
+    expect(css).toContain('calc(var(--mo, 1) * 160ms)')
+    expect(css).toContain('calc(var(--mo, 1) * 200ms)')
+    expect(css).toContain('var(--ease-house)')
+  })
 })
