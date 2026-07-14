@@ -46,7 +46,7 @@
 .controls { display: flex; align-items: center; gap: 3px; margin-left: auto; }
 .controls button { display: grid; width: 30px; height: 30px; place-items: center; border: 0; border-radius: 7px; background: transparent; color: var(--text-dim); font-size: 16px; }
 .controls button:hover { background: var(--hairline-soft); color: var(--text-hi); }
-.body { min-height: 0; flex: 1; overflow: hidden; }
+.body { min-height: 0; flex: 1; overflow: hidden; overscroll-behavior: contain; }
 .window[data-dock-state='minimized'] .body { visibility: hidden; pointer-events: none; }
 
 .resizeHandle {

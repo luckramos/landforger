@@ -19,7 +19,10 @@
   /* Accent */
   --bronze: #b0824a;
   --bronze-light: #e6c79a;
+  --on-bronze: #1a1408;
   --danger: oklch(0.72 0.16 25);
+  --danger-subtle: color-mix(in oklab, var(--danger) 50%, transparent);
+  --danger-bg: oklch(0.5 0.12 25 / 0.16);
 
   /* Hairlines — rgba(255,255,255, 0.05–0.12) */
   --hairline-soft: rgba(255, 255, 255, 0.05);

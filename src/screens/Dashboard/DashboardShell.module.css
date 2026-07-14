@@ -80,7 +80,7 @@
 .topbarButton:hover { background: var(--hairline-soft); color: var(--text-hi); }
 .exitFocus { position: fixed; top: 14px; right: 18px; z-index: 50; padding: 7px 12px; border: 1px solid var(--hairline); border-radius: 999px; background: var(--panel-3); color: var(--text-dim); cursor: pointer; }
 
-.view { min-height: calc(100vh - 56px); animation: lw-view-in calc(var(--mo, 1) * 300ms) var(--ease-house) both; }
+.view { min-height: calc(100vh - 56px); overscroll-behavior: contain; animation: lw-view-in calc(var(--mo, 1) * 300ms) var(--ease-house) both; }
 .loading { display: grid; min-height: 100vh; place-items: center; color: var(--text-dim); }
 
 @keyframes lw-view-in { from { opacity: 0; transform: translateY(10px) scale(.994); } to { opacity: 1; transform: none; } }

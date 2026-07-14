@@ -17,7 +17,7 @@
 .zoomControls button:nth-child(2) { width: 58px; font: 9px var(--font-mono); }
 .zoomControls button:last-child { border-right: 0; }
 .mapArea { position: relative; min-height: 0; overflow: hidden; }
-.viewport { position: absolute; inset: 0; overflow: hidden; cursor: grab; background: radial-gradient(circle at 50% 45%,#17140f,#070706 70%); touch-action: none; }
+.viewport { position: absolute; inset: 0; overflow: hidden; overscroll-behavior: contain; cursor: grab; background: radial-gradient(circle at 50% 45%,#17140f,#070706 70%); touch-action: none; }
 .viewport[data-dragging] { cursor: grabbing; }
 .stage { position: absolute; left: calc(50% - 800px); top: calc(50% - 540px); width: 1600px; height: 1080px; will-change: transform; transition: transform calc(var(--mo,1) * 180ms) var(--ease-house); }
 .stage[data-transition="in"] { animation: map-zoom-in calc(var(--mo,1) * 600ms) var(--ease-map-zoom) both; }

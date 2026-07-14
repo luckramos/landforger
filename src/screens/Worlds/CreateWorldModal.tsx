@@ -5,7 +5,7 @@ import { useUiStore } from '../../state/uiStore'
 import type { World } from '../../domain/types'
 import type { CreateWorldInput, CreateWorldTemplate } from '../../repository/WorldRepository'
 import styles from './CreateWorldModal.module.css'
-import { GENRE_PRESETS, genreColor } from './genres'
+import { BRONZE_HEX, GENRE_PRESETS, genreColor } from './genres'
 import { WorldCard } from './WorldCard'
 
 interface CreateWorldModalProps {
@@ -38,7 +38,7 @@ export function CreateWorldModal({ onCancel, onCreate }: CreateWorldModalProps) 
   const [name, setName] = useState('')
   const [logline, setLogline] = useState('')
   const [genre, setGenre] = useState(GENRE_PRESETS[0].name)
-  const [customColor, setCustomColor] = useState('#b0824a')
+  const [customColor, setCustomColor] = useState(BRONZE_HEX)
   const [template, setTemplate] = useState<CreateWorldTemplate>('starter')
 
   const isCustom = genre === 'Custom'
