@@ -66,11 +66,21 @@ _Avoid_: date, timestamp
 The state of a Page whose `eras` list is empty. Timeless Pages don't appear on the timeline; their Pins stay visible on Maps regardless of the selected Era.
 _Avoid_: era-less, undated, "member of all eras" (the design prototype's workaround — not our model)
 
+**Active Era**:
+The one Era currently selected in a World — exactly one at all times, shared by the timeline and every Map, persisted per World. Defaults to the last Era in the order (the world's "present").
+_Avoid_: selected era, current era
+
 ### Space
 
 **Map**:
-An image owned by a World that Pages can be pinned onto. A Map may be era-linked (one image per Era, crossfading as the selected Era changes) or single-image. Maps nest: a Pin can open a child Map.
+An image owned by a World that Pages can be pinned onto. A Map may be era-linked (one image per Era, crossfading as the Active Era changes; missing images fall back to the nearest earlier Era's) or single-image. Maps form a hierarchy: each World has one Root Map, and a Pin can open a child Map at any depth.
+
+**Root Map**:
+The Map a World's "World map" entry opens — the top of the Map hierarchy. Changeable via the Map Library.
+
+**Map Library**:
+The gallery of all of a World's Maps: list, rename, delete, re-parent, and set the Root Map. Deleting a Map removes its Pins; its orphaned child Maps return to the Library.
 
 **Pin**:
-A placement of a Page on a Map at percentage coordinates, tagged with the Eras in which it is visible (or belonging to a Timeless Page, hence always visible).
+A placement of a Page on a Map at percentage coordinates. A Pin is born with its Page's Eras and may be narrowed to a subset; a Page may have several Pins on one Map (different positions per Era) and across Maps. Visible when its Page is Timeless, or when the Active Era is in both the Pin's list and the Page's current Eras.
 _Avoid_: marker, map pin (redundant — a Pin is always on a Map)
