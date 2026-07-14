@@ -4,10 +4,10 @@
 .canvas:active { cursor: grabbing; }
 .edges line { stroke: color-mix(in oklab, var(--text-faint) 58%, transparent); stroke-width: 1; opacity: .42; }
 .edges line[data-dimmed='true'] { opacity: .09; }
-.node { cursor: pointer; opacity: 0; pointer-events: none; transition: opacity calc(var(--mo, 1) * 300ms) cubic-bezier(.22,.61,.36,1); outline: none; }
+.node { cursor: pointer; opacity: 0; pointer-events: none; transition: opacity calc(var(--mo, 1) * 300ms) var(--ease-house); outline: none; }
 .node[data-revealed='true'] { opacity: 1; pointer-events: auto; }
 .node[data-dimmed='true'] { opacity: .2; }
-.nodeCore { fill: color-mix(in oklab, var(--node-color) 82%, #101014); stroke: color-mix(in oklab, var(--node-color) 70%, white); stroke-width: 1.4; filter: drop-shadow(0 0 9px color-mix(in oklab, var(--node-color) 38%, transparent)); transform: scale(.1); transform-box: fill-box; transform-origin: center; transition: transform calc(var(--mo, 1) * 400ms) cubic-bezier(.34,1.42,.5,1); }
+.nodeCore { fill: color-mix(in oklab, var(--node-color) 82%, #101014); stroke: color-mix(in oklab, var(--node-color) 70%, white); stroke-width: 1.4; filter: drop-shadow(0 0 9px color-mix(in oklab, var(--node-color) 38%, transparent)); transform: scale(.1); transform-box: fill-box; transform-origin: center; transition: transform calc(var(--mo, 1) * 400ms) var(--ease-overshoot-soft); }
 .node[data-revealed='true'] .nodeCore { transform: scale(1); }
 .nodeHalo { fill: transparent; stroke: transparent; stroke-width: 2; }
 .node:hover .nodeHalo, .node:focus-visible .nodeHalo, .node[data-focal='true'] .nodeHalo { stroke: color-mix(in oklab, var(--node-color, var(--bronze)) 60%, transparent); }

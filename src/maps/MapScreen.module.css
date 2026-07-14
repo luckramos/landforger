@@ -81,7 +81,7 @@
 .eraRail::before { content: ''; position: absolute; top: 14px; left: 7%; right: 7%; height: 1px; background: var(--hairline-strong); }
 .eraRail button { position: relative; display: grid; justify-items: center; gap: 6px; border: 0; background: transparent; color: var(--text-faint); cursor: pointer; }
 .eraRail button > i { z-index: 1; width: 10px; height: 10px; margin-top: 9px; border: 2px solid var(--panel-1); border-radius: 50%; background: #4a4440; box-shadow: 0 0 0 1px var(--hairline-strong); }
-.eraRail button > i { transition: all calc(var(--mo,1) * 220ms) var(--ease-overshoot); }
+.eraRail button > i { transition: width calc(var(--mo,1) * 220ms) var(--ease-overshoot), height calc(var(--mo,1) * 220ms) var(--ease-overshoot), margin-top calc(var(--mo,1) * 220ms) var(--ease-overshoot), box-shadow calc(var(--mo,1) * 220ms) var(--ease-overshoot), background calc(var(--mo,1) * 220ms) var(--ease-overshoot); }
 .eraRail button > span,.eraRail strong,.eraRail small { transition: color calc(var(--mo,1) * 200ms); }
 .eraRail button > i[data-past] { background: var(--cat-eras); }
 .eraRail button[aria-pressed="true"] > i { width: 14px; height: 14px; margin-top: 7px; box-shadow: 0 0 0 4px color-mix(in oklab,var(--cat-eras) 16%,transparent),0 0 14px color-mix(in oklab,var(--cat-eras) 55%,transparent); }
