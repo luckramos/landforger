@@ -1,3 +1,5 @@
+import type { ReferenceCanvas } from '../canvas/types'
+
 /** The seven fixed Page kinds (CONTEXT.md — "Category"). Order matches the design's sidebar. */
 export const CATEGORIES = ['stories', 'eras', 'characters', 'locations', 'items', 'organizations', 'events'] as const
 
@@ -94,6 +96,8 @@ export interface World {
   categoryTemplates: CategoryTemplate[]
   maps: WorldMap[]
   pins: Pin[]
+  /** World-scoped reference whiteboard. Absent on legacy fixtures; new Worlds start empty. */
+  canvas?: ReferenceCanvas
   created: string
   updated: string
   body: string

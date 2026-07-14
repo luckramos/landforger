@@ -52,6 +52,21 @@ describe('Page <-> Markdown round-trip', () => {
     expect(twice).toBe(once)
   })
 
+  it('round-trips every reference-canvas item kind through World frontmatter', () => {
+    const withCanvas: World = {
+      ...fullWorld,
+      canvas: {
+        items: [
+          { id: 's', kind: 'stroke', x: 8, y: 8, width: 24, height: 16, color: '#fff', points: [{ x: 0, y: 0 }, { x: 24, y: 16 }] },
+          { id: 'a', kind: 'arrow', x: 40, y: 40, width: 80, height: 40, color: '#f00', start: { x: 0, y: 0 }, end: { x: 80, y: 40 } },
+          { id: 'n', kind: 'sticky', x: 160, y: 80, width: 160, height: 120, color: '#ffd166', text: 'Harbor clue' },
+          { id: 'g', kind: 'shape', x: 340, y: 80, width: 96, height: 96, color: '#7bdff2', shape: 'star' },
+        ],
+      },
+    }
+    expect(worldFromMarkdown(worldToMarkdown(withCanvas))).toEqual(withCanvas)
+  })
+
   it('round-trips a Page with no cover and no custom properties', () => {
     const minimal: Page = {
       slug: 'era-founding',

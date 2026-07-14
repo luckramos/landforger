@@ -1,3 +1,4 @@
+import type { CanvasItem, CanvasPoint, ReferenceCanvas } from '../canvas/types'
 import { joinFrontmatter, splitFrontmatter } from './frontmatter'
 import { CATEGORIES, type Category, type CategoryTemplate, type PropertyDef, type Pin, type World, type WorldMap } from './types'
 import type { YamlValue } from './yaml'
@@ -105,6 +106,85 @@ function pinFromRecord(raw: YamlValue): Pin {
   return pin
 }
 
+// --- Reference Canvas ---
+
+function pointToRecord(point: CanvasPoint): { [key: string]: YamlValue } {
+  return { x: point.x, y: point.y }
+}
+
+function pointFromRecord(raw: YamlValue): CanvasPoint {
+  if (!isRecord(raw)) throw new Error('Malformed canvas point')
+  return { x: asNumber(raw.x), y: asNumber(raw.y) }
+}
+
+function canvasItemToRecord(item: CanvasItem): { [key: string]: YamlValue } {
+  const record: { [key: string]: YamlValue } = {
+    id: item.id,
+    kind: item.kind,
+    x: item.x,
+    y: item.y,
+    width: item.width,
+    height: item.height,
+    color: item.color,
+  }
+  if (item.kind === 'stroke') record.points = item.points.map(pointToRecord)
+  if (item.kind === 'arrow' || item.kind === 'line' || item.kind === 'dashed') {
+    record.start = pointToRecord(item.start)
+    record.end = pointToRecord(item.end)
+  }
+  if (item.kind === 'shape') record.shape = item.shape
+  if (item.kind === 'text' || item.kind === 'sticky') record.text = item.text
+  if (item.kind === 'image') {
+    record.src = item.src
+    record.alt = item.alt
+  }
+  if (item.kind === 'link') {
+    record.pageSlug = item.pageSlug
+    record.label = item.label
+  }
+  return record
+}
+
+function canvasItemFromRecord(raw: YamlValue): CanvasItem {
+  if (!isRecord(raw)) throw new Error('Malformed canvas item')
+  const base = {
+    id: asString(raw.id),
+    x: asNumber(raw.x),
+    y: asNumber(raw.y),
+    width: asNumber(raw.width),
+    height: asNumber(raw.height),
+    color: asString(raw.color),
+  }
+  switch (raw.kind) {
+    case 'stroke':
+      return { ...base, kind: 'stroke', points: Array.isArray(raw.points) ? raw.points.map(pointFromRecord) : [] }
+    case 'arrow':
+    case 'line':
+    case 'dashed':
+      return { ...base, kind: raw.kind, start: pointFromRecord(raw.start ?? {}), end: pointFromRecord(raw.end ?? {}) }
+    case 'shape':
+      return { ...base, kind: 'shape', shape: asString(raw.shape, 'rectangle') as Extract<CanvasItem, { kind: 'shape' }>['shape'] }
+    case 'text':
+    case 'sticky':
+      return { ...base, kind: raw.kind, text: asString(raw.text) }
+    case 'image':
+      return { ...base, kind: 'image', src: asString(raw.src), alt: asString(raw.alt) }
+    case 'link':
+      return { ...base, kind: 'link', pageSlug: asString(raw.pageSlug), label: asString(raw.label) }
+    default:
+      throw new Error(`Malformed canvas item kind: ${JSON.stringify(raw.kind)}`)
+  }
+}
+
+function canvasToRecord(canvas: ReferenceCanvas): { [key: string]: YamlValue } {
+  return { items: canvas.items.map(canvasItemToRecord) }
+}
+
+function canvasFromRecord(raw: YamlValue): ReferenceCanvas {
+  if (!isRecord(raw)) throw new Error('Malformed reference canvas')
+  return { items: Array.isArray(raw.items) ? raw.items.map(canvasItemFromRecord) : [] }
+}
+
 /** Serializes a World to `_world.md` (frontmatter: meta, era order, templates, maps & pins; body: free-form notes). */
 export function worldToMarkdown(world: World): string {
   const data: { [key: string]: YamlValue } = {
@@ -120,6 +200,7 @@ export function worldToMarkdown(world: World): string {
   data.categoryTemplates = world.categoryTemplates.map(categoryTemplateToRecord)
   data.maps = world.maps.map(mapToRecord)
   data.pins = world.pins.map(pinToRecord)
+  if (world.canvas) data.canvas = canvasToRecord(world.canvas)
   data.created = world.created
   data.updated = world.updated
   return joinFrontmatter(data, world.body)
@@ -132,6 +213,7 @@ export function worldFromMarkdown(md: string): World {
   const mapsRaw = Array.isArray(data.maps) ? data.maps : []
   const pinsRaw = Array.isArray(data.pins) ? data.pins : []
   const rootMap = typeof data.rootMap === 'string' ? data.rootMap : undefined
+  const canvas = data.canvas === undefined ? undefined : canvasFromRecord(data.canvas)
   return {
     slug: asString(data.slug),
     name: asString(data.name),
@@ -144,6 +226,7 @@ export function worldFromMarkdown(md: string): World {
     categoryTemplates: templatesRaw.map(categoryTemplateFromRecord),
     maps: mapsRaw.map(mapFromRecord),
     pins: pinsRaw.map(pinFromRecord),
+    ...(canvas !== undefined ? { canvas } : {}),
     created: asString(data.created),
     updated: asString(data.updated),
     body,

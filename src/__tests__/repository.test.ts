@@ -309,6 +309,18 @@ describe('LocalStorageWorldRepository — Page CRUD', () => {
 })
 
 describe('LocalStorageWorldRepository — World mutations', () => {
+  it('persists reference-canvas contents per World across repository reloads', async () => {
+    const repo = new LocalStorageWorldRepository(storage, fixturesFor(baseWorld, [basePage]))
+    await repo.updateWorld('testland', {
+      canvas: {
+        items: [{ id: 'note', kind: 'sticky', x: 8, y: 16, width: 160, height: 120, color: '#ffd166', text: 'Keep this' }],
+      },
+    })
+
+    const reloaded = new LocalStorageWorldRepository(storage, fixturesFor(baseWorld, [basePage]))
+    await expect(reloaded.getWorld('testland')).resolves.toMatchObject({ canvas: { items: [expect.objectContaining({ id: 'note' })] } })
+  })
+
   it('persists era order, active era, templates, maps and pins via updateWorld', async () => {
     const repo = new LocalStorageWorldRepository(storage, fixturesFor(baseWorld, [basePage, baseEraPage, secondEraPage]))
     const updated = await repo.updateWorld('testland', {

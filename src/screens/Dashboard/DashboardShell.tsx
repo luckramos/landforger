@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, matchPath, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { ReferenceCanvasPanel } from '../../canvas/ReferenceCanvasPanel'
 import { UserMenu } from '../../components/UserMenu/UserMenu'
 import type { Page, World } from '../../domain/types'
 import type { WorldRepository } from '../../repository/WorldRepository'
@@ -185,7 +186,7 @@ export function DashboardShell() {
             <Link className={styles.navItem} to={`/w/${world.slug}/map`}><span>⌖</span><span className={styles.expandedOnly}>World map</span></Link>
             <Link className={styles.navItem} to={`/w/${world.slug}?panel=timeline`}><span>◴</span><span className={styles.expandedOnly}>Timeline</span></Link>
             <Link className={styles.navItem} to={`/w/${world.slug}?panel=graph`}><span>✳</span><span className={styles.expandedOnly}>Graph view</span></Link>
-            <button className={styles.navItem} type="button"><span>▱</span><span className={styles.expandedOnly}>Reference canvas</span></button>
+            <Link className={styles.navItem} to={`/w/${world.slug}?panel=canvas`}><span>▱</span><span className={styles.expandedOnly}>Reference canvas</span></Link>
           </nav>
       </aside>
 
@@ -239,6 +240,10 @@ export function DashboardShell() {
           onClose={closePanel}
           onNavigatePage={(slug) => navigate(`/w/${world.slug}/p/${slug}`)}
         />
+      )}
+
+      {panel === 'canvas' && (
+        <ReferenceCanvasPanel world={world} repository={repository} onClose={closePanel} />
       )}
 
       {searchOpen && (
