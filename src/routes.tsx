@@ -5,6 +5,7 @@ import { PageScreen } from './screens/PageScreen'
 import { DashboardShell } from './screens/Dashboard/DashboardShell'
 import { DashboardHome, DashboardList } from './screens/Dashboard/DashboardViews'
 import { Worlds } from './screens/Worlds/Worlds'
+import { NewPageScreen } from './screens/NewPageScreen'
 
 /** The PRD's full URL scheme, each route a placeholder until its slice lands. */
 export function AppRoutes() {
@@ -15,6 +16,7 @@ export function AppRoutes() {
       <Route path="/worlds" element={<Worlds />} />
       <Route path="/w/:world" element={<DashboardShell />}>
         <Route index element={<DashboardHome />} />
+        <Route path="new" element={<NewPageScreen />} />
         <Route path="p/:slug" element={<PageScreen />} />
         <Route path="c/:category" element={<DashboardList />} />
         <Route path="t/:tag" element={<DashboardList />} />

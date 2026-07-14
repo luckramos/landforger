@@ -5,8 +5,9 @@ import type { Editor } from '@tiptap/core'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useOutletContext, useParams } from 'react-router-dom'
 import type { Backlink } from '../domain/backlinks'
-import type { Page } from '../domain/types'
+import type { Category, CustomProperty, Page, PropertyDef, World } from '../domain/types'
 import { PageEditor } from '../editor/PageEditor'
+import { PageProperties } from '../properties/PageProperties'
 import type { WorldRepository } from '../repository/WorldRepository'
 import { getRepository } from '../state/repository'
 import styles from './PageScreen.module.css'
@@ -32,6 +33,7 @@ export function PageScreen({ repository, onEditorReady }: PageScreenProps) {
 
   const [status, setStatus] = useState<Status>('loading')
   const [page, setPage] = useState<Page>()
+  const [worldData, setWorldData] = useState<World>()
   const [pages, setPages] = useState<Page[]>([])
   const [backlinks, setBacklinks] = useState<Backlink[]>([])
   const [saveState, setSaveState] = useState<SaveState>('idle')
@@ -44,19 +46,22 @@ export function PageScreen({ repository, onEditorReady }: PageScreenProps) {
   // Pinned when the Page loads, so a flush on unmount/navigation always
   // writes to the Page it was edited on — never the next route's params.
   const saveTargetRef = useRef<{ world: string; slug: string } | null>(null)
+  const pageRef = useRef<Page | undefined>(undefined)
 
   useEffect(() => {
     let cancelled = false
     setStatus('loading')
     setSaveState('idle')
-    Promise.all([repo.getPage(world, slug), repo.listPages(world), repo.getBacklinks(world, slug)])
-      .then(([loaded, loadedPages, loadedBacklinks]) => {
+    Promise.all([repo.getPage(world, slug), repo.listPages(world), repo.getBacklinks(world, slug), repo.getWorld(world)])
+      .then(([loaded, loadedPages, loadedBacklinks, loadedWorld]) => {
         if (cancelled) return
         setPages(loadedPages)
         setBacklinks(loadedBacklinks)
+        setWorldData(loadedWorld)
         if (loaded) {
           lastSavedBodyRef.current = loaded.body
           saveTargetRef.current = { world, slug: loaded.slug }
+          pageRef.current = loaded
           setPage(loaded)
           setStatus('ready')
         } else {
@@ -125,10 +130,69 @@ export function PageScreen({ repository, onEditorReady }: PageScreenProps) {
         saveTargetRef.current = { world, slug: created.slug }
         setPages((prev) => [...prev, created])
         setBacklinks([])
+        pageRef.current = created
         setPage(created)
         setStatus('ready')
       })
       .catch(() => setStatus('error'))
+  }
+
+  const acceptPage = (next: Page) => {
+    pageRef.current = next
+    setPage(next)
+    setPages((current) => current.map((candidate) => candidate.slug === next.slug ? next : candidate))
+  }
+
+  const persistPagePatch = (createPatch: (current: Page) => Partial<Page>) => {
+    const current = pageRef.current
+    if (!current) return
+    const patch = createPatch(current)
+    const optimistic = { ...current, ...patch, slug: current.slug, created: current.created }
+    acceptPage(optimistic)
+    setSaveState('saving')
+    repo.updatePage(world, current.slug, patch).then((saved) => {
+      acceptPage(saved)
+      setSaveState('saved')
+    }).catch(() => {
+      acceptPage(current)
+      setSaveState('idle')
+    })
+  }
+
+  const handleLifecycleChange = async (title: string, category: Category, applyTemplate: boolean) => {
+    const before = pageRef.current
+    if (!before) return
+    try {
+      setSaveState('saving')
+      let changed = before
+      if (category !== changed.category) {
+        changed = await repo.recategorizePage(world, changed.slug, category, { applyTemplate })
+      }
+      if (title && title !== changed.title) changed = await repo.updatePage(world, changed.slug, { title })
+      acceptPage(changed)
+      setSaveState('saved')
+    } catch {
+      acceptPage(before)
+      setSaveState('idle')
+    }
+  }
+
+  const handleTemplateChange = (category: Category, properties: PropertyDef[]) => {
+    if (!worldData) return
+    const categoryTemplates = worldData.categoryTemplates.some((template) => template.category === category)
+      ? worldData.categoryTemplates.map((template) => template.category === category ? { category, properties } : template)
+      : [...worldData.categoryTemplates, { category, properties }]
+    const optimistic = { ...worldData, categoryTemplates }
+    setWorldData(optimistic)
+    repo.updateWorld(world, { categoryTemplates }).then(setWorldData).catch(() => setWorldData(worldData))
+  }
+
+  const handleDelete = () => {
+    const target = pageRef.current
+    if (!target) return
+    clearTimeout(saveTimerRef.current)
+    pendingBodyRef.current = undefined
+    repo.deletePage(world, target.slug).then(() => navigate(`/w/${world}`)).catch(() => setStatus('error'))
   }
 
   if (status === 'loading') {
@@ -151,7 +215,7 @@ export function PageScreen({ repository, onEditorReady }: PageScreenProps) {
     )
   }
 
-  if (status === 'error' || !page) {
+  if (status === 'error' || !page || !worldData) {
     return (
       <main className={styles.screen}>
         <p className={styles.stateText}>This page couldn't be loaded.</p>
@@ -166,11 +230,24 @@ export function PageScreen({ repository, onEditorReady }: PageScreenProps) {
         <span className={styles.eyebrow}>{page.category}</span>
         <h1 className={styles.title}>{page.title}</h1>
         <p className={styles.summary}>{page.summary}</p>
-        <div className={styles.tags} aria-label="Tags">{page.tags.map((tag) => <span key={tag}>#{tag}</span>)}</div>
         <span className={styles.saveState} data-save-state={saveState}>
           {saveState === 'saving' ? 'Saving' : saveState === 'saved' ? 'Saved' : ''}
         </span>
       </header>
+      <PageProperties
+        page={page}
+        pages={pages}
+        world={worldData}
+        readOnly={dashboard?.readOnly}
+        onPropertiesChange={(change: (properties: CustomProperty[]) => CustomProperty[]) => persistPagePatch((current) => ({ customProperties: change(current.customProperties) }))}
+        onTagsChange={(change) => persistPagePatch((current) => ({ tags: change(current.tags) }))}
+        onErasChange={(change) => persistPagePatch((current) => ({ eras: change(current.eras) }))}
+        onCoverChange={(cover) => persistPagePatch(() => ({ cover }))}
+        onLifecycleChange={handleLifecycleChange}
+        onDelete={handleDelete}
+        onTemplateChange={handleTemplateChange}
+        onSeeTimeline={() => navigate(`/w/${world}?panel=timeline&focus=${page.slug}`)}
+      />
       <PageEditor
         key={page.slug}
         body={page.body}

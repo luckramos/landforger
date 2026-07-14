@@ -97,6 +97,48 @@ describe('LocalStorageWorldRepository — Page CRUD', () => {
     expect(await repo.getPage('testland', 'corin-ashthorn')).toEqual(created)
   })
 
+  it('seeds a new Page from its World current Category Template without sharing mutable definitions', async () => {
+    const templatedWorld: World = {
+      ...baseWorld,
+      categoryTemplates: [
+        {
+          category: 'characters',
+          properties: [
+            { key: 'portrait', label: 'Portrait', type: 'image' },
+            { key: 'age', label: 'Age', type: 'number' },
+            { key: 'allies', label: 'Allies', type: 'relation', targetCategories: ['characters'] },
+          ],
+        },
+      ],
+    }
+    const repo = new LocalStorageWorldRepository(storage, fixturesFor(templatedWorld, []))
+
+    const created = await repo.createPage('testland', { title: 'Mira', category: 'characters' })
+    expect(created.customProperties).toEqual([
+      { key: 'portrait', label: 'Portrait', type: 'image', value: '' },
+      { key: 'age', label: 'Age', type: 'number', value: 0 },
+      { key: 'allies', label: 'Allies', type: 'relation', targetCategories: ['characters'], value: [] },
+    ])
+
+    created.customProperties[2].value = ['alaric']
+    expect((await repo.getWorld('testland'))?.categoryTemplates[0].properties[2]).not.toHaveProperty('value')
+  })
+
+  it('template edits affect future Pages only', async () => {
+    const repo = freshRepo()
+    const first = await repo.createPage('testland', { title: 'Before', category: 'characters' })
+    await repo.updateWorld('testland', {
+      categoryTemplates: [
+        { category: 'characters', properties: [{ key: 'role', label: 'Role', type: 'text' }] },
+      ],
+    })
+    const second = await repo.createPage('testland', { title: 'After', category: 'characters' })
+
+    expect(first.customProperties).toEqual([])
+    expect((await repo.getPage('testland', first.slug))?.customProperties).toEqual([])
+    expect(second.customProperties).toEqual([{ key: 'role', label: 'Role', type: 'text', value: '' }])
+  })
+
   it('resolves slug collisions with a numeric suffix', async () => {
     const repo = freshRepo()
     // The fixture already seeded a page titled "Alaric" (slug `alaric`).
@@ -118,6 +160,34 @@ describe('LocalStorageWorldRepository — Page CRUD', () => {
     const renamed = await repo.updatePage('testland', 'alaric', { title: 'Alaric the Bold' })
     expect(renamed.slug).toBe('alaric')
     expect(renamed.title).toBe('Alaric the Bold')
+  })
+
+  it('recategorizes with Properties intact and can optionally add missing target-template Properties', async () => {
+    const world: World = {
+      ...baseWorld,
+      categoryTemplates: [
+        {
+          category: 'locations',
+          properties: [
+            { key: 'role', label: 'Location role', type: 'text' },
+            { key: 'parent', label: 'Parent', type: 'relation', targetCategories: ['locations'] },
+          ],
+        },
+      ],
+    }
+    const page: Page = {
+      ...basePage,
+      customProperties: [{ key: 'role', label: 'Character role', type: 'text', value: 'Scout' }],
+    }
+    const repo = new LocalStorageWorldRepository(storage, fixturesFor(world, [page]))
+
+    const changed = await repo.recategorizePage('testland', 'alaric', 'locations', { applyTemplate: true })
+    expect(changed.category).toBe('locations')
+    expect(changed.slug).toBe('alaric')
+    expect(changed.customProperties).toEqual([
+      { key: 'role', label: 'Character role', type: 'text', value: 'Scout' },
+      { key: 'parent', label: 'Parent', type: 'relation', targetCategories: ['locations'], value: [] },
+    ])
   })
 
   it('maintains updated on every mutation while created never changes', async () => {
@@ -181,6 +251,46 @@ describe('LocalStorageWorldRepository — Page CRUD', () => {
       expect.objectContaining({ sourceSlug: 'the-watch', kinds: ['relation'] }),
       expect.objectContaining({ sourceSlug: 'chronicle', kinds: ['body'] }),
     ])
+  })
+
+  it('re-derives the live Relation seam after an edit', async () => {
+    const repo = freshRepo()
+    const source = await repo.createPage('testland', {
+      title: 'The Watch',
+      category: 'organizations',
+      customProperties: [{ key: 'members', label: 'Members', type: 'relation', value: [] }],
+    })
+    expect(await repo.getBacklinks('testland', 'alaric')).not.toContainEqual(
+      expect.objectContaining({ sourceSlug: source.slug }),
+    )
+
+    await repo.updatePage('testland', source.slug, {
+      customProperties: [{ key: 'members', label: 'Members', type: 'relation', value: ['alaric'] }],
+    })
+    expect(await repo.getBacklinks('testland', 'alaric')).toContainEqual(
+      expect.objectContaining({ sourceSlug: source.slug, kinds: ['relation'] }),
+    )
+  })
+
+  it('keeps Era order and Active Era valid across create, recategorize and delete', async () => {
+    const repo = freshRepo()
+    const era = await repo.createPage('testland', { title: 'Second Era', category: 'eras' })
+    expect(await repo.getWorld('testland')).toEqual(
+      expect.objectContaining({ eraOrder: ['era-one', era.slug], activeEra: 'era-one' }),
+    )
+
+    const converted = await repo.createPage('testland', { title: 'Third Age', category: 'events' })
+    await repo.recategorizePage('testland', converted.slug, 'eras')
+    expect((await repo.getWorld('testland'))?.eraOrder).toEqual(['era-one', era.slug, converted.slug])
+
+    await repo.recategorizePage('testland', converted.slug, 'events')
+    expect((await repo.getWorld('testland'))?.eraOrder).toEqual(['era-one', era.slug])
+
+    await repo.updateWorld('testland', { activeEra: era.slug })
+    await repo.deletePage('testland', era.slug)
+    expect(await repo.getWorld('testland')).toEqual(
+      expect.objectContaining({ eraOrder: ['era-one'], activeEra: 'era-one' }),
+    )
   })
 })
 

@@ -3,7 +3,7 @@
 // slugs. Runs under happy-dom like the rest of the suite.
 
 import type { Editor } from '@tiptap/core'
-import { act, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createInMemoryStorage } from '../../__tests__/testStorage'
@@ -21,7 +21,16 @@ const world: World = {
   logline: 'A world for tests.',
   eraOrder: ['era-one'],
   activeEra: 'era-one',
-  categoryTemplates: [],
+  categoryTemplates: [
+    {
+      category: 'characters',
+      properties: [{ key: 'role', label: 'Role', type: 'text' }],
+    },
+    {
+      category: 'locations',
+      properties: [{ key: 'parent', label: 'Parent', type: 'relation', targetCategories: ['locations'] }],
+    },
+  ],
   maps: [],
   pins: [],
   created: '2026-01-01T00:00:00.000Z',
@@ -38,7 +47,15 @@ const alaric: Page = {
   eras: ['era-one'],
   created: '2026-01-01T00:00:00.000Z',
   updated: '2026-01-01T00:00:00.000Z',
-  customProperties: [],
+  customProperties: [
+    { key: 'motto', label: 'Motto', type: 'text', value: 'Stand watch' },
+    { key: 'history', label: 'History', type: 'textarea', value: 'Raised at the gate.' },
+    { key: 'rank', label: 'Rank', type: 'select', options: ['Guard', 'Captain'], value: 'Guard' },
+    { key: 'portrait', label: 'Portrait', type: 'image', value: '/portraits/alaric.webp' },
+    { key: 'age', label: 'Age', type: 'number', value: 31 },
+    { key: 'oathDate', label: 'Oath Date', type: 'date', value: '2026-02-03' },
+    { key: 'allies', label: 'Allies', type: 'relation', targetCategories: ['organizations'], value: [] },
+  ],
   body: 'Alaric guards the [[gate-of-ash]].\n\nHe keeps the ledger.',
 }
 
@@ -56,6 +73,7 @@ const chronicle: Page = {
   slug: 'chronicle',
   title: 'The Chronicle',
   category: 'stories',
+  tags: ['history'],
   eras: [],
   body: 'At dusk, [[alaric]] took the western watch.',
 }
@@ -96,6 +114,7 @@ async function mountScreen(slug: string, storage = createInMemoryStorage()) {
   const utils = render(
     <MemoryRouter initialEntries={[`/w/testland/p/${slug}`]}>
       <Routes>
+        <Route path="/w/:world" element={<p>World home</p>} />
         <Route
           path="/w/:world/p/:slug"
           element={
@@ -240,6 +259,173 @@ describe('PageScreen — saving', () => {
     expect((await repo.getPage('testland', 'alaric'))!.body).toContain('Retried text.')
     expect(repo.updatePage).toHaveBeenCalledTimes(2)
     vi.useRealTimers()
+  })
+})
+
+describe('PageScreen — Properties', () => {
+  it('renders all 7 Custom Property types and persists number and date edits to frontmatter', async () => {
+    const { repo, storage } = await mountScreen('alaric')
+    expect(screen.getByLabelText('Motto')).toBeTruthy()
+    expect(screen.getByLabelText('History')).toBeTruthy()
+    expect(screen.getByLabelText('Rank')).toBeTruthy()
+    expect(screen.getByLabelText('Portrait')).toBeTruthy()
+    expect(screen.getByLabelText('Age')).toBeTruthy()
+    expect(screen.getByLabelText('Oath Date')).toBeTruthy()
+    expect(screen.getByRole('group', { name: 'Allies' })).toBeTruthy()
+
+    fireEvent.change(screen.getByLabelText('Age'), { target: { value: '42' } })
+    fireEvent.change(screen.getByLabelText('Oath Date'), { target: { value: '2027-05-09' } })
+    await act(async () => {})
+
+    const saved = (await repo.getPage('testland', 'alaric'))!
+    expect(saved.customProperties.find((property) => property.key === 'age')?.value).toBe(42)
+    expect(saved.customProperties.find((property) => property.key === 'oathDate')?.value).toBe('2027-05-09')
+    const rehydrated = new LocalStorageWorldRepository(storage, fixtures())
+    expect((await rehydrated.getPage('testland', 'alaric'))?.customProperties).toContainEqual(
+      expect.objectContaining({ key: 'age', type: 'number', value: 42 }),
+    )
+  })
+
+  it('filters a Relation picker by target Category and immediately updates backlinks', async () => {
+    const { repo } = await mountScreen('alaric')
+    fireEvent.click(screen.getByRole('button', { name: 'Add Allies' }))
+    expect(screen.getByRole('button', { name: 'The Watch' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'The Gate of Ash' })).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: 'The Watch' }))
+    await act(async () => {})
+    expect(await repo.getBacklinks('testland', 'alaric')).toEqual(
+      expect.arrayContaining([expect.objectContaining({ sourceSlug: 'the-watch' })]),
+    )
+    expect(await repo.getBacklinks('testland', 'the-watch')).toEqual(
+      expect.arrayContaining([expect.objectContaining({ sourceSlug: 'alaric', kinds: ['relation'] })]),
+    )
+  })
+
+  it('adds, renames and removes a page-local Custom Property', async () => {
+    const { repo } = await mountScreen('alaric')
+    fireEvent.click(screen.getByRole('button', { name: 'Add property' }))
+    expect(screen.getAllByRole('button', { name: /^Add (text|textarea|select|relation|image|number|date) property$/ })).toHaveLength(7)
+    fireEvent.click(screen.getByRole('button', { name: 'Add date property' }))
+    await act(async () => {})
+
+    const labelInput = screen.getByLabelText('Property name for dateProperty')
+    fireEvent.change(labelInput, { target: { value: 'Coronation' } })
+    await act(async () => {})
+    expect((await repo.getPage('testland', 'alaric'))?.customProperties).toContainEqual(
+      expect.objectContaining({ key: 'dateProperty', label: 'Coronation', type: 'date' }),
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Coronation' }))
+    await act(async () => {})
+    expect((await repo.getPage('testland', 'alaric'))?.customProperties.some((property) => property.key === 'dateProperty')).toBe(false)
+  })
+
+  it('configures options and Relation target Categories on page-local Properties', async () => {
+    const { repo } = await mountScreen('alaric')
+    fireEvent.change(screen.getByLabelText('Options for Rank'), { target: { value: 'Guard, Captain, Marshal' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Add property' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Add relation property' }))
+    await act(async () => {})
+    fireEvent.click(screen.getByLabelText('Target locations for Relation property'))
+    await act(async () => {})
+    fireEvent.click(screen.getByRole('button', { name: 'Add Relation property' }))
+    expect(screen.getByRole('button', { name: 'The Gate of Ash' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'The Watch' })).toBeNull()
+
+    const saved = (await repo.getPage('testland', 'alaric'))!
+    expect(saved.customProperties.find((property) => property.key === 'rank')?.options).toEqual(['Guard', 'Captain', 'Marshal'])
+    expect(saved.customProperties.find((property) => property.key === 'relationProperty')?.targetCategories).toEqual(['locations'])
+  })
+
+  it('edits tags and Eras inline', async () => {
+    const { repo } = await mountScreen('alaric')
+    fireEvent.click(screen.getByRole('button', { name: 'Add tag' }))
+    fireEvent.change(screen.getByLabelText('New tag'), { target: { value: 'veteran' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Create tag veteran' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Remove era The First Era' }))
+    await act(async () => {})
+
+    const saved = (await repo.getPage('testland', 'alaric'))!
+    expect(saved.tags).toContain('veteran')
+    expect(saved.eras).toEqual([])
+  })
+
+  it('finds an existing World tag and edits the shared Cover slot', async () => {
+    const { repo } = await mountScreen('alaric')
+    fireEvent.click(screen.getByRole('button', { name: 'Add tag' }))
+    fireEvent.change(screen.getByLabelText('New tag'), { target: { value: 'hist' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Use tag history' }))
+    fireEvent.change(screen.getByLabelText('Cover'), { target: { value: '/covers/alaric.webp' } })
+    await act(async () => {})
+
+    expect(await repo.getPage('testland', 'alaric')).toEqual(
+      expect.objectContaining({ tags: ['history'], cover: '/covers/alaric.webp' }),
+    )
+  })
+})
+
+describe('PageScreen — lifecycle and templates', () => {
+  it('renames and recategorizes while keeping slug and Properties, optionally applying the target template', async () => {
+    const { repo } = await mountScreen('alaric')
+    fireEvent.click(screen.getByRole('button', { name: 'Page actions' }))
+    fireEvent.change(screen.getByLabelText('Page title'), { target: { value: 'Alaric the Bold' } })
+    fireEvent.change(screen.getByLabelText('Category'), { target: { value: 'locations' } })
+    fireEvent.click(screen.getByLabelText('Apply target Category Template'))
+    fireEvent.click(screen.getByRole('button', { name: 'Save page details' }))
+    await act(async () => {})
+
+    const saved = (await repo.getPage('testland', 'alaric'))!
+    expect(saved.title).toBe('Alaric the Bold')
+    expect(saved.slug).toBe('alaric')
+    expect(saved.category).toBe('locations')
+    expect(saved.customProperties).toEqual(expect.arrayContaining([
+      expect.objectContaining({ key: 'motto', value: 'Stand watch' }),
+      expect.objectContaining({ key: 'parent', type: 'relation', value: [] }),
+    ]))
+  })
+
+  it('edits the World Category Template and leaves the current Page untouched', async () => {
+    const { repo } = await mountScreen('alaric')
+    const before = (await repo.getPage('testland', 'alaric'))!.customProperties
+    fireEvent.click(screen.getByRole('button', { name: 'Edit characters template' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Add number to template' }))
+    fireEvent.change(screen.getByLabelText('Template property name for numberProperty'), { target: { value: 'Reputation' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save Category Template' }))
+    await act(async () => {})
+
+    expect((await repo.getPage('testland', 'alaric'))?.customProperties).toEqual(before)
+    const future = await repo.createPage('testland', { title: 'Beren', category: 'characters' })
+    expect(future.customProperties).toContainEqual(
+      expect.objectContaining({ key: 'numberProperty', label: 'Reputation', type: 'number', value: 0 }),
+    )
+  })
+
+  it('persists select options and Relation target Categories in a Category Template', async () => {
+    const { repo } = await mountScreen('alaric')
+    fireEvent.click(screen.getByRole('button', { name: 'Edit characters template' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Add select to template' }))
+    fireEvent.change(screen.getByLabelText('Options for Select property'), { target: { value: 'Known, Unknown' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Add relation to template' }))
+    fireEvent.click(screen.getByLabelText('Target organizations for Relation property'))
+    fireEvent.click(screen.getByRole('button', { name: 'Save Category Template' }))
+    await act(async () => {})
+
+    const future = await repo.createPage('testland', { title: 'Template Child', category: 'characters' })
+    expect(future.customProperties).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: 'select', options: ['Known', 'Unknown'] }),
+      expect.objectContaining({ type: 'relation', targetCategories: ['organizations'] }),
+    ]))
+  })
+
+  it('deletes without rewriting inbound references, leaving a Ghost link', async () => {
+    const { repo } = await mountScreen('alaric')
+    fireEvent.click(screen.getByRole('button', { name: 'Page actions' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete page' }))
+    await act(async () => {})
+
+    expect(await repo.getPage('testland', 'alaric')).toBeUndefined()
+    expect((await repo.getPage('testland', 'chronicle'))?.body).toContain('[[alaric]]')
   })
 })
 
