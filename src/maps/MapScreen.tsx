@@ -1,5 +1,6 @@
 import type { ChangeEvent, CSSProperties, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, WheelEvent as ReactWheelEvent } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { CATEGORIES, type Page, type Pin, type World } from '../domain/types'
 import { getRepository } from '../state/repository'
@@ -18,6 +19,8 @@ import {
   type MapCollectionState,
 } from './mapDomain'
 import { persistMapCollection } from './mapPersistence'
+import { overlayExitTransition, prefersReducedMotion } from '../components/motionPrefs'
+import { useUiStore } from '../state/uiStore'
 import styles from './MapScreen.module.css'
 
 type LoadState = 'loading' | 'ready' | 'missing' | 'error'
@@ -27,6 +30,7 @@ interface MapPositionPercent { x: number; y: number }
 interface MapTransition { mapTransition?: 'in' | 'out'; origin?: MapPositionPercent }
 interface MapImageState { mapId: string; activeEra: string; image?: string }
 interface PinDrag { pinId: string; originalPins: Pin[] }
+interface NavigationBurst { to: string; label: string; color: string }
 
 const MIN_ZOOM = 0.6
 const MAX_ZOOM = 3.4
@@ -80,6 +84,8 @@ export function MapScreen() {
   const [placingPageSlug, setPlacingPageSlug] = useState<string>()
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [pinDrag, setPinDrag] = useState<PinDrag>()
+  const [navigationBurst, setNavigationBurst] = useState<NavigationBurst>()
+  const motionScale = useUiStore((state) => state.motionScale)
   const dragRef = useRef<DragStart | undefined>(undefined)
   const viewportRef = useRef<HTMLDivElement>(null)
   const stageRef = useRef<HTMLDivElement>(null)
@@ -205,15 +211,30 @@ export function MapScreen() {
     }
     setFadingFromImage(previous.image)
     if (!previous.image) return
-    const timer = window.setTimeout(() => setFadingFromImage((current) => current === previous.image ? undefined : current), 480)
+    const timer = window.setTimeout(
+      () => setFadingFromImage((current) => current === previous.image ? undefined : current),
+      prefersReducedMotion() ? 0 : 560 * motionScale + 40,
+    )
     return () => window.clearTimeout(timer)
-  }, [currentMap, image, world])
+  }, [currentMap, image, motionScale, world])
 
   useEffect(() => {
     if (!transition) return
-    const timer = window.setTimeout(() => setCompletedTransitionKey(location.key), 500)
+    const timer = window.setTimeout(
+      () => setCompletedTransitionKey(location.key),
+      prefersReducedMotion() ? 0 : 600 * motionScale,
+    )
     return () => window.clearTimeout(timer)
-  }, [location.key, transition])
+  }, [location.key, motionScale, transition])
+
+  useEffect(() => {
+    if (!navigationBurst) return
+    const timer = window.setTimeout(
+      () => navigate(navigationBurst.to),
+      prefersReducedMotion() ? 60 : 640 * motionScale,
+    )
+    return () => window.clearTimeout(timer)
+  }, [motionScale, navigate, navigationBurst])
 
   if (loadState !== 'ready' || !world || !currentMap) {
     return (
@@ -312,6 +333,11 @@ export function MapScreen() {
 
   const navigateMap = (targetId: string, direction: 'in' | 'out', origin: MapPositionPercent) => {
     navigate(`/w/${world.slug}/map/${targetId}`, { state: { mapTransition: direction, origin } satisfies MapTransition })
+  }
+
+  const beginNavigationBurst = (event: ReactMouseEvent<HTMLAnchorElement>, burst: NavigationBurst) => {
+    event.preventDefault()
+    if (!navigationBurst) setNavigationBurst(burst)
   }
 
   const breadcrumbOrigin = (targetIndex: number) => {
@@ -415,8 +441,9 @@ export function MapScreen() {
           </div>
         </div>
 
+        <AnimatePresence>
         {selectedPin && selectedPage && (
-          <aside className={styles.inspector} aria-label="Pin inspector">
+          <motion.aside className={styles.inspector} aria-label="Pin inspector" initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={overlayExitTransition(motionScale)}>
             <button type="button" className={styles.closeInspector} aria-label="Close Pin inspector" onClick={() => { setSelectedPinId(undefined); setReaderOpen(false) }}>×</button>
             {selectedPage.cover ? (
               <img src={selectedPage.cover} alt="" />
@@ -447,7 +474,14 @@ export function MapScreen() {
               {selectedPage.eras.length === 0 && <small>Timeless · visible in every Era</small>}
             </section>
             <div className={styles.inspectorActions}>
-              <Link to={`/w/${world.slug}/p/${selectedPage.slug}`}>Open full page</Link>
+              <Link
+                to={`/w/${world.slug}/p/${selectedPage.slug}`}
+                onClick={(event) => beginNavigationBurst(event, {
+                  to: `/w/${world.slug}/p/${selectedPage.slug}`,
+                  label: selectedPage.title,
+                  color: `var(--cat-${selectedPage.category})`,
+                })}
+              >Open full page</Link>
               <button type="button" onClick={() => setReaderOpen((open) => !open)}>{readerOpen ? 'Close reader' : 'Read in dock'}</button>
               {selectedPin.childMap && (
                 <button type="button" onClick={() => navigateMap(selectedPin.childMap!, 'in', { x: selectedPin.x, y: selectedPin.y })}>
@@ -467,28 +501,41 @@ export function MapScreen() {
                 }}>Remove placement</button>
               )}
             </div>
-          </aside>
+          </motion.aside>
         )}
+        </AnimatePresence>
 
+        <AnimatePresence>
         {readerOpen && selectedPage && (
-          <aside className={styles.reader} aria-label="Docked reader">
+          <motion.aside className={styles.reader} aria-label="Docked reader" initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={overlayExitTransition(motionScale)}>
             <header><span>Docked reader</span><button type="button" aria-label="Close reader" onClick={() => setReaderOpen(false)}>×</button></header>
             <h2>{selectedPage.title}</h2>
             {readerParagraphs(selectedPage.body).map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
-            <Link to={`/w/${world.slug}/p/${selectedPage.slug}`}>Continue on full page →</Link>
-          </aside>
+            <Link
+              to={`/w/${world.slug}/p/${selectedPage.slug}`}
+              onClick={(event) => beginNavigationBurst(event, {
+                to: `/w/${world.slug}/p/${selectedPage.slug}`,
+                label: selectedPage.title,
+                color: `var(--cat-${selectedPage.category})`,
+              })}
+            >Continue on full page →</Link>
+          </motion.aside>
         )}
+        </AnimatePresence>
       </div>
 
+      <AnimatePresence>
       {placingPage && (
-        <div className={styles.placingBanner} role="status">
+        <motion.div className={styles.placingBanner} role="status" initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={overlayExitTransition(motionScale)}>
           Click the Map to place {placingPage.title}
           <button type="button" onClick={() => setPlacingPageSlug(undefined)}>Cancel</button>
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
 
+      <AnimatePresence>
       {pickerOpen && (
-        <div className={styles.scrim} role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setPickerOpen(false)}>
+        <motion.div className={styles.scrim} role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setPickerOpen(false)} initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={overlayExitTransition(motionScale)}>
           <section className={styles.modal} role="dialog" aria-label="Add Pin">
             <header><h2>Add Pin</h2><button type="button" aria-label="Close Add Pin" onClick={() => setPickerOpen(false)}>×</button></header>
             <input type="search" aria-label="Search Pages" value={pageQuery} onChange={(event) => setPageQuery(event.target.value)} autoFocus />
@@ -511,11 +558,13 @@ export function MapScreen() {
               {pickerPages.length === 0 && <p>No Pages match that search.</p>}
             </div>
           </section>
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
 
+      <AnimatePresence>
       {settingsOpen && (
-        <section className={styles.settings} role="dialog" aria-label="Map settings">
+        <motion.section className={styles.settings} role="dialog" aria-label="Map settings" initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={overlayExitTransition(motionScale)}>
           <header><h2>Map settings</h2><button type="button" aria-label="Close Map settings" onClick={() => setSettingsOpen(false)}>×</button></header>
           <label className={styles.toggle}>
             <input
@@ -536,8 +585,9 @@ export function MapScreen() {
               </label>
             ))}
           </div>
-        </section>
+        </motion.section>
       )}
+      </AnimatePresence>
 
       <section className={styles.eraDock} aria-label="Active Era">
         <header><span>Active Era</span><strong>{eraPages.find((era) => era.slug === world.activeEra)?.title ?? 'No Active Era'}</strong></header>
@@ -559,6 +609,18 @@ export function MapScreen() {
           })}
         </div>
       </section>
+
+      {navigationBurst && (
+        <div
+          className={styles.navigationBurst}
+          role="status"
+          aria-label={`Opening ${navigationBurst.label}`}
+          style={{ '--burst-color': navigationBurst.color } as CSSProperties}
+        >
+          <i aria-hidden="true" />
+          <span>Opening {navigationBurst.label}…</span>
+        </div>
+      )}
     </main>
   )
 }

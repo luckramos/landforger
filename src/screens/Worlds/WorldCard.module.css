@@ -12,8 +12,8 @@
   font-family: inherit;
   animation: wf-cardIn calc(var(--mo, 1) * 460ms) var(--ease-house) both;
   transition:
-    border-color 200ms,
-    box-shadow 200ms;
+    border-color calc(var(--mo, 1) * 200ms),
+    box-shadow calc(var(--mo, 1) * 200ms);
 }
 
 .card:hover:not(:disabled) {

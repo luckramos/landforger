@@ -1,4 +1,7 @@
 import { useState } from 'react'
+import { motion } from 'motion/react'
+import { overlayExitTransition } from '../../components/motionPrefs'
+import { useUiStore } from '../../state/uiStore'
 import type { World } from '../../domain/types'
 import type { CreateWorldInput, CreateWorldTemplate } from '../../repository/WorldRepository'
 import styles from './CreateWorldModal.module.css'
@@ -31,6 +34,7 @@ function previewWorld(name: string, logline: string, genre: string, color: strin
 
 /** The "Forge a new world" modal (design-inventory.md §2.2): name, premise, genre chips + custom color, template choice, live preview. */
 export function CreateWorldModal({ onCancel, onCreate }: CreateWorldModalProps) {
+  const motionScale = useUiStore((state) => state.motionScale)
   const [name, setName] = useState('')
   const [logline, setLogline] = useState('')
   const [genre, setGenre] = useState(GENRE_PRESETS[0].name)
@@ -47,7 +51,7 @@ export function CreateWorldModal({ onCancel, onCreate }: CreateWorldModalProps) 
   }
 
   return (
-    <div className={styles.scrim} onClick={onCancel}>
+    <motion.div className={styles.scrim} onClick={onCancel} initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={overlayExitTransition(motionScale)}>
       <div
         className={styles.panel}
         role="dialog"
@@ -155,6 +159,6 @@ export function CreateWorldModal({ onCancel, onCreate }: CreateWorldModalProps) 
           <WorldCard world={previewWorld(name, logline, genre, color)} entryCount={0} interactive={false} />
         </div>
       </div>
-    </div>
+    </motion.div>
   )
 }

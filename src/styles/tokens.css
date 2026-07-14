@@ -39,6 +39,7 @@
   --font-sans: 'Hanken Grotesk', system-ui, sans-serif;
   --font-serif: 'Newsreader', Georgia, serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --page-body-font: var(--font-serif);
 
   /* Easing curves — the complete measured set */
   --ease-house: cubic-bezier(0.22, 0.61, 0.36, 1);

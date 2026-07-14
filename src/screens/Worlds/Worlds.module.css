@@ -40,8 +40,8 @@
   font-family: var(--font-sans);
   font-size: 13px;
   transition:
-    border-color 160ms,
-    box-shadow 160ms;
+    border-color calc(var(--mo, 1) * 160ms),
+    box-shadow calc(var(--mo, 1) * 160ms);
 }
 
 .search:focus {
@@ -124,9 +124,9 @@
   font-family: var(--font-sans);
   animation: wf-cardIn calc(var(--mo, 1) * 460ms) var(--ease-house) both;
   transition:
-    border-color 180ms,
-    background 180ms,
-    box-shadow 180ms;
+    border-color calc(var(--mo, 1) * 180ms),
+    background calc(var(--mo, 1) * 180ms),
+    box-shadow calc(var(--mo, 1) * 180ms);
 }
 
 .createCard:hover {

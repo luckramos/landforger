@@ -177,9 +177,9 @@
   font-family: var(--font-sans);
   font-size: 14px;
   transition:
-    border-color 160ms,
-    background 160ms,
-    box-shadow 160ms;
+    border-color calc(var(--mo, 1) * 160ms),
+    background calc(var(--mo, 1) * 160ms),
+    box-shadow calc(var(--mo, 1) * 160ms);
 }
 
 .field input:focus {
@@ -212,8 +212,8 @@
   color: var(--text-dim);
   cursor: pointer;
   transition:
-    color 140ms,
-    background 140ms;
+    color calc(var(--mo, 1) * 140ms),
+    background calc(var(--mo, 1) * 140ms);
 }
 
 .eyeButton:hover {
@@ -246,8 +246,8 @@
   border: 1px solid var(--hairline-strong);
   background: transparent;
   transition:
-    background 160ms,
-    border-color 160ms;
+    background calc(var(--mo, 1) * 160ms),
+    border-color calc(var(--mo, 1) * 160ms);
 }
 
 .checkboxBox[data-checked] {
@@ -259,7 +259,7 @@
   font-size: 13px;
   color: var(--text-dim);
   text-decoration: none;
-  transition: color 140ms;
+  transition: color calc(var(--mo, 1) * 140ms);
 }
 
 .forgotLink:hover {
@@ -301,8 +301,8 @@
   font-size: 14px;
   cursor: pointer;
   transition:
-    filter 160ms,
-    transform 120ms;
+    filter calc(var(--mo, 1) * 160ms),
+    transform calc(var(--mo, 1) * 120ms);
 }
 
 .submitButton:hover {
@@ -342,7 +342,7 @@
   color: var(--bronze-light);
   font-size: 13px;
   cursor: pointer;
-  transition: color 140ms;
+  transition: color calc(var(--mo, 1) * 140ms);
 }
 
 .linkButton:hover {

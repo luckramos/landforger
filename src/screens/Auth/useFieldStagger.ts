@@ -23,7 +23,7 @@ export function useFieldStagger(containerRef: RefObject<HTMLElement | null>, rep
         el.style.opacity = '1'
         el.style.transform = 'none'
       } else {
-        el.style.animation = `authFieldIn calc(var(--mo, 1) * 560ms) var(--ease-house) ${i * 62}ms both`
+        el.style.animation = `authFieldIn calc(var(--mo, 1) * 560ms) var(--ease-house) calc(var(--mo, 1) * ${i * 62}ms) both`
       }
     }
   }, [containerRef, replayKey])

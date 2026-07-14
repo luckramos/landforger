@@ -87,7 +87,7 @@ describe('Dashboard shell controls', () => {
     expect(screen.getByRole('dialog', { name: 'Search the World' })).toBeTruthy()
     expect(screen.getByRole('combobox', { name: 'Search Pages and Categories' })).toBe(document.activeElement)
     fireEvent.keyDown(document, { key: 'Escape' })
-    expect(screen.queryByRole('dialog', { name: 'Search the World' })).toBeNull()
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Search the World' })).toBeNull())
 
     fireEvent.click(screen.getByRole('button', { name: /Search the world/ }))
     expect(screen.getByRole('dialog', { name: 'Search the World' })).toBeTruthy()
@@ -131,7 +131,7 @@ describe('Dashboard shell controls', () => {
     fireEvent.keyDown(search, { key: 'Enter' })
 
     expect(await screen.findByRole('heading', { name: 'The Salt & Cinder Days' })).toBeTruthy()
-    expect(screen.queryByRole('dialog', { name: 'Search the World' })).toBeNull()
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Search the World' })).toBeNull())
   })
 
   it('opens a Category result through the real Category route', async () => {

@@ -2,7 +2,7 @@ import { motion } from 'motion/react'
 import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useUiStore } from '../../state/uiStore'
-import { prefersReducedMotion } from '../motionPrefs'
+import { overlayExitTransition, prefersReducedMotion } from '../motionPrefs'
 import styles from './DockableWindow.module.css'
 
 interface Geometry {
@@ -144,9 +144,14 @@ export function DockableWindow({
       data-dock-state={dockState}
       data-dragging={pointerOperation ? 'true' : undefined}
       style={{ '--dock-accent': accent } as CSSProperties}
-      initial={false}
-      animate={{ ...geometry, borderRadius: mode === 'fullscreen' && !minimized ? 0 : 12 }}
-      transition={{ duration: reduced || pointerOperation ? 0 : 0.34 * motionScale, ease: [0.22, 0.61, 0.36, 1] }}
+      initial={{ opacity: 0 }}
+      animate={{ ...geometry, opacity: 1, borderRadius: mode === 'fullscreen' && !minimized ? 0 : 12 }}
+      exit={{ opacity: 0 }}
+      transition={{
+        duration: reduced || pointerOperation ? 0 : 0.34 * motionScale,
+        ease: [0.22, 0.61, 0.36, 1],
+        opacity: overlayExitTransition(motionScale),
+      }}
     >
       <header
         className={styles.header}

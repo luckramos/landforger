@@ -1,4 +1,7 @@
 import { useEffect, useState } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
+import { overlayExitTransition } from '../components/motionPrefs'
+import { useUiStore } from '../state/uiStore'
 import { CATEGORIES, type Category, type CustomProperty, type CustomPropertyType, type Page, type PropertyDef, type World } from '../domain/types'
 import { propertyFromDefinition, templatePropertiesFor, uniquePropertyKey } from '../domain/properties'
 import { PropertyInput } from './PropertyInput'
@@ -38,6 +41,7 @@ export function PageProperties({
   onTemplateChange,
   onSeeTimeline,
 }: PagePropertiesProps) {
+  const motionScale = useUiStore((state) => state.motionScale)
   const [tagOpen, setTagOpen] = useState(false)
   const [tagDraft, setTagDraft] = useState('')
   const [eraOpen, setEraOpen] = useState(false)
@@ -98,8 +102,9 @@ export function PageProperties({
           {page.tags.map((tag) => <span key={tag} className={styles.tagChip}>#{tag}<button type="button" disabled={readOnly} aria-label={`Remove tag ${tag}`} onClick={() => onTagsChange((tags) => tags.filter((item) => item !== tag))}>×</button></span>)}
           {!readOnly && <button type="button" className={styles.addChip} aria-label="Add tag" onClick={() => setTagOpen((open) => !open)}>＋ tag</button>}
         </div>
+        <AnimatePresence>
         {tagOpen && (
-          <div className={styles.inlinePopover}>
+          <motion.div className={styles.inlinePopover} initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={overlayExitTransition(motionScale)}>
             <input aria-label="New tag" value={tagDraft} onChange={(event) => setTagDraft(event.target.value)} />
             {knownTags.map((tag) => <button type="button" key={tag} aria-label={`Use tag ${tag}`} onClick={() => { onTagsChange((tags) => [...tags, tag]); setTagDraft(''); setTagOpen(false) }}>#{tag}</button>)}
             <button type="button" aria-label={`Create tag ${tagDraft}`} disabled={!tagDraft.trim()} onClick={() => {
@@ -108,8 +113,9 @@ export function PageProperties({
               setTagDraft('')
               setTagOpen(false)
             }}>Add</button>
-          </div>
+          </motion.div>
         )}
+        </AnimatePresence>
       </div>
 
       {page.category !== 'eras' && (
@@ -123,7 +129,7 @@ export function PageProperties({
             {!readOnly && <button type="button" className={styles.addChip} aria-label="Add era" onClick={() => setEraOpen((open) => !open)}>＋ era</button>}
             {page.eras.length > 0 && <button type="button" role="link" aria-label="See on timeline" className={styles.timelineChip} onClick={onSeeTimeline}>See on timeline →</button>}
           </div>
-          {eraOpen && <div className={styles.inlinePopover}>{eraPages.filter((era) => !page.eras.includes(era.slug)).map((era) => <button key={era.slug} type="button" onClick={() => { onErasChange((eras) => [...eras, era.slug]); setEraOpen(false) }}>{era.title}</button>)}</div>}
+          <AnimatePresence>{eraOpen && <motion.div className={styles.inlinePopover} initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={overlayExitTransition(motionScale)}>{eraPages.filter((era) => !page.eras.includes(era.slug)).map((era) => <button key={era.slug} type="button" onClick={() => { onErasChange((eras) => [...eras, era.slug]); setEraOpen(false) }}>{era.title}</button>)}</motion.div>}</AnimatePresence>
         </div>
       )}
 
@@ -159,12 +165,13 @@ export function PageProperties({
         <div className={styles.propertyFooter}>
           <button type="button" aria-label="Add property" onClick={() => setTypePickerOpen((open) => !open)}>＋ add property</button>
           <button type="button" aria-label={`Edit ${page.category} template`} onClick={openTemplate}>Edit Category Template</button>
-          {typePickerOpen && <div className={styles.typePicker}>{PROPERTY_TYPES.map((type) => <button type="button" key={type} aria-label={`Add ${type} property`} onClick={() => addProperty(type)}>{typeLabel(type)}</button>)}</div>}
+          <AnimatePresence>{typePickerOpen && <motion.div className={styles.typePicker} initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={overlayExitTransition(motionScale)}>{PROPERTY_TYPES.map((type) => <button type="button" key={type} aria-label={`Add ${type} property`} onClick={() => addProperty(type)}>{typeLabel(type)}</button>)}</motion.div>}</AnimatePresence>
         </div>
       )}
 
+      <AnimatePresence>
       {actionsOpen && (
-        <div className={styles.dialog} role="dialog" aria-label="Page lifecycle">
+        <motion.div className={styles.dialog} role="dialog" aria-label="Page lifecycle" initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={overlayExitTransition(motionScale)}>
           <h2>Page details</h2>
           <label>Page title<input aria-label="Page title" value={titleDraft} onChange={(event) => setTitleDraft(event.target.value)} /></label>
           <label>Category<select aria-label="Category" value={categoryDraft} onChange={(event) => setCategoryDraft(event.target.value as Category)}>{CATEGORIES.map((category) => <option key={category} value={category}>{category}</option>)}</select></label>
@@ -173,11 +180,13 @@ export function PageProperties({
             <button type="button" className={styles.danger} onClick={onDelete}>Delete page</button>
             <button type="button" onClick={() => { onLifecycleChange(titleDraft.trim(), categoryDraft, applyTemplate); setActionsOpen(false) }}>Save page details</button>
           </div>
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
 
+      <AnimatePresence>
       {templateOpen && (
-        <div className={styles.dialog} role="dialog" aria-label={`${page.category} Category Template`}>
+        <motion.div className={styles.dialog} role="dialog" aria-label={`${page.category} Category Template`} initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={overlayExitTransition(motionScale)}>
           <h2>{page.category} template</h2>
           <p>Changes seed future Pages only.</p>
           {templateDraft.map((definition, index) => (
@@ -192,8 +201,9 @@ export function PageProperties({
           ))}
           <div className={styles.typePicker}>{PROPERTY_TYPES.map((type) => <button type="button" key={type} aria-label={`Add ${type} to template`} onClick={() => addTemplateProperty(type)}>{typeLabel(type)}</button>)}</div>
           <div className={styles.dialogActions}><button type="button" onClick={() => setTemplateOpen(false)}>Cancel</button><button type="button" onClick={() => { onTemplateChange(page.category, templateDraft); setTemplateOpen(false) }}>Save Category Template</button></div>
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
     </section>
   )
 }

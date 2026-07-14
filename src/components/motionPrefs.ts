@@ -7,3 +7,8 @@
 export function prefersReducedMotion(): boolean {
   return typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true
 }
+
+/** Motion transition shared by every dismissible overlay exit (catalog: 120–160ms). */
+export function overlayExitTransition(motionScale: number) {
+  return { duration: prefersReducedMotion() ? 0 : 0.14 * motionScale, ease: 'easeOut' as const }
+}
