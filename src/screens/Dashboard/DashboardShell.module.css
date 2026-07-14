@@ -83,15 +83,7 @@
 .panelPlaceholder { position: fixed; right: 24px; bottom: 24px; padding: 10px 14px; border: 1px solid var(--hairline); border-radius: 9px; background: var(--panel-3); color: var(--text-faint); font-family: var(--font-mono); font-size: 10px; }
 .loading { display: grid; min-height: 100vh; place-items: center; color: var(--text-dim); }
 
-.searchScrim { position: fixed; inset: 0; z-index: 80; display: grid; place-items: start center; padding-top: 12vh; background: rgba(0,0,0,.72); backdrop-filter: blur(8px); }
-.searchPanel { width: min(620px, calc(100vw - 32px)); padding: 10px; border: 1px solid var(--hairline-strong); border-radius: 14px; background: var(--panel-1); box-shadow: 0 25px 70px rgba(0,0,0,.6); animation: search-in calc(var(--mo, 1) * 200ms) var(--ease-house); }
-.searchGlyph { float: left; margin: 5px 14px 18px 5px; color: var(--bronze-light); font-size: 28px; }
-.searchPanel h2 { margin: 3px 0; color: var(--text-hi); font-family: var(--font-serif); font-size: 22px; font-weight: 400; }
-.searchPanel p { margin: 0 0 14px; color: var(--text-dim); font-size: 12px; }
-.searchPanel > button { display: block; margin-left: auto; border: 0; background: transparent; color: var(--text-dim); cursor: pointer; }
-
 @keyframes lw-view-in { from { opacity: 0; transform: translateY(10px) scale(.994); } to { opacity: 1; transform: none; } }
-@keyframes search-in { from { opacity: 0; transform: translateY(-8px) scale(.98); } }
 @keyframes saving-pulse { 50% { opacity: .3; transform: scale(.7); } }
 
 @media (max-width: 760px) {
@@ -103,6 +95,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .view, .searchPanel, .saveIndicator[data-saving] i { animation-duration: .01ms; animation-iteration-count: 1; }
+  .view, .saveIndicator[data-saving] i { animation-duration: .01ms; animation-iteration-count: 1; }
   .sidebar, .expandedOnly, .mainColumn, .topbar, .navItem, .topbarButton { transition-duration: .01ms; }
 }
