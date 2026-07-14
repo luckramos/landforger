@@ -14,7 +14,9 @@ export interface RecategorizePageOptions {
 }
 
 /** World-level mutations: era order, Category Templates, Maps & Pins, Active Era, and world meta. */
-export type WorldMutationInput = Partial<Omit<World, 'slug' | 'created' | 'updated'>>
+export type WorldMutationInput =
+  Partial<Omit<World, 'slug' | 'created' | 'updated' | 'rootMap'>> &
+  { /** `null` explicitly clears the optional Root Map. */ rootMap?: string | null }
 
 /** `'starter'` seeds the default per-Category Templates (design's `createSchemas`); `'blank'` starts empty. */
 export type CreateWorldTemplate = 'blank' | 'starter'

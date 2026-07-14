@@ -1,11 +1,23 @@
-import type { CSSProperties, PointerEvent as ReactPointerEvent, WheelEvent as ReactWheelEvent } from 'react'
+import type { ChangeEvent, CSSProperties, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, WheelEvent as ReactWheelEvent } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
-import type { Page, World } from '../domain/types'
+import { CATEGORIES, type Page, type Pin, type World } from '../domain/types'
 import { getRepository } from '../state/repository'
 import { categoryMeta } from '../screens/Dashboard/categoryMeta'
 import { eraDateLabel } from '../domain/timeline'
-import { buildMapBreadcrumbs, clampMapPan, isPinVisible, pinsForPage, resolveMapImage } from './mapDomain'
+import {
+  buildMapBreadcrumbs,
+  clampMapPan,
+  clampPinPosition,
+  createChildMap,
+  createPin,
+  isPinVisible,
+  narrowPinEras,
+  pinsForPage,
+  resolveMapImage,
+  type MapCollectionState,
+} from './mapDomain'
+import { persistMapCollection } from './mapPersistence'
 import styles from './MapScreen.module.css'
 
 type LoadState = 'loading' | 'ready' | 'missing' | 'error'
@@ -14,6 +26,7 @@ interface DragStart { pointerX: number; pointerY: number; pan: Pan }
 interface MapPositionPercent { x: number; y: number }
 interface MapTransition { mapTransition?: 'in' | 'out'; origin?: MapPositionPercent }
 interface MapImageState { mapId: string; activeEra: string; image?: string }
+interface PinDrag { pinId: string; originalPins: Pin[] }
 
 const MIN_ZOOM = 0.6
 const MAX_ZOOM = 3.4
@@ -35,7 +48,16 @@ function readerParagraphs(body: string): string[] {
     .slice(0, 4)
 }
 
-/** Read-only Map view backed exclusively by World/Page Markdown through the repository seam. */
+function fileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('Image could not be read'))
+    reader.onerror = () => reject(reader.error ?? new Error('Image could not be read'))
+    reader.readAsDataURL(file)
+  })
+}
+
+/** Map viewer/editor backed exclusively by World/Page Markdown through the repository seam. */
 export function MapScreen() {
   const { world: worldSlug = '', mapId } = useParams()
   const location = useLocation()
@@ -52,10 +74,19 @@ export function MapScreen() {
   const [readerOpen, setReaderOpen] = useState(false)
   const [fadingFromImage, setFadingFromImage] = useState<string>()
   const [completedTransitionKey, setCompletedTransitionKey] = useState<string>()
+  const [editing, setEditing] = useState(false)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [pageQuery, setPageQuery] = useState('')
+  const [placingPageSlug, setPlacingPageSlug] = useState<string>()
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [pinDrag, setPinDrag] = useState<PinDrag>()
   const dragRef = useRef<DragStart | undefined>(undefined)
   const viewportRef = useRef<HTMLDivElement>(null)
+  const stageRef = useRef<HTMLDivElement>(null)
+  const worldRef = useRef<World | undefined>(undefined)
   const lastImageRef = useRef<MapImageState | undefined>(undefined)
   const deepLinkedPage = new URLSearchParams(location.search).get('page') ?? undefined
+  worldRef.current = world
 
   useEffect(() => {
     let cancelled = false
@@ -116,6 +147,36 @@ export function MapScreen() {
     }
   }, [dragStart, zoom])
 
+  useEffect(() => {
+    if (!pinDrag) return
+    const move = (event: PointerEvent) => {
+      const rect = stageRef.current?.getBoundingClientRect()
+      if (!rect?.width || !rect.height) return
+      const position = clampPinPosition({
+        x: ((event.clientX - rect.left) / rect.width) * 100,
+        y: ((event.clientY - rect.top) / rect.height) * 100,
+      })
+      setWorld((current) => current ? {
+        ...current,
+        pins: current.pins.map((pin) => pin.id === pinDrag.pinId ? { ...pin, ...position } : pin),
+      } : current)
+    }
+    const end = () => {
+      const latest = worldRef.current
+      setPinDrag(undefined)
+      if (!latest) return
+      void repository.updateWorld(latest.slug, { pins: latest.pins })
+        .then(setWorld)
+        .catch(() => setWorld((current) => current ? { ...current, pins: pinDrag.originalPins } : current))
+    }
+    document.addEventListener('pointermove', move)
+    document.addEventListener('pointerup', end, { once: true })
+    return () => {
+      document.removeEventListener('pointermove', move)
+      document.removeEventListener('pointerup', end)
+    }
+  }, [pinDrag, repository])
+
   const pageBySlug = useMemo(() => new Map(pages.map((page) => [page.slug, page])), [pages])
   const currentMap = world?.maps.find((candidate) => candidate.id === resolvedMapId)
   const selectedPin = world?.pins.find((pin) => pin.id === selectedPinId && pin.mapId === currentMap?.id)
@@ -138,7 +199,7 @@ export function MapScreen() {
     const next = { mapId: currentMap.id, activeEra: world.activeEra, image }
     const previous = lastImageRef.current
     lastImageRef.current = next
-    if (!previous || previous.mapId !== next.mapId || previous.activeEra === next.activeEra || previous.image === next.image) {
+    if (!previous || previous.mapId !== next.mapId || previous.image === next.image) {
       setFadingFromImage(undefined)
       return
     }
@@ -169,6 +230,48 @@ export function MapScreen() {
     const page = pageBySlug.get(pin.pageSlug)
     return page ? isPinVisible(pin, page, world.activeEra, world.eraOrder) : false
   })
+  const renderedPins = editing
+    ? world.pins.filter((pin) => pin.mapId === currentMap.id && pageBySlug.has(pin.pageSlug))
+    : visiblePins
+  const placingPage = placingPageSlug ? pageBySlug.get(placingPageSlug) : undefined
+  const pickerPages = pages.filter((page) => {
+    const query = pageQuery.trim().toLocaleLowerCase()
+    return !query || page.title.toLocaleLowerCase().includes(query) || page.slug.includes(query)
+  })
+
+  const persistMapState = (state: MapCollectionState) => persistMapCollection(repository, world, state, setWorld)
+
+  const placePage = (event: ReactMouseEvent<HTMLDivElement>) => {
+    if (!placingPage || (event.target as HTMLElement).closest('button')) return
+    const rect = event.currentTarget.getBoundingClientRect()
+    if (!rect.width || !rect.height) return
+    const placed = createPin(world.pins, currentMap.id, placingPage, {
+      x: ((event.clientX - rect.left) / rect.width) * 100,
+      y: ((event.clientY - rect.top) / rect.height) * 100,
+    })
+    setPlacingPageSlug(undefined)
+    setSelectedPinId(placed.id)
+    void persistMapState({ ...world, pins: [...world.pins, placed] })
+  }
+
+  const updatePinEras = (pin: Pin, page: Page, eraSlug: string) => {
+    const requested = pin.eras.includes(eraSlug)
+      ? pin.eras.filter((candidate) => candidate !== eraSlug)
+      : [...pin.eras, eraSlug]
+    const updatedPin = narrowPinEras(pin, page, requested, world.eraOrder)
+    if (updatedPin === pin) return
+    void persistMapState({ ...world, pins: world.pins.map((candidate) => candidate.id === pin.id ? updatedPin : candidate) })
+  }
+
+  const uploadImage = async (event: ChangeEvent<HTMLInputElement>, imageKey: string) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    const dataUrl = await fileAsDataUrl(file)
+    const maps = world.maps.map((map) => map.id === currentMap.id
+      ? { ...map, images: { ...map.images, [imageKey]: dataUrl } }
+      : map)
+    await persistMapState({ ...world, maps })
+  }
 
   const setActiveEra = async (eraSlug: string) => {
     if (eraSlug === world.activeEra) return
@@ -236,7 +339,13 @@ export function MapScreen() {
             </span>
           ))}
         </nav>
-        <div className={styles.titleBlock}><span>Viewing map</span><h1>{currentMap.title}</h1></div>
+        <div className={styles.titleBlock}><span>{editing ? 'Editing layout' : 'Viewing map'}</span><h1>{currentMap.title}</h1></div>
+        <div className={styles.mapActions}>
+          <button type="button" aria-pressed={editing} onClick={() => { setEditing((value) => !value); setPlacingPageSlug(undefined) }}>Edit layout</button>
+          <button type="button" onClick={() => { setPickerOpen(true); setPageQuery('') }}>Add Pin</button>
+          <Link to={`/w/${world.slug}/library`}>Map Library</Link>
+          <button type="button" aria-label="Map settings" onClick={() => setSettingsOpen((open) => !open)}>⚙</button>
+        </div>
         <div className={styles.zoomControls} aria-label="Map zoom controls">
           <button type="button" aria-label="Zoom out" onClick={() => changeZoom(-ZOOM_STEP)}>−</button>
           <button type="button" aria-label="Reset map view" onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }) }}>{Math.round(zoom * 100)}%</button>
@@ -253,6 +362,7 @@ export function MapScreen() {
           onWheel={wheelZoom}
         >
           <div
+            ref={stageRef}
             className={styles.stage}
             data-testid="map-stage"
             data-zoom={zoom}
@@ -260,6 +370,7 @@ export function MapScreen() {
             onAnimationEnd={(event) => {
               if (event.currentTarget === event.target && transition) setCompletedTransitionKey(location.key)
             }}
+            onClick={placePage}
             style={{
               transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
               transformOrigin: transitionOrigin ? `${transitionOrigin.x}% ${transitionOrigin.y}%` : '50% 50%',
@@ -267,7 +378,7 @@ export function MapScreen() {
           >
             {fadingFromImage && <img className={styles.previousMapImage} src={fadingFromImage} alt="" />}
             {image ? <img key={image} className={styles.mapImage} src={image} alt={`Map of ${currentMap.title}`} /> : <div className={styles.noImage}>No chart survives from this Era.</div>}
-            {visiblePins.map((pin) => {
+            {renderedPins.map((pin) => {
               const page = pageBySlug.get(pin.pageSlug)!
               const meta = categoryMeta(page.category)
               const selected = pin.id === selectedPinId
@@ -280,13 +391,20 @@ export function MapScreen() {
                   aria-pressed={selected}
                   data-selected={selected || undefined}
                   data-child={pin.childMap ? 'true' : undefined}
+                  data-editing={editing || undefined}
                   style={{
                     left: `${pin.x}%`,
                     top: `${pin.y}%`,
                     '--pin-color': `var(--cat-${page.category})`,
                     '--pin-scale': 1 / zoom,
                   } as CSSProperties}
-                  onClick={() => { setSelectedPinId(pin.id); setReaderOpen(false) }}
+                  onPointerDown={(event) => {
+                    if (!editing || event.button !== 0) return
+                    event.preventDefault()
+                    event.stopPropagation()
+                    setPinDrag({ pinId: pin.id, originalPins: world.pins })
+                  }}
+                  onClick={(event) => { event.stopPropagation(); setSelectedPinId(pin.id); setReaderOpen(false) }}
                 >
                   <i><em>{meta?.icon ?? '◆'}</em></i>
                   <span>{page.title}</span>
@@ -314,7 +432,17 @@ export function MapScreen() {
               <h3>Visible in</h3>
               {eraPages.map((era) => {
                 const included = isPinVisible(selectedPin, selectedPage, era.slug, world.eraOrder)
-                return <span key={era.slug} data-included={included || undefined}><i />{era.title}</span>
+                return editing && selectedPage.eras.length > 0 ? (
+                  <label key={era.slug} data-included={included || undefined}>
+                    <input
+                      type="checkbox"
+                      checked={selectedPin.eras.includes(era.slug)}
+                      disabled={!selectedPage.eras.includes(era.slug)}
+                      onChange={() => updatePinEras(selectedPin, selectedPage, era.slug)}
+                    />
+                    <i />{era.title}
+                  </label>
+                ) : <span key={era.slug} data-included={included || undefined}><i />{era.title}</span>
               })}
               {selectedPage.eras.length === 0 && <small>Timeless · visible in every Era</small>}
             </section>
@@ -325,6 +453,18 @@ export function MapScreen() {
                 <button type="button" onClick={() => navigateMap(selectedPin.childMap!, 'in', { x: selectedPin.x, y: selectedPin.y })}>
                   Enter {world.maps.find((map) => map.id === selectedPin.childMap)?.title ?? 'child'} map
                 </button>
+              )}
+              {!selectedPin.childMap && editing && (
+                <button type="button" onClick={() => {
+                  const next = createChildMap(world, selectedPin.id, selectedPage.title)
+                  void persistMapState(next)
+                }}>Create child Map</button>
+              )}
+              {editing && (
+                <button type="button" className={styles.danger} onClick={() => {
+                  setSelectedPinId(undefined)
+                  void persistMapState({ ...world, pins: world.pins.filter((pin) => pin.id !== selectedPin.id) })
+                }}>Remove placement</button>
               )}
             </div>
           </aside>
@@ -339,6 +479,65 @@ export function MapScreen() {
           </aside>
         )}
       </div>
+
+      {placingPage && (
+        <div className={styles.placingBanner} role="status">
+          Click the Map to place {placingPage.title}
+          <button type="button" onClick={() => setPlacingPageSlug(undefined)}>Cancel</button>
+        </div>
+      )}
+
+      {pickerOpen && (
+        <div className={styles.scrim} role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setPickerOpen(false)}>
+          <section className={styles.modal} role="dialog" aria-label="Add Pin">
+            <header><h2>Add Pin</h2><button type="button" aria-label="Close Add Pin" onClick={() => setPickerOpen(false)}>×</button></header>
+            <input type="search" aria-label="Search Pages" value={pageQuery} onChange={(event) => setPageQuery(event.target.value)} autoFocus />
+            <div className={styles.pagePicker}>
+              {CATEGORIES.map((category) => {
+                const categoryPages = pickerPages.filter((page) => page.category === category)
+                if (categoryPages.length === 0) return null
+                const meta = categoryMeta(category)
+                return (
+                  <section key={category} className={styles.pickerGroup} aria-labelledby={`picker-${category}`}>
+                    <h3 id={`picker-${category}`}>{meta?.icon} {meta?.label}</h3>
+                    {categoryPages.map((page) => (
+                      <button type="button" key={page.slug} onClick={() => { setPlacingPageSlug(page.slug); setPickerOpen(false); setEditing(true) }}>
+                        Place {page.title}
+                      </button>
+                    ))}
+                  </section>
+                )
+              })}
+              {pickerPages.length === 0 && <p>No Pages match that search.</p>}
+            </div>
+          </section>
+        </div>
+      )}
+
+      {settingsOpen && (
+        <section className={styles.settings} role="dialog" aria-label="Map settings">
+          <header><h2>Map settings</h2><button type="button" aria-label="Close Map settings" onClick={() => setSettingsOpen(false)}>×</button></header>
+          <label className={styles.toggle}>
+            <input
+              type="checkbox"
+              checked={currentMap.eraLinked}
+              onChange={() => {
+                const maps = world.maps.map((map) => map.id === currentMap.id ? { ...map, eraLinked: !map.eraLinked } : map)
+                void persistMapState({ ...world, maps })
+              }}
+            />
+            Era-linked · one image per Era
+          </label>
+          <div className={styles.imageSlots}>
+            {(currentMap.eraLinked ? eraPages.map((era) => ({ key: era.slug, label: era.title })) : [{ key: 'all', label: 'All Eras' }]).map((slot) => (
+              <label key={slot.key}>
+                <span>{slot.label}<small>{currentMap.images[slot.key] ? 'Image ready' : 'Missing image'}</small></span>
+                <input type="file" accept="image/*" aria-label={`Upload image for ${slot.label}`} onChange={(event) => void uploadImage(event, slot.key)} />
+              </label>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className={styles.eraDock} aria-label="Active Era">
         <header><span>Active Era</span><strong>{eraPages.find((era) => era.slug === world.activeEra)?.title ?? 'No Active Era'}</strong></header>

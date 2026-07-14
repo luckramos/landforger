@@ -187,9 +187,13 @@ export class LocalStorageWorldRepository implements WorldRepository {
     const world = this.readWorld(worldSlug)
     if (!world) throw new Error(`No such World: ${worldSlug}`)
     this.notifyMutation({ kind: 'updateWorld', worldSlug })
+    const { rootMap: requestedRootMap, ...worldPatch } = withoutUndefined(patch)
+    const { rootMap: currentRootMap, ...worldWithoutRootMap } = world
+    const rootMap = requestedRootMap === null ? undefined : requestedRootMap ?? currentRootMap
     const updated = normalizeWorldTimeline({
-      ...world,
-      ...withoutUndefined(patch),
+      ...worldWithoutRootMap,
+      ...worldPatch,
+      ...(rootMap ? { rootMap } : {}),
       slug: world.slug,
       created: world.created,
       updated: new Date().toISOString(),

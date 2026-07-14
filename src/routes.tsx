@@ -1,12 +1,13 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { Auth } from './screens/Auth/Auth'
-import { NotFound, Placeholder } from './screens/Placeholder'
+import { NotFound } from './screens/Placeholder'
 import { PageScreen } from './screens/PageScreen'
 import { DashboardShell } from './screens/Dashboard/DashboardShell'
 import { DashboardHome, DashboardList } from './screens/Dashboard/DashboardViews'
 import { Worlds } from './screens/Worlds/Worlds'
 import { NewPageScreen } from './screens/NewPageScreen'
 import { MapScreen } from './maps/MapScreen'
+import { MapLibrary } from './maps/MapLibrary'
 
 /** The PRD's full URL scheme; unfinished slices retain the shared placeholder. */
 export function AppRoutes() {
@@ -24,7 +25,7 @@ export function AppRoutes() {
       </Route>
       <Route path="/w/:world/map" element={<MapScreen />} />
       <Route path="/w/:world/map/:mapId" element={<MapScreen />} />
-      <Route path="/w/:world/library" element={<Placeholder name="Map Library" />} />
+      <Route path="/w/:world/library" element={<MapLibrary />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   )

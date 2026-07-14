@@ -320,6 +320,16 @@ describe('LocalStorageWorldRepository — World mutations', () => {
     expect((await repo.getWorld('testland'))?.activeEra).toBe('era-two')
   })
 
+  it('can explicitly clear the optional Root Map', async () => {
+    const repo = new LocalStorageWorldRepository(storage, fixturesFor(baseWorld, [basePage, baseEraPage]))
+    await repo.updateWorld('testland', {
+      rootMap: 'old-map',
+      maps: [{ id: 'old-map', title: 'Old Map', eraLinked: false, images: {} }],
+    })
+    await repo.updateWorld('testland', { rootMap: null })
+    expect((await repo.getWorld('testland'))?.rootMap).toBeUndefined()
+  })
+
   it('defaults an invalid Active Era to the last Era and keeps it across repository reloads', async () => {
     const world = { ...baseWorld, eraOrder: ['era-one', 'era-two'], activeEra: 'missing-era' }
     const repo = new LocalStorageWorldRepository(storage, fixturesFor(world, [basePage, baseEraPage, secondEraPage]))

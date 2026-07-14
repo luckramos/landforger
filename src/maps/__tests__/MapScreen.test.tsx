@@ -129,4 +129,102 @@ describe('Maps viewing screen', () => {
     await screen.findByRole('heading', { name: 'Emberglass' })
     expect(screen.queryByRole('link', { name: 'See on map' })).toBeNull()
   })
+
+  it('adds duplicate Page placements with inherited Eras and persists their clamped positions', async () => {
+    const sera = await repository.getPage('ninth-vale', 'sera')
+    await renderAt('/w/ninth-vale/map')
+    const stage = await screen.findByTestId('map-stage')
+    Object.defineProperty(stage, 'getBoundingClientRect', {
+      value: () => ({ left: 0, top: 0, right: 1000, bottom: 1000, width: 1000, height: 1000, x: 0, y: 0, toJSON: () => ({}) }),
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add Pin' }))
+    expect(screen.getByRole('heading', { name: /Characters/ })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: /Locations/ })).toBeTruthy()
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search Pages' }), { target: { value: 'Sera' } })
+    fireEvent.click(screen.getByRole('button', { name: /Place Sera Valen/ }))
+    expect(screen.getByText(/Click the Map to place Sera Valen/)).toBeTruthy()
+    fireEvent.click(stage, { clientX: 990, clientY: -20 })
+
+    await waitFor(async () => {
+      const world = await repository.getWorld('ninth-vale')
+      const placed = world!.pins.find((pin) => pin.mapId === 'drowned-coast' && pin.pageSlug === 'sera')
+      expect(placed).toMatchObject({ x: 98, y: 2, eras: sera!.eras })
+    })
+  })
+
+  it('drags Pins in edit-layout mode and persists the safe-area coordinates', async () => {
+    await renderAt('/w/ninth-vale/map')
+    const stage = await screen.findByTestId('map-stage')
+    Object.defineProperty(stage, 'getBoundingClientRect', {
+      value: () => ({ left: 0, top: 0, right: 1000, bottom: 1000, width: 1000, height: 1000, x: 0, y: 0, toJSON: () => ({}) }),
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Edit layout' }))
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'The Ninth Vale' }), { button: 0, clientX: 625, clientY: 350 })
+    fireEvent.pointerMove(document, { clientX: -100, clientY: 1200 })
+    fireEvent.pointerUp(document)
+
+    await waitFor(async () => {
+      const moved = (await repository.getWorld('ninth-vale'))!.pins.find((pin) => pin.id === 'pin-ninth-vale')
+      expect(moved).toMatchObject({ x: 2, y: 98 })
+    })
+  })
+
+  it('narrows a Pin to the Page intersection and refuses to remove its last Era', async () => {
+    await renderAt('/w/ninth-vale/map')
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit layout' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Order of the Ember' }))
+    const inspector = screen.getByRole('complementary', { name: 'Pin inspector' })
+    const drowning = within(inspector).getByRole('checkbox', { name: 'The Drowning Years' })
+    const salt = within(inspector).getByRole('checkbox', { name: 'The Salt & Cinder Days' })
+    fireEvent.click(drowning)
+    await waitFor(async () => expect((await repository.getWorld('ninth-vale'))!.pins.find((pin) => pin.id === 'pin-order-ember')?.eras).toEqual(['era-saltcinder']))
+    fireEvent.click(salt)
+    expect((salt as HTMLInputElement).checked).toBe(true)
+    expect((await repository.getWorld('ninth-vale'))!.pins.find((pin) => pin.id === 'pin-order-ember')?.eras).toEqual(['era-saltcinder'])
+  })
+
+  it('creates an empty child Map from a Pin and persists both hierarchy links', async () => {
+    await renderAt('/w/ninth-vale/map')
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit layout' }))
+    fireEvent.click(screen.getByRole('button', { name: 'The Sundering' }))
+    fireEvent.click(within(screen.getByRole('complementary', { name: 'Pin inspector' })).getByRole('button', { name: 'Create child Map' }))
+
+    await waitFor(async () => {
+      const world = (await repository.getWorld('ninth-vale'))!
+      expect(world.maps.find((map) => map.id === 'the-sundering')).toMatchObject({ parentMap: 'drowned-coast', parentPin: 'pin-the-sundering' })
+      expect(world.pins.find((pin) => pin.id === 'pin-the-sundering')?.childMap).toBe('the-sundering')
+    })
+  })
+
+  it('keeps Timeless Pin Eras read-only and removes only the chosen placement', async () => {
+    await renderAt('/w/ninth-vale/map')
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit layout' }))
+    fireEvent.click(screen.getByRole('button', { name: 'The Ninth Vale' }))
+    const inspector = screen.getByRole('complementary', { name: 'Pin inspector' })
+    expect(within(inspector).getByText(/Timeless/)).toBeTruthy()
+    expect(within(inspector).queryByRole('checkbox')).toBeNull()
+    fireEvent.click(within(inspector).getByRole('button', { name: 'Remove placement' }))
+    await waitFor(async () => expect((await repository.getWorld('ninth-vale'))!.pins.some((pin) => pin.id === 'pin-ninth-vale')).toBe(false))
+  })
+
+  it('toggles Era-linked settings and stores uploaded images as data URLs', async () => {
+    await renderAt('/w/ninth-vale/map')
+    fireEvent.click(await screen.findByRole('button', { name: 'Map settings' }))
+    const dialog = screen.getByRole('dialog', { name: 'Map settings' })
+    expect(within(dialog).getByLabelText('Upload image for The Salt & Cinder Days')).toBeTruthy()
+    fireEvent.click(within(dialog).getByRole('checkbox', { name: /Era-linked/ }))
+    const upload = within(dialog).getByLabelText('Upload image for All Eras')
+    fireEvent.change(upload, { target: { files: [new File(['map'], 'coast.png', { type: 'image/png' })] } })
+
+    await waitFor(async () => {
+      const map = (await repository.getWorld('ninth-vale'))!.maps.find((candidate) => candidate.id === 'drowned-coast')!
+      expect(map.eraLinked).toBe(false)
+      expect(map.images.all).toMatch(/^data:image\/png;base64,/)
+    })
+    const firstImage = screen.getByRole('img', { name: 'Map of The Drowned Coast' }).getAttribute('src')!
+    fireEvent.change(within(dialog).getByLabelText('Upload image for All Eras'), { target: { files: [new File(['replacement'], 'new.png', { type: 'image/png' })] } })
+    await waitFor(() => expect(screen.getByRole('img', { name: 'Map of The Drowned Coast' }).getAttribute('src')).not.toBe(firstImage))
+    expect(document.querySelector(`img[src="${firstImage}"]`)).toBeTruthy()
+  })
 })

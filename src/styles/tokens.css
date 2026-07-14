@@ -19,6 +19,7 @@
   /* Accent */
   --bronze: #b0824a;
   --bronze-light: #e6c79a;
+  --danger: oklch(0.72 0.16 25);
 
   /* Hairlines — rgba(255,255,255, 0.05–0.12) */
   --hairline-soft: rgba(255, 255, 255, 0.05);
@@ -50,4 +51,19 @@
 
   /* Motion scale: multiply-is-slower. Durations use calc(var(--mo, 1) * <N>ms). */
   --mo: 1;
+}
+
+@keyframes lf-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes lf-modal-pop {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes lf-banner-pop {
+  from { opacity: 0; transform: translate(-50%, 10px) scale(0.97); }
+  to { opacity: 1; transform: translate(-50%, 0) scale(1); }
 }

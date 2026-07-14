@@ -25,12 +25,9 @@ afterEach(() => {
 })
 
 describe('routes', () => {
-  // Routes still on the shared Placeholder frame until their slices land.
-  const placeholderCases: Array<[path: string, heading: string]> = [['/w/ninth-vale/library', 'Map Library']]
-
-  it.each(placeholderCases)('%s renders the %s placeholder', (path, heading) => {
-    renderAt(path)
-    expect(screen.getByRole('heading', { name: heading })).toBeTruthy()
+  it('/w/:world/library renders the real Map Library', async () => {
+    renderAt('/w/ninth-vale/library')
+    expect(await screen.findByRole('heading', { name: 'Map Library' })).toBeTruthy()
   })
 
   it('/w/:world, /c/:category and /t/:tag render the real Dashboard views', async () => {
