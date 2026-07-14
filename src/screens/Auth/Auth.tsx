@@ -20,17 +20,6 @@ function EyeIcon({ crossed }: { crossed: boolean }) {
   )
 }
 
-function Logo() {
-  return (
-    <svg width="30" height="30" viewBox="0 0 34 34" fill="none" aria-hidden="true">
-      <circle cx="22" cy="10" r="6" fill="var(--bronze-light)" opacity="0.85" />
-      <path d="M2 28 L13 10 L19 20 L24 13 L32 28 Z" fill="var(--bronze)" />
-      <circle cx="6" cy="6" r="1.2" fill="var(--bronze-light)" />
-      <circle cx="11" cy="3" r="0.8" fill="var(--bronze-light)" />
-    </svg>
-  )
-}
-
 const COPY: Record<Mode, { eyebrow: string; heading: string; subtext: string; submit: string; overlay: string }> = {
   login: {
     eyebrow: 'Sign in',
@@ -113,8 +102,7 @@ export function Auth() {
         <div className={styles.drift} aria-hidden="true" />
         <div className={styles.imageContent}>
           <div className={styles.wordmark}>
-            <Logo />
-            <span>LandForger</span>
+            <img src="/landforger.svg" alt="LandForger" />
           </div>
           <div className={styles.imageFooter}>
             <span className={styles.eyebrow}>Worldbuilding Studio</span>

@@ -28,6 +28,10 @@
   white-space: nowrap;
 }
 
+.wordmark img {
+  display: block;
+}
+
 .search {
   flex: 1;
   max-width: 380px;

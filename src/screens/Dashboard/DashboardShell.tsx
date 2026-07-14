@@ -148,7 +148,9 @@ export function DashboardShell() {
       <aside className={styles.sidebar} aria-label="World navigation" aria-hidden={focusMode || undefined}>
           <div className={styles.brandRow}>
             <Link to={`/w/${world.slug}`} className={styles.brand} aria-label={`${world.name} home`}>
-              <span className={styles.brandMark}>L</span>
+              <span className={styles.brandMark}>
+                <img src="/landforger-icon.svg" alt="" aria-hidden="true" />
+              </span>
               <span className={styles.expandedOnly}><strong>LandForger</strong><small>{world.slug}</small></span>
             </Link>
             <button

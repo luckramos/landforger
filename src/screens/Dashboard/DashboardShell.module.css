@@ -39,7 +39,8 @@
 .brandRow, .brand, .navItem, .topbar, .crumbs, .saveIndicator { display: flex; align-items: center; }
 .brandRow { justify-content: space-between; gap: 8px; margin-bottom: 16px; }
 .brand { min-width: 0; gap: 9px; color: var(--text-hi); text-decoration: none; }
-.brandMark { display: grid; width: 34px; height: 34px; flex: 0 0 34px; place-items: center; border: 1px solid var(--bronze); border-radius: 9px; color: var(--bronze-light); font-family: var(--font-serif); font-size: 21px; }
+.brandMark { display: grid; width: 34px; height: 34px; flex: 0 0 34px; place-items: center; border: 1px solid var(--bronze); border-radius: 9px; }
+.brandMark img { width: 26px; height: 26px; display: block; }
 .brand strong, .brand small { display: block; white-space: nowrap; }
 .brand strong { font-family: var(--font-serif); font-size: 16px; font-weight: 500; }
 .brand small { color: var(--text-faint); font-family: var(--font-mono); font-size: 9px; letter-spacing: .08em; }

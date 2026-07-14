@@ -13,10 +13,7 @@ import styles from './Worlds.module.css'
 function Wordmark() {
   return (
     <span className={styles.wordmark}>
-      <svg width="22" height="22" viewBox="0 0 34 34" fill="none" aria-hidden="true">
-        <circle cx="22" cy="10" r="6" fill="var(--bronze-light)" opacity="0.85" />
-        <path d="M2 28 L13 10 L19 20 L24 13 L32 28 Z" fill="var(--bronze)" />
-      </svg>
+      <img src="/landforger-icon.svg" alt="" aria-hidden="true" width="22" height="22" />
       LandForger
     </span>
   )

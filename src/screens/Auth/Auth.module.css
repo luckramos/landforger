@@ -49,10 +49,12 @@
 .wordmark {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-family: var(--font-serif);
-  font-size: 20px;
-  color: var(--text-hi);
+}
+
+.wordmark img {
+  height: 58px;
+  width: auto;
+  display: block;
 }
 
 .imageFooter {
