@@ -18,7 +18,9 @@ import { TaskItem, TaskList } from '@tiptap/extension-list'
 import StarterKit from '@tiptap/starter-kit'
 import { Callout } from './Callout'
 import { CodeFenceAsText } from './CodeFenceAsText'
-import { WikiLink } from './WikiLink'
+import { buildWikiLinkSuggestions, WikiLink } from './WikiLink'
+import { SlashCommands } from './SlashCommands'
+import type { WikiLinkRegistry } from '../WikiLinkRegistry'
 
 export interface BlockExtensionOptions {
   /**
@@ -29,11 +31,13 @@ export interface BlockExtensionOptions {
   codeFenceGuard?: boolean
   /** Live title lookup for wikilink chips — see `WikiLinkOptions.resolveTitle`. */
   resolveTitle?: (slug: string) => string | undefined
+  wikiLinkRegistry?: WikiLinkRegistry
+  onWikiLinkNavigate?: (slug: string) => void
 }
 
 /** The shared block set: one schema for the editor and the codec — they must never diverge. */
 export function buildBlockExtensions(opts: BlockExtensionOptions = {}): AnyExtension[] {
-  const { codeFenceGuard = true, resolveTitle } = opts
+  const { codeFenceGuard = true, resolveTitle, wikiLinkRegistry, onWikiLinkNavigate } = opts
   return [
     StarterKit.configure({
       codeBlock: false, // no Code block in v1
@@ -47,7 +51,15 @@ export function buildBlockExtensions(opts: BlockExtensionOptions = {}): AnyExten
     DetailsContent,
     Callout,
     Highlight,
-    resolveTitle ? WikiLink.configure({ resolveTitle }) : WikiLink,
+    resolveTitle || wikiLinkRegistry || onWikiLinkNavigate
+      ? WikiLink.configure({
+          ...(resolveTitle ? { resolveTitle } : {}),
+          ...(wikiLinkRegistry ? { registry: wikiLinkRegistry } : {}),
+          ...(wikiLinkRegistry ? { suggestions: buildWikiLinkSuggestions(wikiLinkRegistry) } : {}),
+          ...(onWikiLinkNavigate ? { onNavigate: onWikiLinkNavigate } : {}),
+        })
+      : WikiLink,
+    SlashCommands,
     ...(codeFenceGuard ? [CodeFenceAsText] : []),
   ]
 }
@@ -55,3 +67,4 @@ export function buildBlockExtensions(opts: BlockExtensionOptions = {}): AnyExten
 export { Callout } from './Callout'
 export { CodeFenceAsText } from './CodeFenceAsText'
 export { WikiLink, type WikiLinkOptions } from './WikiLink'
+export { SlashCommands, slashCommandsPluginKey } from './SlashCommands'

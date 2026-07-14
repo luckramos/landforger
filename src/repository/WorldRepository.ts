@@ -1,4 +1,5 @@
 import type { Page, World } from '../domain/types'
+import type { Backlink } from '../domain/backlinks'
 
 /** Slug is generated (never supplied); `created`/`updated` are system-maintained. */
 export type CreatePageInput = Pick<Page, 'title' | 'category'> &
@@ -54,6 +55,8 @@ export interface WorldRepository {
 
   listPages(worldSlug: string): Promise<Page[]>
   getPage(worldSlug: string, pageSlug: string): Promise<Page | undefined>
+  /** Derived inverse references; recalculated from current Page Markdown and Properties. */
+  getBacklinks(worldSlug: string, pageSlug: string): Promise<Backlink[]>
   /** Slug is generated from `title` (kebab-case, collision-suffixed) — never provided by the caller. */
   createPage(worldSlug: string, input: CreatePageInput): Promise<Page>
   updatePage(worldSlug: string, pageSlug: string, patch: UpdatePageInput): Promise<Page>

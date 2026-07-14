@@ -163,6 +163,25 @@ describe('LocalStorageWorldRepository — Page CRUD', () => {
     expect((await repo.getPage('testland', 'referencer'))?.body).toContain('[[alaric]]')
     expect((await repo.getPage('testland', 'alaric'))?.title).toBe('Alaric')
   })
+
+  it('exposes backlinks as a repository-derived view over body links and Relations', async () => {
+    const repo = freshRepo()
+    await repo.createPage('testland', {
+      title: 'Chronicle',
+      category: 'stories',
+      body: 'The record names [[alaric]].',
+    })
+    await repo.createPage('testland', {
+      title: 'The Watch',
+      category: 'organizations',
+      customProperties: [{ key: 'members', label: 'Members', type: 'relation', value: ['alaric'] }],
+    })
+
+    expect(await repo.getBacklinks('testland', 'alaric')).toEqual([
+      expect.objectContaining({ sourceSlug: 'the-watch', kinds: ['relation'] }),
+      expect.objectContaining({ sourceSlug: 'chronicle', kinds: ['body'] }),
+    ])
+  })
 })
 
 describe('LocalStorageWorldRepository — World mutations', () => {

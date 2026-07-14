@@ -1,4 +1,5 @@
 import { pageFromMarkdown, pageToMarkdown } from '../domain/page'
+import { deriveBacklinks, type Backlink } from '../domain/backlinks'
 import { resolveSlugCollision, slugify } from '../domain/slug'
 import type { CategoryTemplate, Page, World } from '../domain/types'
 import { worldFromMarkdown, worldToMarkdown } from '../domain/world'
@@ -242,6 +243,10 @@ export class LocalStorageWorldRepository implements WorldRepository {
 
   async getPage(worldSlug: string, pageSlug: string): Promise<Page | undefined> {
     return this.readPage(worldSlug, pageSlug)
+  }
+
+  async getBacklinks(worldSlug: string, pageSlug: string): Promise<Backlink[]> {
+    return deriveBacklinks(await this.listPages(worldSlug), pageSlug)
   }
 
   async createPage(worldSlug: string, input: CreatePageInput): Promise<Page> {

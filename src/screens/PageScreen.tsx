@@ -1,10 +1,10 @@
-// Minimal Page view for issue #20: category eyebrow + serif title +
-// PageEditor over the Page's body, saving through the repository. The
-// properties block, tags/eras rows, and backlinks panel are later slices.
+// Page view: repository-backed editor, Wikilink navigation/soft-404 and the
+// derived, grouped "Mentioned in" panel.
 
 import type { Editor } from '@tiptap/core'
 import { useEffect, useRef, useState } from 'react'
-import { useOutletContext, useParams } from 'react-router-dom'
+import { useNavigate, useOutletContext, useParams } from 'react-router-dom'
+import type { Backlink } from '../domain/backlinks'
 import type { Page } from '../domain/types'
 import { PageEditor } from '../editor/PageEditor'
 import type { WorldRepository } from '../repository/WorldRepository'
@@ -26,12 +26,14 @@ export interface PageScreenProps {
 
 export function PageScreen({ repository, onEditorReady }: PageScreenProps) {
   const { world = '', slug = '' } = useParams()
+  const navigate = useNavigate()
   const dashboard = useOutletContext<DashboardOutletContext | undefined>()
   const repo = repository ?? dashboard?.repository ?? getRepository()
 
   const [status, setStatus] = useState<Status>('loading')
   const [page, setPage] = useState<Page>()
-  const [titles, setTitles] = useState<Map<string, string>>(new Map())
+  const [pages, setPages] = useState<Page[]>([])
+  const [backlinks, setBacklinks] = useState<Backlink[]>([])
   const [saveState, setSaveState] = useState<SaveState>('idle')
 
   const lastSavedBodyRef = useRef('')
@@ -47,10 +49,11 @@ export function PageScreen({ repository, onEditorReady }: PageScreenProps) {
     let cancelled = false
     setStatus('loading')
     setSaveState('idle')
-    Promise.all([repo.getPage(world, slug), repo.listPages(world)])
-      .then(([loaded, pages]) => {
+    Promise.all([repo.getPage(world, slug), repo.listPages(world), repo.getBacklinks(world, slug)])
+      .then(([loaded, loadedPages, loadedBacklinks]) => {
         if (cancelled) return
-        setTitles(new Map(pages.map((p) => [p.slug, p.title])))
+        setPages(loadedPages)
+        setBacklinks(loadedBacklinks)
         if (loaded) {
           lastSavedBodyRef.current = loaded.body
           saveTargetRef.current = { world, slug: loaded.slug }
@@ -120,7 +123,8 @@ export function PageScreen({ repository, onEditorReady }: PageScreenProps) {
       .then((created) => {
         lastSavedBodyRef.current = created.body
         saveTargetRef.current = { world, slug: created.slug }
-        setTitles((prev) => new Map(prev).set(created.slug, created.title))
+        setPages((prev) => [...prev, created])
+        setBacklinks([])
         setPage(created)
         setStatus('ready')
       })
@@ -170,11 +174,68 @@ export function PageScreen({ repository, onEditorReady }: PageScreenProps) {
       <PageEditor
         key={page.slug}
         body={page.body}
-        resolveTitle={(s) => titles.get(s)}
+        resolveTitle={(targetSlug) => pages.find((candidate) => candidate.slug === targetSlug)?.title}
+        pages={pages}
+        onNavigate={(targetSlug) => navigate(`/w/${world}/p/${targetSlug}`)}
         onBodyChange={handleBodyChange}
         readOnly={dashboard?.readOnly}
         onEditorReady={onEditorReady}
       />
+      <BacklinksPanel
+        backlinks={backlinks}
+        onNavigate={(sourceSlug) => navigate(`/w/${world}/p/${sourceSlug}`)}
+      />
     </main>
+  )
+}
+
+function BacklinksPanel({ backlinks, onNavigate }: { backlinks: Backlink[]; onNavigate: (slug: string) => void }) {
+  const [open, setOpen] = useState(true)
+  const grouped = new Map<Backlink['sourceCategory'], Backlink[]>()
+  for (const backlink of backlinks) {
+    const entries = grouped.get(backlink.sourceCategory) ?? []
+    entries.push(backlink)
+    grouped.set(backlink.sourceCategory, entries)
+  }
+
+  return (
+    <section className={styles.backlinks} aria-label="Mentioned in">
+      <button
+        type="button"
+        className={styles.backlinksToggle}
+        aria-expanded={open}
+        aria-controls="page-backlinks"
+        onClick={() => setOpen((value) => !value)}
+      >
+        <span className={open ? styles.backlinksCaretOpen : styles.backlinksCaret}>▶</span>
+        <span>Mentioned in</span>
+        <span className={styles.backlinksCount}>{backlinks.length}</span>
+      </button>
+      {open && (
+        <div id="page-backlinks" className={styles.backlinksGroups}>
+          {[...grouped.entries()].map(([category, entries]) => (
+            <div key={category} className={styles.backlinksGroup}>
+              <h3 className={styles.backlinksCategory}>{category}</h3>
+              {entries.map((backlink) => (
+                <a
+                  key={backlink.sourceSlug}
+                  href={`./${backlink.sourceSlug}`}
+                  className={styles.backlinkRow}
+                  aria-label={backlink.sourceTitle}
+                  onClick={(event) => {
+                    event.preventDefault()
+                    onNavigate(backlink.sourceSlug)
+                  }}
+                >
+                  <strong>{backlink.sourceTitle}</strong>
+                  <span>{backlink.snippet}</span>
+                </a>
+              ))}
+            </div>
+          ))}
+          {backlinks.length === 0 && <p className={styles.noBacklinks}>No Pages point here yet.</p>}
+        </div>
+      )}
+    </section>
   )
 }

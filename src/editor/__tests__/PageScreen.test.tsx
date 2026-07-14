@@ -51,11 +51,42 @@ const gateOfAsh: Page = {
   body: 'A gate.',
 }
 
+const chronicle: Page = {
+  ...alaric,
+  slug: 'chronicle',
+  title: 'The Chronicle',
+  category: 'stories',
+  eras: [],
+  body: 'At dusk, [[alaric]] took the western watch.',
+}
+
+const watch: Page = {
+  ...alaric,
+  slug: 'the-watch',
+  title: 'The Watch',
+  category: 'organizations',
+  eras: [],
+  body: '',
+  customProperties: [{ key: 'members', label: 'Members', type: 'relation', value: ['alaric'] }],
+}
+
+const eraOne: Page = {
+  ...alaric,
+  slug: 'era-one',
+  title: 'The First Era',
+  category: 'eras',
+  eras: [],
+  body: 'An age of beginnings.',
+}
+
 function fixtures(): FixtureFiles {
   return {
     '/src/fixtures/worlds/testland/_world.md': worldToMarkdown(world),
     '/src/fixtures/worlds/testland/alaric.md': pageToMarkdown(alaric),
     '/src/fixtures/worlds/testland/gate-of-ash.md': pageToMarkdown(gateOfAsh),
+    '/src/fixtures/worlds/testland/chronicle.md': pageToMarkdown(chronicle),
+    '/src/fixtures/worlds/testland/the-watch.md': pageToMarkdown(watch),
+    '/src/fixtures/worlds/testland/era-one.md': pageToMarkdown(eraOne),
   }
 }
 
@@ -96,8 +127,39 @@ describe('PageScreen — loading', () => {
     expect(screen.getByText('characters')).toBeTruthy()
     // body rendered through the editor, wikilink chip resolved to the live title
     expect(container.querySelector('.tiptap')?.textContent).toContain('He keeps the ledger.')
-    expect(container.querySelector('[data-wikilink="gate-of-ash"]')?.textContent).toBe('The Gate of Ash')
+    expect(container.querySelector('[data-wikilink="gate-of-ash"]')?.textContent).toContain('The Gate of Ash')
     expect(getEditor()).toBeTruthy()
+  })
+
+  it('navigates through a Wikilink chip', async () => {
+    const { container } = await mountScreen('alaric')
+    const chip = container.querySelector('[data-wikilink="gate-of-ash"]')!
+    await act(async () => chip.dispatchEvent(new MouseEvent('click', { bubbles: true })))
+    await act(async () => {})
+    expect(screen.getByRole('heading', { name: 'The Gate of Ash' })).toBeTruthy()
+  })
+})
+
+describe('PageScreen — Mentioned in', () => {
+  it('groups body and Relation backlinks by Category with snippets and collapses', async () => {
+    await mountScreen('alaric')
+    const toggle = screen.getByRole('button', { name: /Mentioned in/ })
+    expect(toggle.getAttribute('aria-expanded')).toBe('true')
+    expect(screen.getByRole('heading', { name: 'stories' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'organizations' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'The Chronicle' })).toBeTruthy()
+    expect(screen.getByText(/At dusk, Alaric took the western watch/)).toBeTruthy()
+    expect(screen.getByText('Relation: Members')).toBeTruthy()
+
+    act(() => toggle.dispatchEvent(new MouseEvent('click', { bubbles: true })))
+    expect(toggle.getAttribute('aria-expanded')).toBe('false')
+    expect(screen.queryByRole('link', { name: 'The Chronicle' })).toBeNull()
+  })
+
+  it('lists member Pages as live backlinks on an Era Page', async () => {
+    await mountScreen('era-one')
+    expect(screen.getByRole('link', { name: 'Alaric' })).toBeTruthy()
+    expect(screen.getByText('Member of The First Era')).toBeTruthy()
   })
 })
 

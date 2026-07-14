@@ -1,0 +1,91 @@
+.menu {
+  z-index: 80;
+  width: min(302px, calc(100vw - 24px));
+  max-height: min(360px, calc(100vh - 24px));
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  background: var(--panel-3);
+  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.5);
+  animation: suggestion-in calc(var(--mo, 1) * 200ms) var(--ease-house) both;
+}
+
+.item {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: 9px;
+  width: 100%;
+  padding: 8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.selected,
+.item:hover {
+  background: var(--hairline);
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+  height: 26px;
+  border: 1px solid var(--hairline-soft);
+  border-radius: 6px;
+  color: var(--bronze-light);
+  font-family: var(--font-mono);
+}
+
+.copy {
+  min-width: 0;
+}
+
+.label,
+.description {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.label {
+  color: var(--text-hi);
+  font-family: var(--font-sans);
+  font-size: 13px;
+}
+
+.description {
+  margin-top: 2px;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.empty {
+  margin: 0;
+  padding: 12px;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+@keyframes suggestion-in {
+  from {
+    opacity: 0;
+    transform: translateY(5px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu {
+    animation-duration: 0ms;
+  }
+}
