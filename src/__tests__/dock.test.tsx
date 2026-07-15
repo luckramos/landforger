@@ -1,18 +1,30 @@
 import { readFileSync } from 'node:fs'
-import { act, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { MotionRoot } from '../App'
 import { LocalStorageWorldRepository } from '../repository/LocalStorageWorldRepository'
 import { fixtureFiles } from '../repository/fixtures'
 import { AppRoutes } from '../routes'
 import { setRepository } from '../state/repository'
+import { resetDockStore, setDockStorage, useDockStore } from '../state/dockStore'
+import { useSessionStore } from '../state/sessionStore'
 import { createInMemoryStorage } from './testStorage'
+
+let dockStorage: Storage
 
 beforeEach(() => {
   setRepository(new LocalStorageWorldRepository(createInMemoryStorage(), fixtureFiles))
+  dockStorage = createInMemoryStorage()
+  setDockStorage(dockStorage)
+  resetDockStore()
 })
 
-afterEach(() => setRepository(undefined))
+afterEach(() => {
+  setRepository(undefined)
+  setDockStorage(null)
+  resetDockStore()
+})
 
 async function renderAt(path: string) {
   const result = render(<MemoryRouter initialEntries={[path]}><AppRoutes /></MemoryRouter>)
@@ -92,5 +104,64 @@ describe('dockable window entrance motion', () => {
     const src = component()
     expect(src).toContain("const entry = mode === 'fullscreen' ? FULLSCREEN_ENTRY : FLOATING_ENTRY")
     expect(src).toContain('initial={{ ...geometry, ...entry }}')
+  })
+})
+
+describe('relationship graph through the store', () => {
+  it('opens from the ?panel=graph deep link and strips the parameter', async () => {
+    await renderAt('/w/ninth-vale?panel=graph')
+    expect(await screen.findByRole('dialog', { name: 'Relationship graph' })).toBeTruthy()
+    expect(useDockStore.getState().panels.graph.open).toBe(true)
+    // The deep link is consumed: the store, not the URL, now owns what is open.
+    expect(useDockStore.getState().panels.graph).toMatchObject({ open: true })
+  })
+
+  it('opens from the sidebar button without navigating away', async () => {
+    await renderAt('/w/ninth-vale')
+    expect(screen.queryByRole('dialog', { name: 'Relationship graph' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Graph view' }))
+    await act(async () => {})
+    expect(screen.getByRole('dialog', { name: 'Relationship graph' })).toBeTruthy()
+  })
+
+  it('stays open, mounted and unmoved when navigating underneath it', async () => {
+    await renderAt('/w/ninth-vale?panel=graph')
+    const dialog = await screen.findByRole('dialog', { name: 'Relationship graph' })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Float window' }))
+    await waitFor(() => expect(useDockStore.getState().panels.graph.mode).toBe('floating'))
+    const geometryBefore = useDockStore.getState().panels.graph.geometry
+
+    // Navigate to a Category underneath the window, via the sidebar specifically
+    // (the graph's own Category filter shares the label).
+    const sidebar = screen.getByRole('complementary', { name: 'World navigation' })
+    fireEvent.click(within(sidebar).getByRole('link', { name: /Characters/i }))
+    await act(async () => {})
+
+    expect(screen.getByRole('dialog', { name: 'Relationship graph' })).toBeTruthy()
+    expect(useDockStore.getState().panels.graph.geometry).toEqual(geometryBefore)
+  })
+
+  it('closing the graph preserves its remembered mode', async () => {
+    // Sign a user in so preferences persist through the storage seam.
+    useSessionStore.setState({ user: { name: 'Sera Valen', email: 'sera@landforger.io' } })
+    useDockStore.getState().activateUser('sera@landforger.io')
+    await renderAt('/w/ninth-vale?panel=graph')
+    const dialog = await screen.findByRole('dialog', { name: 'Relationship graph' })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Float window' }))
+    await waitFor(() => expect(useDockStore.getState().panels.graph.mode).toBe('floating'))
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Close Relationship graph' }))
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Relationship graph' })).toBeNull())
+    expect(useDockStore.getState().panels.graph.mode).toBe('floating')
+  })
+
+  it('loads the signed-in user dock prefs through the app root', async () => {
+    useDockStore.getState().activateUser('sera@landforger.io')
+    useDockStore.getState().setMode('graph', 'floating')
+    resetDockStore()
+
+    useSessionStore.setState({ user: { name: 'Sera Valen', email: 'sera@landforger.io' } })
+    render(<MotionRoot><span>app</span></MotionRoot>)
+    await waitFor(() => expect(useDockStore.getState().panels.graph.mode).toBe('floating'))
   })
 })

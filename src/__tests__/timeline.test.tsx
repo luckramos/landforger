@@ -5,6 +5,7 @@ import { LocalStorageWorldRepository } from '../repository/LocalStorageWorldRepo
 import { fixtureFiles } from '../repository/fixtures'
 import { AppRoutes } from '../routes'
 import { setRepository } from '../state/repository'
+import { resetDockStore, setDockStorage } from '../state/dockStore'
 import { createInMemoryStorage } from './testStorage'
 
 let repository: LocalStorageWorldRepository
@@ -24,9 +25,14 @@ beforeEach(() => {
   storage = createInMemoryStorage()
   repository = new LocalStorageWorldRepository(storage, fixtureFiles)
   setRepository(repository)
+  setDockStorage(createInMemoryStorage())
+  resetDockStore()
 })
 
-afterEach(() => setRepository(undefined))
+afterEach(() => {
+  setRepository(undefined)
+  setDockStorage(null)
+})
 
 describe('Timeline panel', () => {
   it('is refresh-safe, excludes Timeless Pages and expands members grouped by Category', async () => {

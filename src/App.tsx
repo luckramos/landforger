@@ -1,6 +1,7 @@
 import { useLayoutEffect } from 'react'
 import { BrowserRouter } from 'react-router-dom'
 import { AppRoutes } from './routes'
+import { useDockStore } from './state/dockStore'
 import { useUiStore } from './state/uiStore'
 import { useSessionStore } from './state/sessionStore'
 import './styles/global.css'
@@ -9,9 +10,11 @@ import './styles/global.css'
 export function MotionRoot({ children }: { children: React.ReactNode }) {
   const motionScale = useUiStore((s) => s.motionScale)
   const activateUser = useUiStore((s) => s.activateUser)
+  const activateDockUser = useDockStore((s) => s.activateUser)
   const userEmail = useSessionStore((s) => s.user?.email)
 
   useLayoutEffect(() => activateUser(userEmail), [activateUser, userEmail])
+  useLayoutEffect(() => activateDockUser(userEmail), [activateDockUser, userEmail])
   useLayoutEffect(() => {
     document.documentElement.style.setProperty('--mo', String(motionScale))
   }, [motionScale])

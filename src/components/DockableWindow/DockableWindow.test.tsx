@@ -1,11 +1,25 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { createInMemoryStorage } from '../../__tests__/testStorage'
+import { resetDockStore, setDockStorage, useDockStore } from '../../state/dockStore'
 import { DockableWindow } from './DockableWindow'
+
+beforeEach(() => {
+  setDockStorage(createInMemoryStorage())
+  resetDockStore()
+  // These cases exercise the header controls, so the window must be open.
+  useDockStore.getState().open('timeline')
+})
+
+afterEach(() => {
+  setDockStorage(null)
+  resetDockStore()
+})
 
 describe('DockableWindow', () => {
   it('morphs between fullscreen, floating and minimized states without unmounting its content', () => {
     render(
-      <DockableWindow title="Timeline" subtitle="4 Eras" onClose={() => {}}>
+      <DockableWindow panelId="timeline" title="Timeline" subtitle="4 Eras" onClose={() => {}}>
         <p>Timeline body</p>
       </DockableWindow>,
     )
@@ -28,7 +42,7 @@ describe('DockableWindow', () => {
 
   it('suspends the geometry morph while a floating window is dragged', () => {
     render(
-      <DockableWindow title="Timeline" onClose={() => {}}>
+      <DockableWindow panelId="timeline" title="Timeline" onClose={() => {}}>
         body
       </DockableWindow>,
     )

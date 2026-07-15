@@ -9,6 +9,7 @@ import { LocalStorageWorldRepository } from '../repository/LocalStorageWorldRepo
 import { fixtureFiles } from '../repository/fixtures'
 import { AppRoutes } from '../routes'
 import { setRepository } from '../state/repository'
+import { resetDockStore, setDockStorage } from '../state/dockStore'
 import { createInMemoryStorage } from './testStorage'
 
 let repository: LocalStorageWorldRepository
@@ -16,10 +17,13 @@ let repository: LocalStorageWorldRepository
 beforeEach(() => {
   repository = new LocalStorageWorldRepository(createInMemoryStorage(), fixtureFiles)
   setRepository(repository)
+  setDockStorage(createInMemoryStorage())
+  resetDockStore()
 })
 
 afterEach(() => {
   setRepository(undefined)
+  setDockStorage(null)
   vi.restoreAllMocks()
 })
 
@@ -88,7 +92,9 @@ describe('relationship graph panel', () => {
 
     fireEvent.click(sera)
     expect(await screen.findByRole('heading', { name: 'Sera Valen' })).toBeTruthy()
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Relationship graph' })).toBeNull())
+    // #53: a docked window survives navigation. Clicking a node navigates to its
+    // Page, and the Graph stays open over it rather than closing as it once did.
+    expect(screen.getByRole('dialog', { name: 'Relationship graph' })).toBeTruthy()
   })
 
   it('updates edges after repository mutations and supports pan/zoom controls', async () => {

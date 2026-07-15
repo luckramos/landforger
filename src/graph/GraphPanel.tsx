@@ -53,7 +53,8 @@ export function GraphPanel({ world, pages, focalSlug, onClose, onNavigatePage }:
     <DockableWindow
       title="Relationship graph"
       subtitle={`${world.name} · ${scopeLabel} · ${graph.nodes.length} Pages`}
-      initialState={focalSlug ? 'floating' : 'fullscreen'}
+      panelId="graph"
+      defaultMode={focalSlug ? 'floating' : 'fullscreen'}
       onClose={onClose}
       toolbar={toolbar}
       icon={<icons.graph />}

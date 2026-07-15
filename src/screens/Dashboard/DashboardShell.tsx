@@ -3,12 +3,13 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence } from 'motion/react'
 import { Link, matchPath, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ReferenceCanvasPanel } from '../../canvas/ReferenceCanvasPanel'
+import { DockLayer } from '../../components/DockableWindow/DockLayer'
 import { UserMenu } from '../../components/UserMenu/UserMenu'
 import type { Page, World } from '../../domain/types'
 import type { WorldRepository } from '../../repository/WorldRepository'
 import { getRepository } from '../../state/repository'
+import { useDockStore } from '../../state/dockStore'
 import { TimelinePanel } from '../../timeline/TimelinePanel'
-import { GraphPanel } from '../../graph/GraphPanel'
 import { icons } from '../../icons'
 import { CATEGORY_META, categoryMeta } from './categoryMeta'
 import { SpotlightSearch } from './SpotlightSearch'
@@ -31,6 +32,7 @@ export function DashboardShell() {
   const panel = searchParams.get('panel')
   const focusedPageSlug = searchParams.get('focus') ?? undefined
   const repository = getRepository()
+  const openDock = useDockStore((state) => state.open)
   const [loadState, setLoadState] = useState<LoadState>('loading')
   const [world, setWorld] = useState<World>()
   const [pages, setPages] = useState<Page[]>([])
@@ -107,6 +109,18 @@ export function DashboardShell() {
     document.addEventListener('keydown', handleSearchShortcut)
     return () => document.removeEventListener('keydown', handleSearchShortcut)
   }, [])
+
+  /* `?panel=graph` is a deep-link entry point, not state: it opens the Graph
+     once and is then stripped, so navigation and the Back button never fight
+     the store over what is on screen. Timeline and Canvas keep their own
+     `?panel=` handling until #54 migrates them, so we touch only `graph`. */
+  useEffect(() => {
+    if (panel !== 'graph') return
+    openDock('graph')
+    const next = new URLSearchParams(location.search)
+    next.delete('panel')
+    navigate({ pathname: location.pathname, search: next.toString() }, { replace: true })
+  }, [panel, location.pathname, location.search, navigate, openDock])
 
   const counts = useMemo(
     () => new Map(CATEGORY_META.map(({ category }) => [category, pages.filter((page) => page.category === category).length])),
@@ -190,7 +204,7 @@ export function DashboardShell() {
           <nav className={styles.bottomNav}>
             <Link className={styles.navItem} to={`/w/${world.slug}/map`}><span><icons.map /></span><span className={styles.expandedOnly}>World map</span></Link>
             <Link className={styles.navItem} to={`/w/${world.slug}?panel=timeline`}><span><icons.timeline /></span><span className={styles.expandedOnly}>Timeline</span></Link>
-            <Link className={styles.navItem} to={`/w/${world.slug}?panel=graph`}><span><icons.graph /></span><span className={styles.expandedOnly}>Graph view</span></Link>
+            <button type="button" className={styles.navItem} onClick={() => openDock('graph')}><span><icons.graph /></span><span className={styles.expandedOnly}>Graph view</span></button>
             <Link className={styles.navItem} to={`/w/${world.slug}?panel=canvas`}><span><icons.canvas /></span><span className={styles.expandedOnly}>Reference canvas</span></Link>
           </nav>
       </aside>
@@ -226,6 +240,8 @@ export function DashboardShell() {
         </div>
       </div>
 
+      <DockLayer world={world} pages={pages} pageSlug={pageSlug} />
+
       <AnimatePresence>
       {panel === 'timeline' && (
         <TimelinePanel
@@ -235,16 +251,6 @@ export function DashboardShell() {
           focusPage={focusedPageSlug}
           onClose={closePanel}
           onNavigatePage={(slug) => navigate(`/w/${world.slug}/p/${slug}?panel=timeline`)}
-        />
-      )}
-
-      {panel === 'graph' && (
-        <GraphPanel
-          world={world}
-          pages={pages}
-          focalSlug={pageSlug}
-          onClose={closePanel}
-          onNavigatePage={(slug) => navigate(`/w/${world.slug}/p/${slug}`)}
         />
       )}
 
