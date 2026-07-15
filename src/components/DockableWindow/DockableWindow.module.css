@@ -49,6 +49,12 @@
 .controls { display: flex; align-items: center; gap: 3px; margin-left: auto; }
 .controls button { display: grid; width: 30px; height: 30px; place-items: center; border: 0; border-radius: 7px; background: transparent; color: var(--text-dim); font-size: 16px; transition: background calc(var(--mo, 1) * 130ms), color calc(var(--mo, 1) * 130ms); }
 .controls button:hover { background: var(--hairline-soft); color: var(--text-hi); }
+
+/* The float/maximize toggle cross-fades its two glyphs (Motion `AnimatePresence`,
+   #66): both coexist during the swap, so they're stacked on the same cell via
+   absolute positioning rather than flowing as separate grid children. */
+.modeToggle { position: relative; }
+.modeGlyph { display: grid; position: absolute; inset: 0; place-items: center; }
 .body { min-height: 0; flex: 1; overflow: hidden; overscroll-behavior: contain; transition: opacity calc(var(--mo, 1) * 140ms) ease, visibility 0s; }
 .window[data-dock-state='minimized'] .body {
   opacity: 0;

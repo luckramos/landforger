@@ -45,3 +45,14 @@ export function dialogChunkTransition(motionScale: number) {
     ? { duration: 0 }
     : { type: 'spring' as const, duration: 0.3 * motionScale, bounce: 0 }
 }
+
+/**
+ * DockableWindow's float/maximize glyph cross-fade (opacity/scale/blur, via
+ * `AnimatePresence`): a critically damped spring, never bouncy, collapsing
+ * to zero duration under reduced motion.
+ */
+export function iconCrossfadeTransition(motionScale: number) {
+  return prefersReducedMotion()
+    ? { duration: 0 }
+    : { type: 'spring' as const, duration: 0.3 * motionScale, bounce: 0 }
+}

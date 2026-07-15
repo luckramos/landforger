@@ -107,6 +107,32 @@ describe('dockable window entrance motion', () => {
   })
 })
 
+describe('dockable window icon cross-fade (#66)', () => {
+  const component = () => readFileSync('src/components/DockableWindow/DockableWindow.tsx', 'utf8')
+  const motionPrefs = () => readFileSync('src/components/motionPrefs.ts', 'utf8')
+
+  /*
+   * The behavioral coexistence assertion lives in DockableWindow.test.tsx
+   * (happy-dom can observe the DOM mid-swap). What it can't observe is the
+   * actual animation values or the reduced-motion collapse — same reasoning
+   * as the entrance-motion guards above — so those are guarded here at the
+   * source level, reading the shared `iconCrossfadeTransition` seam.
+   */
+  it('wires the float/maximize toggle through AnimatePresence with the specified opacity/scale/blur cross-fade', () => {
+    const src = component()
+    expect(src).toContain('<AnimatePresence initial={false}>')
+    expect(src).toContain("initial={{ opacity: 0, scale: 0.25, filter: 'blur(4px)' }}")
+    expect(src).toContain("animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}")
+    expect(src).toContain("exit={{ opacity: 0, scale: 0.25, filter: 'blur(4px)' }}")
+    expect(src).toContain('transition={iconCrossfadeTransition(motionScale)}')
+  })
+
+  it('animates the cross-fade on a critically damped spring — bounce: 0 — collapsing to zero under reduced motion', () => {
+    const src = motionPrefs()
+    expect(src).toMatch(/export function iconCrossfadeTransition\(motionScale: number\) \{\s*return prefersReducedMotion\(\)\s*\?\s*\{ duration: 0 \}\s*:\s*\{ type: 'spring' as const, duration: 0\.3 \* motionScale, bounce: 0 \}/)
+  })
+})
+
 describe('relationship graph through the store', () => {
   it('opens from the ?panel=graph deep link and strips the parameter', async () => {
     await renderAt('/w/ninth-vale?panel=graph')

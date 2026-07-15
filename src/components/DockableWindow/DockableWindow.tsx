@@ -1,4 +1,4 @@
-import { motion } from 'motion/react'
+import { AnimatePresence, motion } from 'motion/react'
 import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import { icons } from '../../icons'
@@ -12,7 +12,7 @@ import {
   type DockPanelId,
 } from '../../state/dockStore'
 import { useUiStore } from '../../state/uiStore'
-import { EASE_HOUSE, overlayExitTransition, prefersReducedMotion } from '../motionPrefs'
+import { EASE_HOUSE, iconCrossfadeTransition, overlayExitTransition, prefersReducedMotion } from '../motionPrefs'
 import styles from './DockableWindow.module.css'
 
 interface PointerOperation {
@@ -170,10 +170,23 @@ export function DockableWindow({
             <>
               <button
                 type="button"
+                className={styles.modeToggle}
                 aria-label={mode === 'fullscreen' ? 'Float window' : 'Maximize window'}
                 onClick={() => setMode(panelId, mode === 'fullscreen' ? 'floating' : 'fullscreen')}
               >
-                {mode === 'fullscreen' ? <icons.windowFloat size={16} aria-hidden="true" /> : <icons.windowMaximize size={16} aria-hidden="true" />}
+                <AnimatePresence initial={false}>
+                  <motion.span
+                    key={mode}
+                    className={styles.modeGlyph}
+                    data-dock-mode-icon={mode}
+                    initial={{ opacity: 0, scale: 0.25, filter: 'blur(4px)' }}
+                    animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+                    exit={{ opacity: 0, scale: 0.25, filter: 'blur(4px)' }}
+                    transition={iconCrossfadeTransition(motionScale)}
+                  >
+                    {mode === 'fullscreen' ? <icons.windowFloat size={16} aria-hidden="true" /> : <icons.windowMaximize size={16} aria-hidden="true" />}
+                  </motion.span>
+                </AnimatePresence>
               </button>
               <button type="button" aria-label="Minimize window" onClick={() => setMinimized(panelId, true)}><icons.windowMinimize size={16} aria-hidden="true" /></button>
             </>
