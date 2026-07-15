@@ -1,6 +1,5 @@
 import type { CSSProperties, FormEvent, PointerEvent as ReactPointerEvent } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { DockableWindowHandle } from '../components/DockableWindow/DockableWindow'
 import { DockableWindow } from '../components/DockableWindow/DockableWindow'
 import { prefersReducedMotion } from '../components/motionPrefs'
 import { buildTimeline, reorderEras } from '../domain/timeline'
@@ -8,6 +7,7 @@ import type { Page, World } from '../domain/types'
 import { icons } from '../icons'
 import { categoryMeta } from '../screens/Dashboard/categoryMeta'
 import type { WorldRepository } from '../repository/WorldRepository'
+import { useDockStore } from '../state/dockStore'
 import { useUiStore } from '../state/uiStore'
 import styles from './TimelinePanel.module.css'
 
@@ -37,14 +37,14 @@ export function TimelinePanel({ world, pages, repository, focusPage, onClose, on
   const eraDragRef = useRef<EraDrag | undefined>(undefined)
   const eraDragCleanupRef = useRef<() => void>(() => {})
   const scrollRef = useRef<HTMLDivElement>(null)
-  const windowRef = useRef<DockableWindowHandle>(null)
+  const setDockMode = useDockStore((state) => state.setMode)
   const motionScale = useUiStore((state) => state.motionScale)
 
   /* Docking first keeps the Page reachable behind the Timeline, so the reader
      watches the Page they picked load instead of losing it under a fullscreen
      panel. */
   const openPage = (slug: string) => {
-    windowRef.current?.dock()
+    setDockMode('timeline', 'floating')
     onNavigatePage(slug)
   }
 
@@ -158,7 +158,7 @@ export function TimelinePanel({ world, pages, repository, focusPage, onClose, on
 
   return (
     <DockableWindow
-      ref={windowRef}
+      panelId="timeline"
       title="Timeline"
       subtitle={`${timeline.length} ${timeline.length === 1 ? 'Era' : 'Eras'}`}
       onClose={onClose}

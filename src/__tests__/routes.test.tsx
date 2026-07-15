@@ -5,6 +5,7 @@ import { AppRoutes } from '../routes'
 import { LocalStorageWorldRepository } from '../repository/LocalStorageWorldRepository'
 import { fixtureFiles } from '../repository/fixtures'
 import { setRepository } from '../state/repository'
+import { resetDockStore, setDockStorage } from '../state/dockStore'
 import { createInMemoryStorage } from './testStorage'
 
 function renderAt(path: string) {
@@ -18,10 +19,13 @@ function renderAt(path: string) {
 // /worlds is a real screen now and reads through the repository seam.
 beforeEach(() => {
   setRepository(new LocalStorageWorldRepository(createInMemoryStorage(), fixtureFiles))
+  setDockStorage(createInMemoryStorage())
+  resetDockStore()
 })
 
 afterEach(() => {
   setRepository(undefined)
+  setDockStorage(null)
 })
 
 describe('routes', () => {

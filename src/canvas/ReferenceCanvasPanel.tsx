@@ -437,6 +437,7 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
 
   return (
     <DockableWindow
+      panelId="canvas"
       title="Reference canvas"
       subtitle={`${items.length} items · ${Math.round(viewport.zoom * 100)}%`}
       accent="var(--bronze)"
