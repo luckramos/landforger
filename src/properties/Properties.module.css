@@ -121,7 +121,7 @@
   transition: var(--tint-transition);
 }
 .chipRemove:hover { opacity: 1; color: var(--danger); }
-.chipRemove:active { transform: scale(0.88); }
+.chipRemove:active { transform: scale(0.96); }
 
 /* Whole-pill tint when the navigable label is hovered or focused. */
 .tagChip:has(.chipNav:hover), .relationChip:has(.chipNav:hover) {
@@ -197,7 +197,7 @@
   background: color-mix(in oklab, var(--bronze) 14%, var(--panel-2));
   color: var(--bronze-light);
 }
-.dropdown button:active:not(:disabled) { transform: scale(0.97); }
+.dropdown button:active:not(:disabled) { transform: scale(0.96); }
 .dropdown button:disabled { opacity: .5; cursor: default; }
 
 /* --- Scalar / relation inputs ----------------------------------------- */
@@ -275,7 +275,7 @@
   inset: -7px;
 }
 .stepButton:hover:not(:disabled) { background: color-mix(in oklab, var(--bronze) 14%, transparent); color: var(--bronze-light); }
-.stepButton:active:not(:disabled) { transform: scale(0.9); }
+.stepButton:active:not(:disabled) { transform: scale(0.96); }
 .stepButton:disabled { opacity: .4; cursor: default; }
 
 /* --- Date field + custom calendar ------------------------------------- */
@@ -438,7 +438,7 @@
   background: var(--danger-bg);
   color: var(--danger);
 }
-.tintButton:active, .tintPrimary:active, .tintDanger:active, .danger:active { transform: scale(0.97); }
+.tintButton:active, .tintPrimary:active, .tintDanger:active, .danger:active { transform: scale(0.96); }
 
 /* Icon-only buttons (row settings gear, row remove, top actions). */
 .iconButton, .topActions button {
@@ -473,7 +473,7 @@
   background: var(--danger-bg);
   color: var(--danger);
 }
-.iconButton:active, .topActions button:active { transform: scale(0.94); }
+.iconButton:active, .topActions button:active { transform: scale(0.96); }
 
 /* --- Add property (dashed card at the end of the list) ---------------- */
 .addRow { position: relative; }
@@ -498,7 +498,7 @@
   background: color-mix(in oklab, var(--bronze) 8%, transparent);
   color: var(--bronze-light);
 }
-.addCard:active { transform: scale(0.995); }
+.addCard:active { transform: scale(0.96); }
 
 /* Edit-template link inside the ⋯ page-actions dialog. */
 .templateLink {
@@ -520,7 +520,7 @@
   background: color-mix(in oklab, var(--bronze) 12%, transparent);
   color: var(--bronze-light);
 }
-.templateLink:active { transform: scale(0.98); }
+.templateLink:active { transform: scale(0.96); }
 
 /* --- Popovers (add tag/era, relation picker, type picker) ------------- */
 .popover, .inlinePopover, .typePicker, .typePickerInline {
@@ -558,7 +558,7 @@
   background: color-mix(in oklab, var(--bronze) 14%, var(--panel-2));
   color: var(--bronze-light);
 }
-.popover button:active, .inlinePopover button:active, .typePicker button:active, .typePickerInline button:active { transform: scale(0.97); }
+.popover button:active, .inlinePopover button:active, .typePicker button:active, .typePickerInline button:active { transform: scale(0.96); }
 .typePickerInline button { background: var(--panel-1); }
 
 /* --- Property settings popover (gear) --------------------------------- */

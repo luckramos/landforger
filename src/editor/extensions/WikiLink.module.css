@@ -16,7 +16,18 @@
   cursor: pointer;
   transition:
     background calc(var(--mo, 1) * 160ms),
-    box-shadow calc(var(--mo, 1) * 160ms);
+    border-color calc(var(--mo, 1) * 160ms),
+    box-shadow calc(var(--mo, 1) * 160ms),
+    transform calc(var(--mo, 1) * 120ms) var(--ease-house);
+}
+
+.chip:hover {
+  border-color: color-mix(in oklab, var(--bronze) 55%, transparent);
+  background: color-mix(in oklab, var(--bronze) 10%, var(--panel-3));
+}
+
+.chip:active {
+  transform: scale(0.96);
 }
 
 .categoryIcon {

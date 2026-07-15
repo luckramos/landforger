@@ -218,11 +218,16 @@
   color: var(--text-dim);
   font-size: 14px;
   cursor: pointer;
+  transition: transform calc(var(--mo, 1) * 120ms) var(--ease-house);
 }
 
 .cancelButton:hover {
   background: var(--hairline-soft);
   color: var(--text);
+}
+
+.cancelButton:active {
+  transform: scale(0.96);
 }
 
 .previewColumn {
