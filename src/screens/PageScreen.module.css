@@ -72,7 +72,7 @@
     color calc(var(--mo, 1) * 140ms) ease,
     transform calc(var(--mo, 1) * 120ms) var(--ease-house);
 }
-.pageAction:active { transform: scale(0.97); }
+.pageAction:active { transform: scale(0.96); }
 .actionMap:hover { border-color: color-mix(in oklab, var(--cat-locations) 55%, transparent); background: color-mix(in oklab, var(--cat-locations) 12%, transparent); color: var(--cat-locations); }
 .actionGraph:hover { border-color: color-mix(in oklab, var(--bronze) 55%, transparent); background: color-mix(in oklab, var(--bronze) 12%, transparent); color: var(--bronze-light); }
 .actionTimeline:hover { border-color: color-mix(in oklab, var(--cat-eras) 55%, transparent); background: color-mix(in oklab, var(--cat-eras) 12%, transparent); color: var(--cat-eras); }

@@ -13,7 +13,8 @@
 .form > .field { display: grid; gap: 6px; }
 .fieldLabel { color: var(--text-faint); font-family: var(--font-mono); font-size: 10px; letter-spacing: .05em; }
 .form textarea { min-height: 76px; resize: vertical; }
-.create { justify-self: end; padding: 9px 16px; border: 1px solid var(--bronze); border-radius: 8px; background: color-mix(in oklab, var(--bronze) 18%, var(--panel-2)); color: var(--bronze-light); cursor: pointer; }
+.create { justify-self: end; padding: 9px 16px; border: 1px solid var(--bronze); border-radius: 8px; background: color-mix(in oklab, var(--bronze) 18%, var(--panel-2)); color: var(--bronze-light); cursor: pointer; transition: transform calc(var(--mo, 1) * 120ms) var(--ease-house); }
+.create:active:not(:disabled) { transform: scale(0.96); }
 .create:disabled { opacity: .4; cursor: default; }
 @keyframes new-page-in { from { opacity: 0; transform: translateY(10px); } }
 @media (max-width: 800px) { .categoryGrid { grid-template-columns: repeat(4, 1fr); } }

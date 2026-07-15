@@ -233,7 +233,8 @@
   cursor: pointer;
   transition:
     background calc(var(--mo, 1) * 130ms),
-    color calc(var(--mo, 1) * 130ms);
+    color calc(var(--mo, 1) * 130ms),
+    transform calc(var(--mo, 1) * 120ms) var(--ease-house);
 }
 .button::after {
   content: '';
@@ -244,6 +245,10 @@
 .button:hover:not(:disabled) {
   background: var(--hairline);
   color: var(--text-hi);
+}
+
+.button:active:not(:disabled) {
+  transform: scale(0.96);
 }
 
 .button:disabled {
@@ -284,7 +289,13 @@
   color: var(--text-faint);
   transition:
     background calc(var(--mo, 1) * 160ms),
-    color calc(var(--mo, 1) * 160ms);
+    color calc(var(--mo, 1) * 160ms),
+    transform calc(var(--mo, 1) * 120ms) var(--ease-house);
+}
+
+.segment:active,
+.segmentActive:active {
+  transform: scale(0.96);
 }
 
 .segmentActive {

@@ -1,4 +1,5 @@
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { render } from '@testing-library/react'
 import { act } from 'react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -7,6 +8,15 @@ import { resetDockStore, setDockStorage } from '../state/dockStore'
 import { DEFAULT_USER_SETTINGS, setUiStorage, useUiStore } from '../state/uiStore'
 import { useSessionStore } from '../state/sessionStore'
 import { createInMemoryStorage } from './testStorage'
+
+// Repo-wide CSS Module discovery for the press-feedback guard (#65): a plain
+// list of file paths would rot the moment a new tactile control's module is
+// added, so this walks src/ itself and finds every *.module.css.
+function findCssModules(root: string): string[] {
+  return readdirSync(root, { recursive: true })
+    .filter((entry): entry is string => typeof entry === 'string' && entry.endsWith('.module.css'))
+    .map((entry) => join(root, entry))
+}
 
 function resetUiStore() {
   useUiStore.setState({
@@ -230,5 +240,107 @@ describe('staggered dialog and gallery entrances (#61)', () => {
     expect(css).toMatch(/prefers-reduced-motion:reduce\)\s*{\s*\.card,\.preview img,\.scrim,\.confirm\s*{\s*animation-duration:\s*0ms;\s*animation-delay:\s*0ms;/)
     const component = readFileSync('src/maps/MapLibrary.tsx', 'utf8')
     expect(component).toContain("'--card-index': index")
+  })
+})
+
+/*
+ * Issue #65: press feedback is standardized on exactly scale(0.96) on
+ * :active across every tactile control (better-ui principle 9) — the three
+ * below-floor deviations (0.88, 0.9, 0.94) read as rubbery, the drift
+ * (0.97, 0.98, 0.995) is inconsistent, and several controls (graph/canvas
+ * tools, the editor toolbar, the Wikilink chip, Create, Cancel) previously
+ * had no press reaction at all. This extends the idiom #46 established on
+ * primary click targets to the long tail.
+ */
+describe('press feedback normalization (#65)', () => {
+  // Every module #65 explicitly touches: the shared Button, the active
+  // Timeline button, page-action pills, the Properties chip-remove/
+  // steppers/icon buttons, the graph and canvas tool buttons, the editor
+  // toolbar, the Wikilink chip, and the New Page "Create" / Create World
+  // "Cancel" buttons.
+  const citedModules = [
+    'src/components/Button/Button.module.css',
+    'src/timeline/TimelinePanel.module.css',
+    'src/screens/PageScreen.module.css',
+    'src/properties/Properties.module.css',
+    'src/graph/GraphPanel.module.css',
+    'src/canvas/ReferenceCanvasPanel.module.css',
+    'src/editor/PageEditor.module.css',
+    'src/editor/extensions/WikiLink.module.css',
+    'src/screens/NewPageScreen.module.css',
+    'src/screens/Worlds/CreateWorldModal.module.css',
+  ]
+
+  it('every cited module presses with exactly scale(0.96) on :active', () => {
+    for (const file of citedModules) {
+      const css = readFileSync(file, 'utf8')
+      expect(css, `${file} should contain scale(0.96)`).toContain('scale(0.96)')
+    }
+  })
+
+  it('the graph and canvas tool buttons gained a press reaction with transform in their transition', () => {
+    const graph = readFileSync('src/graph/GraphPanel.module.css', 'utf8')
+    expect(graph).toMatch(/\.categories button,\s*\.scopeToggle button,\s*\.zoomControls button\s*\{[^}]*transition:[^}]*transform[^}]*\}/)
+    expect(graph).toContain(".categories button:active, .scopeToggle button:active, .zoomControls button:active { transform: scale(0.96); }")
+
+    const canvas = readFileSync('src/canvas/ReferenceCanvasPanel.module.css', 'utf8')
+    expect(canvas).toMatch(/\.tools button,\s*\.shapePicker button\s*\{[^}]*transition:\s*transform[^}]*\}/)
+    // The palette swatch's press scales the inner .dot, not the transparent
+    // 40px button — the button IS the hit target (#59) and must not shrink.
+    expect(canvas).toContain('.palette button:active .dot { transform: scale(0.96); }')
+  })
+
+  it('the editor toolbar buttons gained a press reaction with transform in their transition', () => {
+    const css = readFileSync('src/editor/PageEditor.module.css', 'utf8')
+    expect(css).toMatch(/\.button\s*\{[^}]*transition:[^}]*transform calc\(var\(--mo, 1\) \* 120ms\) var\(--ease-house\)[^}]*\}/)
+    expect(css).toContain('.button:active:not(:disabled) {\n  transform: scale(0.96);\n}')
+  })
+
+  it('the Wikilink chip reacts to hover as well as press, with transform in its transition', () => {
+    const css = readFileSync('src/editor/extensions/WikiLink.module.css', 'utf8')
+    expect(css).toMatch(/\.chip:hover\s*\{[^}]*\}/)
+    expect(css).toContain('.chip:active {\n  transform: scale(0.96);\n}')
+    expect(css).toMatch(/\.chip\s*\{[^}]*transition:[^}]*transform calc\(var\(--mo, 1\) \* 120ms\) var\(--ease-house\)[^}]*\}/)
+  })
+
+  it('the New Page "Create" button gained a press reaction with transform in its transition', () => {
+    const css = readFileSync('src/screens/NewPageScreen.module.css', 'utf8')
+    expect(css).toContain('transition: transform calc(var(--mo, 1) * 120ms) var(--ease-house);')
+    expect(css).toContain('.create:active:not(:disabled) { transform: scale(0.96); }')
+  })
+
+  it('the Create World "Cancel" button gained a press reaction with transform in its transition', () => {
+    const css = readFileSync('src/screens/Worlds/CreateWorldModal.module.css', 'utf8')
+    expect(css).toMatch(/\.cancelButton\s*\{[^}]*transition: transform calc\(var\(--mo, 1\) \* 120ms\) var\(--ease-house\);[^}]*\}/)
+    expect(css).toContain('.cancelButton:active {\n  transform: scale(0.96);\n}')
+  })
+
+  it('no :active transform below scale(0.95) survives anywhere in src/**/*.module.css', () => {
+    const offenders: string[] = []
+    for (const file of findCssModules('src')) {
+      const css = readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+      // Every top-level `selector { body }` block — good enough for the flat,
+      // non-nested CSS Modules this repo writes (no CSS nesting is used).
+      for (const [, selector, body] of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+        if (!selector.includes(':active')) continue
+        for (const [, raw] of body.matchAll(/scale\(([\d.]+)\)/g)) {
+          const value = Number(raw)
+          if (value < 0.95) {
+            offenders.push(`${file} :: ${selector.trim()} { ${body.trim()} }`)
+          }
+        }
+      }
+    }
+    expect(offenders).toEqual([])
+  })
+
+  it('added press/hover collapses under prefers-reduced-motion (universal collapse, #41)', () => {
+    // The added transitions ride plain CSS `transition`, which the global
+    // `*` reduced-motion rule already collapses (asserted above in "global.css
+    // collapses animation under prefers-reduced-motion"). The Wikilink chip
+    // additionally re-declares its own reduced-motion collapse since its
+    // hover/press are new behavior on a previously-inert element.
+    const css = readFileSync('src/editor/extensions/WikiLink.module.css', 'utf8')
+    expect(css).toMatch(/prefers-reduced-motion:\s*reduce\)\s*\{\s*\.chip\s*\{\s*transition-duration:\s*0ms;/)
   })
 })
