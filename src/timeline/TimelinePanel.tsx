@@ -4,6 +4,7 @@ import { DockableWindow } from '../components/DockableWindow/DockableWindow'
 import { prefersReducedMotion } from '../components/motionPrefs'
 import { buildTimeline, reorderEras } from '../domain/timeline'
 import type { Page, World } from '../domain/types'
+import { icons } from '../icons'
 import type { WorldRepository } from '../repository/WorldRepository'
 import { useUiStore } from '../state/uiStore'
 import styles from './TimelinePanel.module.css'
@@ -130,9 +131,9 @@ export function TimelinePanel({ world, pages, repository, focusPage, onClose, on
     <div className={styles.headerTools}>
       {occurrences.length > 0 && (
         <div className={styles.occurrences} aria-label={`Occurrences of ${focus?.title}`}>
-          <button type="button" aria-label="Previous occurrence" onClick={() => setOccurrence((current) => (current - 1 + occurrences.length) % occurrences.length)}>◀</button>
+          <button type="button" aria-label="Previous occurrence" onClick={() => setOccurrence((current) => (current - 1 + occurrences.length) % occurrences.length)}><icons.caretLeft size={14} /></button>
           <span>{occurrence + 1} / {occurrences.length}</span>
-          <button type="button" aria-label="Next occurrence" onClick={() => setOccurrence((current) => (current + 1) % occurrences.length)}>▶</button>
+          <button type="button" aria-label="Next occurrence" onClick={() => setOccurrence((current) => (current + 1) % occurrences.length)}><icons.caretRight size={14} /></button>
         </div>
       )}
       <div className={styles.modeToggle}>
@@ -148,14 +149,14 @@ export function TimelinePanel({ world, pages, repository, focusPage, onClose, on
       subtitle={`${timeline.length} ${timeline.length === 1 ? 'Era' : 'Eras'}`}
       onClose={onClose}
       toolbar={toolbar}
-      icon="◴"
+      icon={<icons.timeline />}
       accent="var(--cat-eras)"
     >
       <div className={styles.panel}>
         <div className={styles.activeBar}>
           <span className={styles.activeDot} />
           <span>{activeEraTitle ? `Active Era: ${activeEraTitle}` : 'No Active Era'}</span>
-          {timeline.length > 0 && <button type="button" onClick={() => setCreateOpen(true)}>＋ Create Era</button>}
+          {timeline.length > 0 && <button type="button" onClick={() => setCreateOpen(true)}><icons.add size={14} /> Create Era</button>}
         </div>
 
         {mode === 'timeline' ? (
@@ -183,7 +184,7 @@ export function TimelinePanel({ world, pages, repository, focusPage, onClose, on
                       aria-expanded={isExpanded}
                       onClick={() => setExpanded((current) => toggleSet(current, era.page.slug))}
                     >
-                      <span className={isExpanded ? styles.caretOpen : styles.caret}>▶</span>
+                      <span className={isExpanded ? styles.caretOpen : styles.caret}><icons.caretRight size={12} /></span>
                       <span>
                         <strong>{era.page.title}</strong>
                         <small>{era.dateLabel}</small>
@@ -198,7 +199,7 @@ export function TimelinePanel({ world, pages, repository, focusPage, onClose, on
                       aria-pressed={isActive}
                       onClick={() => void setActiveEra(era.page.slug)}
                     >
-                      {isActive ? '● Active Era' : '○ Set active'}
+                      {isActive ? <><icons.circle size={10} weight="fill" /> Active Era</> : <><icons.circle size={10} /> Set active</>}
                     </button>
                     {isExpanded && (
                       <div className={styles.members}>
@@ -217,7 +218,7 @@ export function TimelinePanel({ world, pages, repository, focusPage, onClose, on
                                     onNavigatePage(page.slug)
                                   }}
                                 >
-                                  <span style={{ color: `var(--cat-${page.category})` }}>◆</span>{page.title}
+                                  <span style={{ color: `var(--cat-${page.category})` }}><icons.marker size={12} /></span>{page.title}
                                 </a>
                               ))}
                             </div>
@@ -244,7 +245,7 @@ export function TimelinePanel({ world, pages, repository, focusPage, onClose, on
                 data-dragging={eraDrag?.from === index || undefined}
                 style={{ transform: manageRowTransform(index, eraDrag) }}
               >
-                <button type="button" className={styles.grip} aria-label={`Reorder ${era.page.title}`} onPointerDown={(event) => beginEraDrag(index, event)}>⠿</button>
+                <button type="button" className={styles.grip} aria-label={`Reorder ${era.page.title}`} onPointerDown={(event) => beginEraDrag(index, event)}><icons.grip size={16} /></button>
                 <span className={styles.order}>{String(index + 1).padStart(2, '0')}</span>
                 <span><strong>{era.page.title}</strong><small>{era.dateLabel}</small></span>
                 {currentWorld.activeEra === era.page.slug && <b>Active Era</b>}
@@ -262,7 +263,7 @@ export function TimelinePanel({ world, pages, repository, focusPage, onClose, on
 function EmptyTimeline({ onCreate }: { onCreate: () => void }) {
   return (
     <div className={styles.empty}>
-      <span>◴</span>
+      <span><icons.timeline size={40} /></span>
       <h3>No Eras yet</h3>
       <p>Give this World its first chapter in time.</p>
       <button type="button" onClick={onCreate}>Create first Era</button>

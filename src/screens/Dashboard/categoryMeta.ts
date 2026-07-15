@@ -1,19 +1,21 @@
+import type { ComponentType } from 'react'
 import type { Category } from '../../domain/types'
+import { categoryIcons, type IconProps } from '../../icons'
 
 export interface CategoryMeta {
   category: Category
   label: string
-  icon: string
+  icon: ComponentType<IconProps>
 }
 
 export const CATEGORY_META: CategoryMeta[] = [
-  { category: 'stories', label: 'Stories', icon: '✦' },
-  { category: 'eras', label: 'Eras', icon: '◐' },
-  { category: 'characters', label: 'Characters', icon: '♙' },
-  { category: 'locations', label: 'Locations', icon: '⌖' },
-  { category: 'items', label: 'Items', icon: '◇' },
-  { category: 'organizations', label: 'Organizations', icon: '⬡' },
-  { category: 'events', label: 'Events', icon: '✺' },
+  { category: 'stories', label: 'Stories', icon: categoryIcons.stories },
+  { category: 'eras', label: 'Eras', icon: categoryIcons.eras },
+  { category: 'characters', label: 'Characters', icon: categoryIcons.characters },
+  { category: 'locations', label: 'Locations', icon: categoryIcons.locations },
+  { category: 'items', label: 'Items', icon: categoryIcons.items },
+  { category: 'organizations', label: 'Organizations', icon: categoryIcons.organizations },
+  { category: 'events', label: 'Events', icon: categoryIcons.events },
 ]
 
 export function categoryMeta(category: string): CategoryMeta | undefined {

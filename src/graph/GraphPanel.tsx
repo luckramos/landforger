@@ -56,7 +56,7 @@ export function GraphPanel({ world, pages, focalSlug, onClose, onNavigatePage }:
       initialState={focalSlug ? 'floating' : 'fullscreen'}
       onClose={onClose}
       toolbar={toolbar}
-      icon="✳"
+      icon={<icons.graph />}
       accent="var(--bronze)"
     >
       <div className={styles.panel}>
@@ -72,7 +72,7 @@ export function GraphPanel({ world, pages, focalSlug, onClose, onNavigatePage }:
                 aria-label={`${meta.label} (${count})`}
                 onClick={() => toggleCategory(meta.category)}
               >
-                <span style={{ color: `var(--cat-${meta.category})` }}>{meta.icon}</span>{meta.label}<small>{count}</small>
+                <span style={{ color: `var(--cat-${meta.category})` }}><meta.icon size={12} /></span>{meta.label}<small>{count}</small>
               </button>
             )
           })}

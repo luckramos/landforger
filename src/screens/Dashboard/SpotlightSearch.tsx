@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom'
 import type { Page } from '../../domain/types'
 import type { SpotlightResult } from '../../search/spotlightSearch'
 import { searchSpotlight, splitGraphemes } from '../../search/spotlightSearch'
+import { icons } from '../../icons'
 import { CATEGORY_META, categoryMeta } from './categoryMeta'
 import styles from './SpotlightSearch.module.css'
 
@@ -78,7 +79,7 @@ export function SpotlightSearch({ pages, worldSlug, onClose }: SpotlightSearchPr
         }}
       >
         <div className={styles.inputRow}>
-          <span aria-hidden="true">⌕</span>
+          <span aria-hidden="true"><icons.search size={16} /></span>
           <input
             ref={inputRef}
             role="combobox"
@@ -110,7 +111,7 @@ export function SpotlightSearch({ pages, worldSlug, onClose }: SpotlightSearchPr
                 onMouseEnter={() => setSelectedIndex(index)}
                 onClick={() => openResult(result)}
               >
-                <span className={styles.resultIcon} style={{ color: `var(--cat-${result.category})` }}>{meta?.icon}</span>
+                <span className={styles.resultIcon} style={{ color: `var(--cat-${result.category})` }}>{meta && <meta.icon size={16} />}</span>
                 <span className={styles.resultCopy}>
                   <strong><HighlightedTitle title={result.title} indices={result.matchIndices} /></strong>
                   <small>{result.kind === 'page' ? result.summary : 'Category'}</small>

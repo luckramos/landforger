@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { CATEGORIES, type Page, type Pin, type World } from '../domain/types'
 import { getRepository } from '../state/repository'
+import { icons } from '../icons'
 import { categoryMeta } from '../screens/Dashboard/categoryMeta'
 import { eraDateLabel } from '../domain/timeline'
 import {
@@ -358,7 +359,7 @@ export function MapScreen() {
   return (
     <main className={styles.screen}>
       <header className={styles.header}>
-        <Link className={styles.back} to={`/w/${world.slug}`}>‹ {world.name}</Link>
+        <Link className={styles.back} to={`/w/${world.slug}`}><icons.caretLeft size={14} /> {world.name}</Link>
         <nav className={styles.breadcrumbs} aria-label="Map breadcrumbs">
           {breadcrumbs.map((crumb, index) => index === breadcrumbs.length - 1 ? (
             <span key={crumb.id}>{crumb.title}</span>
@@ -379,12 +380,12 @@ export function MapScreen() {
           <button type="button" aria-pressed={editing} onClick={() => { setEditing((value) => !value); setPlacingPageSlug(undefined) }}>Edit layout</button>
           <button type="button" onClick={() => { setPickerOpen(true); setPageQuery('') }}>Add Pin</button>
           <Link to={`/w/${world.slug}/library`}>Map Library</Link>
-          <button type="button" aria-label="Map settings" onClick={() => setSettingsOpen((open) => !open)}>⚙</button>
+          <button type="button" aria-label="Map settings" onClick={() => setSettingsOpen((open) => !open)}><icons.settings size={16} /></button>
         </div>
         <div className={styles.zoomControls} aria-label="Map zoom controls">
-          <button type="button" aria-label="Zoom out" onClick={() => changeZoom(-ZOOM_STEP)}>−</button>
+          <button type="button" aria-label="Zoom out" onClick={() => changeZoom(-ZOOM_STEP)}><icons.minus size={14} /></button>
           <button type="button" aria-label="Reset map view" onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }) }}>{Math.round(zoom * 100)}%</button>
-          <button type="button" aria-label="Zoom in" onClick={() => changeZoom(ZOOM_STEP)}>＋</button>
+          <button type="button" aria-label="Zoom in" onClick={() => changeZoom(ZOOM_STEP)}><icons.add size={14} /></button>
         </div>
       </header>
 
@@ -441,9 +442,9 @@ export function MapScreen() {
                   }}
                   onClick={(event) => { event.stopPropagation(); setSelectedPinId(pin.id); setReaderOpen(false) }}
                 >
-                  <i><em>{meta?.icon ?? '◆'}</em></i>
+                  <i><em>{meta ? <meta.icon size={14} /> : <icons.marker size={14} />}</em></i>
                   <span>{page.title}</span>
-                  {pin.childMap && <b aria-hidden="true">⌄</b>}
+                  {pin.childMap && <b aria-hidden="true"><icons.caretDown size={12} /></b>}
                 </button>
               )
             })}
@@ -453,11 +454,13 @@ export function MapScreen() {
         <AnimatePresence>
         {selectedPin && selectedPage && (
           <motion.aside className={styles.inspector} aria-label="Pin inspector" initial={{ opacity: 1 }} exit={{ opacity: 0, x: 12 }} transition={overlayExitTransition(motionScale)}>
-            <button type="button" className={styles.closeInspector} aria-label="Close Pin inspector" onClick={() => { setSelectedPinId(undefined); setReaderOpen(false) }}>×</button>
+            <button type="button" className={styles.closeInspector} aria-label="Close Pin inspector" onClick={() => { setSelectedPinId(undefined); setReaderOpen(false) }}><icons.close /></button>
             {selectedPage.cover ? (
               <img src={selectedPage.cover} alt="" />
             ) : (
-              <div className={styles.coverFallback} style={{ color: `var(--cat-${selectedPage.category})` }}>{categoryMeta(selectedPage.category)?.icon ?? '◆'}</div>
+              <div className={styles.coverFallback} style={{ color: `var(--cat-${selectedPage.category})` }}>
+                {(() => { const CoverIcon = categoryMeta(selectedPage.category)?.icon ?? icons.marker; return <CoverIcon size={32} /> })()}
+              </div>
             )}
             <span className={styles.eyebrow} style={{ color: `var(--cat-${selectedPage.category})` }}>{categoryMeta(selectedPage.category)?.label}</span>
             <h2>{selectedPage.title}</h2>
@@ -517,7 +520,7 @@ export function MapScreen() {
         <AnimatePresence>
         {readerOpen && selectedPage && (
           <motion.aside className={styles.reader} aria-label="Docked reader" initial={{ opacity: 1 }} exit={{ opacity: 0, x: 12 }} transition={overlayExitTransition(motionScale)}>
-            <header><span>Docked reader</span><button type="button" aria-label="Close reader" onClick={() => setReaderOpen(false)}>×</button></header>
+            <header><span>Docked reader</span><button type="button" aria-label="Close reader" onClick={() => setReaderOpen(false)}><icons.close /></button></header>
             <h2>{selectedPage.title}</h2>
             {readerParagraphs(selectedPage.body).map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
             <Link
@@ -527,7 +530,7 @@ export function MapScreen() {
                 label: selectedPage.title,
                 color: `var(--cat-${selectedPage.category})`,
               })}
-            >Continue on full page →</Link>
+            >Continue on full page <icons.arrowRight size={14} /></Link>
           </motion.aside>
         )}
         </AnimatePresence>
@@ -546,7 +549,7 @@ export function MapScreen() {
       {pickerOpen && (
         <motion.div className={styles.scrim} role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setPickerOpen(false)} initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={overlayExitTransition(motionScale)}>
           <motion.section className={styles.modal} role="dialog" aria-label="Add Pin" initial={false} exit={{ opacity: 0, y: 7, scale: 0.98 }} transition={overlayExitTransition(motionScale)}>
-            <header><h2>Add Pin</h2><button type="button" aria-label="Close Add Pin" onClick={() => setPickerOpen(false)}>×</button></header>
+            <header><h2>Add Pin</h2><button type="button" aria-label="Close Add Pin" onClick={() => setPickerOpen(false)}><icons.close /></button></header>
             <input type="search" aria-label="Search Pages" value={pageQuery} onChange={(event) => setPageQuery(event.target.value)} autoFocus />
             <div className={styles.pagePicker}>
               {CATEGORIES.map((category) => {
@@ -555,7 +558,7 @@ export function MapScreen() {
                 const meta = categoryMeta(category)
                 return (
                   <section key={category} className={styles.pickerGroup} aria-labelledby={`picker-${category}`}>
-                    <h3 id={`picker-${category}`}>{meta?.icon} {meta?.label}</h3>
+                    <h3 id={`picker-${category}`}>{meta && <meta.icon size={16} />} {meta?.label}</h3>
                     {categoryPages.map((page) => (
                       <button type="button" key={page.slug} onClick={() => { setPlacingPageSlug(page.slug); setPickerOpen(false); setEditing(true) }}>
                         Place {page.title}
@@ -574,7 +577,7 @@ export function MapScreen() {
       <AnimatePresence>
       {settingsOpen && (
         <motion.section className={styles.settings} role="dialog" aria-label="Map settings" initial={{ opacity: 1 }} exit={{ opacity: 0, y: 7, scale: 0.98 }} transition={overlayExitTransition(motionScale)}>
-          <header><h2>Map settings</h2><button type="button" aria-label="Close Map settings" onClick={() => setSettingsOpen(false)}>×</button></header>
+          <header><h2>Map settings</h2><button type="button" aria-label="Close Map settings" onClick={() => setSettingsOpen(false)}><icons.close /></button></header>
           <label className={styles.toggle}>
             <input
               type="checkbox"

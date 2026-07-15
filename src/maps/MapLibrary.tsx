@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { Link, useParams } from 'react-router-dom'
 import type { Page, World } from '../domain/types'
+import { icons } from '../icons'
 import { getRepository } from '../state/repository'
 import { deleteMap, reparentMap, resolveMapImage, setRootMap, type MapCollectionState } from './mapDomain'
 import { persistMapCollection } from './mapPersistence'
@@ -69,7 +70,7 @@ export function MapLibrary() {
     <main className={styles.screen}>
       <header className={styles.header}>
         <div>
-          <Link to={`/w/${world.slug}/map`}>‹ World Map</Link>
+          <Link to={`/w/${world.slug}/map`}><icons.caretLeft size={14} /> World Map</Link>
           <span>{world.name}</span>
         </div>
         <h1>Map Library</h1>

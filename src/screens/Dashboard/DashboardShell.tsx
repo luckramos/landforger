@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence } from 'motion/react'
 import { Link, matchPath, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
@@ -160,21 +161,21 @@ export function DashboardShell() {
               aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
               onClick={() => setSidebarCollapsed((value) => !value)}
             >
-              {sidebarCollapsed ? '›' : '‹'}
+              {sidebarCollapsed ? <icons.caretRight size={16} /> : <icons.caretLeft size={16} />}
             </button>
           </div>
 
           <Link className={styles.newPage} to={`/w/${world.slug}/new`}>
-            <span>＋</span><span className={styles.expandedOnly}>New page</span>
+            <span><icons.add size={18} /></span><span className={styles.expandedOnly}>New page</span>
           </Link>
 
           <nav className={styles.primaryNav}>
             <Link className={styles.navItem} to={`/w/${world.slug}`}>
-              <span>⌂</span><span className={styles.expandedOnly}>All pages</span><b className={styles.expandedOnly}>{pages.length}</b>
+              <span><icons.home /></span><span className={styles.expandedOnly}>All pages</span><b className={styles.expandedOnly}>{pages.length}</b>
             </Link>
             {CATEGORY_META.map((item) => (
               <Link key={item.category} className={styles.navItem} to={`/w/${world.slug}/c/${item.category}`}>
-                <span style={{ color: `var(--cat-${item.category})` }}>{item.icon}</span>
+                <span style={{ color: `var(--cat-${item.category})` } as CSSProperties}><item.icon /></span>
                 <span className={styles.expandedOnly}>{item.label}</span>
                 <b className={styles.expandedOnly}>{counts.get(item.category)}</b>
               </Link>
@@ -187,21 +188,21 @@ export function DashboardShell() {
           </section>
 
           <nav className={styles.bottomNav}>
-            <Link className={styles.navItem} to={`/w/${world.slug}/map`}><span>⌖</span><span className={styles.expandedOnly}>World map</span></Link>
-            <Link className={styles.navItem} to={`/w/${world.slug}?panel=timeline`}><span>◴</span><span className={styles.expandedOnly}>Timeline</span></Link>
-            <Link className={styles.navItem} to={`/w/${world.slug}?panel=graph`}><span>✳</span><span className={styles.expandedOnly}>Graph view</span></Link>
-            <Link className={styles.navItem} to={`/w/${world.slug}?panel=canvas`}><span>▱</span><span className={styles.expandedOnly}>Reference canvas</span></Link>
+            <Link className={styles.navItem} to={`/w/${world.slug}/map`}><span><icons.map /></span><span className={styles.expandedOnly}>World map</span></Link>
+            <Link className={styles.navItem} to={`/w/${world.slug}?panel=timeline`}><span><icons.timeline /></span><span className={styles.expandedOnly}>Timeline</span></Link>
+            <Link className={styles.navItem} to={`/w/${world.slug}?panel=graph`}><span><icons.graph /></span><span className={styles.expandedOnly}>Graph view</span></Link>
+            <Link className={styles.navItem} to={`/w/${world.slug}?panel=canvas`}><span><icons.canvas /></span><span className={styles.expandedOnly}>Reference canvas</span></Link>
           </nav>
       </aside>
 
       <div className={styles.mainColumn}>
         <header className={styles.topbar} aria-hidden={focusMode || undefined}>
-            <Link to="/worlds" className={styles.worldsBack}>‹ Worlds</Link>
+            <Link to="/worlds" className={styles.worldsBack}><icons.caretLeft size={12} /> Worlds</Link>
             <nav className={styles.crumbs} aria-label="Breadcrumb">
               <Link to={`/w/${world.slug}`}>{world.name}</Link>
               {currentLabel && <><span>/</span><span>{currentLabel}</span></>}
             </nav>
-            <button type="button" className={styles.searchTrigger} onClick={() => setSearchOpen(true)}>⌕ <span>Search the world…</span><kbd>⌘K</kbd></button>
+            <button type="button" className={styles.searchTrigger} onClick={() => setSearchOpen(true)}><icons.search size={16} /> <span>Search the world…</span><kbd>⌘K</kbd></button>
             <span className={styles.saveIndicator} data-testid="save-indicator" data-saving={saving || undefined}>
               <i />{saving ? 'Saving' : 'Saved'}
             </span>
@@ -214,11 +215,11 @@ export function DashboardShell() {
             >
               {readOnly ? <icons.lock /> : <icons.unlock />}
             </button>
-            <button type="button" className={styles.topbarButton} aria-label="Enter focus mode" onClick={() => setFocusMode(true)}>◎</button>
+            <button type="button" className={styles.topbarButton} aria-label="Enter focus mode" onClick={() => setFocusMode(true)}><icons.focus /></button>
             <UserMenu />
         </header>
 
-        {focusMode && <button type="button" className={styles.exitFocus} aria-label="Exit focus mode" onClick={() => setFocusMode(false)}>× Exit focus</button>}
+        {focusMode && <button type="button" className={styles.exitFocus} aria-label="Exit focus mode" onClick={() => setFocusMode(false)}><icons.close size={14} /> Exit focus</button>}
 
         <div key={location.pathname} className={styles.view} data-route-key={location.pathname}>
           <Outlet context={{ world, pages, repository, readOnly } satisfies DashboardOutletContext} />

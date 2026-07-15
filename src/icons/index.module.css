@@ -1,0 +1,11 @@
+/*
+ * Duotone category icons render two SVG paths: the outline (unaffected here,
+ * so it keeps whatever `color`/currentColor the call site is already in) and
+ * a background wash path that Phosphor marks with an `opacity` attribute.
+ * Binding that wash to the category color — while leaving the outline
+ * neutral — is what makes the icon read as "duotone" instead of a single
+ * flat-tinted glyph.
+ */
+.categoryIcon path[opacity] {
+  fill: var(--icon-secondary-color, currentColor);
+}
