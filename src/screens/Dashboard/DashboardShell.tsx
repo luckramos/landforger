@@ -7,7 +7,7 @@ import { UserMenu } from '../../components/UserMenu/UserMenu'
 import type { Page, World } from '../../domain/types'
 import type { WorldRepository } from '../../repository/WorldRepository'
 import { getRepository } from '../../state/repository'
-import { DOCK_PANEL_IDS, useDockStore, type DockPanelId } from '../../state/dockStore'
+import { isDockPanelId, useDockStore } from '../../state/dockStore'
 import { icons } from '../../icons'
 import { CATEGORY_META, categoryMeta } from './categoryMeta'
 import { SpotlightSearch } from './SpotlightSearch'
@@ -112,8 +112,8 @@ export function DashboardShell() {
      window once and is then stripped, so navigation and the Back button never
      fight the store over what is on screen. */
   useEffect(() => {
-    if (!panel || !(DOCK_PANEL_IDS as string[]).includes(panel)) return
-    openDock(panel as DockPanelId)
+    if (!isDockPanelId(panel)) return
+    openDock(panel)
     const next = new URLSearchParams(location.search)
     next.delete('panel')
     navigate({ pathname: location.pathname, search: next.toString() }, { replace: true })

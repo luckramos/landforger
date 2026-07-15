@@ -5,6 +5,11 @@ export type DockMode = 'fullscreen' | 'floating'
 
 export const DOCK_PANEL_IDS: DockPanelId[] = ['timeline', 'graph', 'canvas']
 
+/** Narrows an arbitrary string (e.g. a `?panel=` value) to a known panel id. */
+export function isDockPanelId(value: string | null | undefined): value is DockPanelId {
+  return value != null && (DOCK_PANEL_IDS as string[]).includes(value)
+}
+
 export interface DockGeometry {
   x: number
   y: number

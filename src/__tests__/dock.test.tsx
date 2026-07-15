@@ -219,3 +219,50 @@ describe('multiple dockable windows', () => {
     expect(useDockStore.getState().panels.timeline.mode).toBeUndefined()
   })
 })
+
+/*
+ * The three windows share one DockLayer and one store path, so these invariants
+ * should hold identically for each. Running them parametrically states that
+ * equivalence outright rather than testing the Graph and assuming the rest.
+ */
+describe.each([
+  { id: 'timeline', dialog: 'Timeline', button: 'Timeline' },
+  { id: 'graph', dialog: 'Relationship graph', button: 'Graph view' },
+  { id: 'canvas', dialog: 'Reference canvas', button: 'Reference canvas' },
+] as const)('every dockable window ($id)', ({ id, dialog, button }) => {
+  const sidebarButton = () =>
+    within(screen.getByRole('complementary', { name: 'World navigation' })).getByRole('button', { name: button })
+
+  it('reopens in the mode it was last left in', async () => {
+    useSessionStore.setState({ user: { name: 'Sera Valen', email: 'sera@landforger.io' } })
+    useDockStore.getState().activateUser('sera@landforger.io')
+    await renderAt('/w/ninth-vale')
+    fireEvent.click(sidebarButton())
+    const panel = await screen.findByRole('dialog', { name: dialog })
+    fireEvent.click(within(panel).getByRole('button', { name: 'Float window' }))
+    await waitFor(() => expect(useDockStore.getState().panels[id].mode).toBe('floating'))
+
+    fireEvent.click(within(panel).getByRole('button', { name: `Close ${dialog}` }))
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: dialog })).toBeNull())
+
+    fireEvent.click(sidebarButton())
+    const reopened = await screen.findByRole('dialog', { name: dialog })
+    expect(reopened.getAttribute('data-dock-state')).toBe('floating')
+  })
+
+  it('stays open, mounted and unmoved when navigating underneath it', async () => {
+    await renderAt('/w/ninth-vale')
+    fireEvent.click(sidebarButton())
+    const panel = await screen.findByRole('dialog', { name: dialog })
+    fireEvent.click(within(panel).getByRole('button', { name: 'Float window' }))
+    await waitFor(() => expect(useDockStore.getState().panels[id].mode).toBe('floating'))
+    const geometryBefore = useDockStore.getState().panels[id].geometry
+
+    const sidebar = screen.getByRole('complementary', { name: 'World navigation' })
+    fireEvent.click(within(sidebar).getByRole('link', { name: /Characters/i }))
+    await act(async () => {})
+
+    expect(screen.getByRole('dialog', { name: dialog })).toBeTruthy()
+    expect(useDockStore.getState().panels[id].geometry).toEqual(geometryBefore)
+  })
+})
