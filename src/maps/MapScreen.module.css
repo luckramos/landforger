@@ -52,7 +52,7 @@
 @keyframes drawer-in { from { opacity: 0; transform: translateX(18px); } to { opacity: 1; transform: translateX(0); } }
 .closeInspector { float: right; border: 0; background: transparent; color: var(--text-dim); font-size: 20px; cursor: pointer; }
 .inspector > img,.coverFallback { width: calc(100% + 32px); height: 132px; margin: -16px -16px 18px; border-radius: 12px 12px 0 0; }
-.inspector > img { object-fit: cover; opacity: .72; }
+.inspector > img { object-fit: cover; opacity: .72; box-shadow: inset 0 0 0 1px oklch(1 0 0 / 0.1); }
 .coverFallback { display: grid; place-items: center; background: radial-gradient(circle,color-mix(in oklab,currentColor 22%,var(--panel-3)),var(--panel-1) 72%); font-size: 34px; }
 .inspector h2,.reader h2 { margin: 5px 0 8px; color: var(--text-hi); font: 400 28px var(--font-serif); }
 .inspector > p,.reader p { color: var(--text-dim); font: 14px/1.55 var(--font-serif); }
