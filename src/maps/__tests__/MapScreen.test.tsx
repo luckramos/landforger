@@ -73,6 +73,46 @@ describe('Maps viewing screen', () => {
     expect(stage.getAttribute('data-zoom')).toBe('0.6')
   })
 
+  it('promotes the compositor layer only while actively panning/zooming, releasing it at rest (#62)', async () => {
+    await renderAt('/w/ninth-vale/map')
+    const stage = await screen.findByTestId('map-stage')
+    const viewport = stage.parentElement!
+    Object.defineProperty(viewport, 'getBoundingClientRect', {
+      value: () => ({ left: 0, top: 0, right: 1000, bottom: 1000, width: 1000, height: 1000, x: 0, y: 0, toJSON: () => ({}) }),
+    })
+    expect(stage.hasAttribute('data-active')).toBe(false)
+
+    // Zooming promotes the layer for the settling transition, then releases it.
+    fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }))
+    expect(stage.getAttribute('data-active')).toBe('true')
+    fireEvent.transitionEnd(stage)
+    expect(stage.hasAttribute('data-active')).toBe(false)
+
+    // Panning promotes the layer for the drag and releases it on pointer up.
+    fireEvent.pointerDown(viewport, { button: 0, clientX: 100, clientY: 100 })
+    expect(stage.getAttribute('data-active')).toBe('true')
+    fireEvent.pointerMove(document, { clientX: 140, clientY: 120 })
+    fireEvent.pointerUp(document)
+    expect(stage.hasAttribute('data-active')).toBe(false)
+  })
+
+  it('does not promote the compositor layer when zooming is already clamped at the bound (#62)', async () => {
+    await renderAt('/w/ninth-vale/map')
+    const stage = await screen.findByTestId('map-stage')
+
+    // Drive the zoom to its maximum, settling each step.
+    for (let step = 0; step < 30; step += 1) {
+      fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }))
+      fireEvent.transitionEnd(stage)
+    }
+    expect(stage.hasAttribute('data-active')).toBe(false)
+
+    // At the bound the transform can't change, so no transitionend would ever
+    // fire to release the layer — it must never be promoted in the first place.
+    fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }))
+    expect(stage.hasAttribute('data-active')).toBe(false)
+  })
+
   it('opens an inspector and drills into a child Map with breadcrumbs back up', async () => {
     await renderAt('/w/ninth-vale/map')
     fireEvent.click(await screen.findByRole('button', { name: 'Duskwater' }))

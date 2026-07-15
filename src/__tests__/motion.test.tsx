@@ -132,6 +132,17 @@ describe('motion scale root sync', () => {
     expect(css).toContain('calc(var(--mo,1) * 520ms) ease')
   })
 
+  it('scopes the Map stage will-change to the active drag/zoom state, released at rest (#62)', () => {
+    const css = readFileSync('src/maps/MapScreen.module.css', 'utf8')
+    const lines = css.split('\n')
+    // The base .stage rule must not permanently hold a promoted compositor layer.
+    const baseStageRule = lines.find((line) => line.trimStart().startsWith('.stage {'))
+    expect(baseStageRule).toBeDefined()
+    expect(baseStageRule).not.toContain('will-change')
+    // will-change is scoped to the active drag/zoom state only.
+    expect(css).toContain('.stage[data-active] { will-change: transform; }')
+  })
+
   // The burst disc is retired: route changes ride the View Transitions API.
   // These pseudo-elements sit outside the universal `*` reduced-motion collapse,
   // so they need their own guard — and they must stay on the house curve/scale.

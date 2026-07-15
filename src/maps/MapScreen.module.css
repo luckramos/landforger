@@ -20,7 +20,9 @@
 .viewport { position: absolute; inset: 0; overflow: hidden; overscroll-behavior: contain; cursor: grab; background: radial-gradient(circle at 50% 45%,#17140f,#070706 70%); touch-action: none; }
 .viewport[data-dragging] { cursor: grabbing; }
 .viewport[data-dragging] .stage { transition: none; }
-.stage { position: absolute; left: calc(50% - 800px); top: calc(50% - 540px); width: 1600px; height: 1080px; will-change: transform; transition: transform calc(var(--mo,1) * 180ms) var(--ease-house); }
+.stage { position: absolute; left: calc(50% - 800px); top: calc(50% - 540px); width: 1600px; height: 1080px; transition: transform calc(var(--mo,1) * 180ms) var(--ease-house); }
+/* #62: promote the compositor layer only while actively panning/zooming — released at rest so the Map doesn't hold a permanent layer. */
+.stage[data-active] { will-change: transform; }
 .stage[data-transition="in"] { animation: map-zoom-in calc(var(--mo,1) * 600ms) var(--ease-map-zoom) both; }
 .stage[data-transition="out"] { animation: map-zoom-out calc(var(--mo,1) * 600ms) var(--ease-map-zoom) both; }
 @keyframes map-zoom-in { from { opacity: 0; transform: scale(1.55); } to { opacity: 1; transform: scale(1); } }
