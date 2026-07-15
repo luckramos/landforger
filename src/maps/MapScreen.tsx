@@ -75,6 +75,7 @@ export function MapScreen() {
   const [zoom, setZoom] = useState(1)
   const [pan, setPan] = useState<Pan>({ x: 0, y: 0 })
   const [dragStart, setDragStart] = useState<DragStart>()
+  const [zooming, setZooming] = useState(false)
   const [readerOpen, setReaderOpen] = useState(false)
   const [fadingFromImage, setFadingFromImage] = useState<string>()
   const [completedTransitionKey, setCompletedTransitionKey] = useState<string>()
@@ -123,6 +124,7 @@ export function MapScreen() {
         setSelectedPinId(preferredPin?.id)
         setZoom(1)
         setPan({ x: 0, y: 0 })
+        setZooming(false)
         setReaderOpen(false)
         setLoadState('ready')
       })
@@ -319,6 +321,9 @@ export function MapScreen() {
   }
 
   const changeZoom = (delta: number) => {
+    // Compositor layer promotion (will-change) is released once the settling
+    // transition finishes — see the stage's onTransitionEnd below (#62).
+    setZooming(true)
     setZoom((current) => {
       const next = clampZoom(current + delta)
       setPan((position) => panWithinViewport(position, next))
@@ -388,8 +393,14 @@ export function MapScreen() {
             data-testid="map-stage"
             data-zoom={zoom}
             data-transition={transition}
+            data-active={(Boolean(dragStart) || zooming) || undefined}
             onAnimationEnd={(event) => {
               if (event.currentTarget === event.target && transition) setCompletedTransitionKey(location.key)
+            }}
+            onTransitionEnd={(event) => {
+              // Pan/zoom settled: release the promoted compositor layer (#62).
+              // `.stage` only transitions `transform`, so no propertyName filter is needed.
+              if (event.currentTarget === event.target) setZooming(false)
             }}
             onClick={placePage}
             style={{
