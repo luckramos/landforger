@@ -39,7 +39,9 @@
   height: 25px;
   place-items: center;
   border: 1px solid var(--hairline);
-  border-radius: 6px;
+  /* Concentric radius (#64): matches --radius-xs; .shapePicker derives its
+     own outer radius from this same token below. */
+  border-radius: var(--radius-xs);
   background: var(--panel-1);
   color: var(--text-dim);
   cursor: pointer;
@@ -69,6 +71,9 @@
    box has to grow to fit 3 real 40px pitches: 8px padding * 2 + 3*25
    (buttons) + 2*15 (gaps) = 121px. */
 .shapePicker {
+  /* Concentric radius (#64): outer = inner (--radius-xs, the buttons above)
+     + --picker-pad, so the two can't drift apart. */
+  --picker-pad: 8px;
   position: absolute;
   z-index: 8;
   top: 110px;
@@ -78,9 +83,9 @@
   grid-template-columns: repeat(3, 25px);
   justify-content: center;
   gap: 15px;
-  padding: 8px;
+  padding: var(--picker-pad);
   border: 1px solid var(--hairline-strong);
-  border-radius: 9px;
+  border-radius: calc(var(--radius-xs) + var(--picker-pad));
   background: var(--panel-2);
   box-shadow: 0 14px 38px rgba(0, 0, 0, .55);
   animation: canvas-pop calc(var(--mo, 1) * 150ms) ease-out;

@@ -74,6 +74,11 @@
   --radius-lg: 16px; /* modals, large panels */
   --radius-pill: 999px; /* fully-rounded chips/pills */
   --radius-circle: 50%; /* circular dots/avatars */
+  /* Card radius sits between --radius-md and --radius-lg — kept as its own
+     token (rather than snapped onto the base scale) so opportunistic
+     derivation of the Worlds/WorldCard/SpotlightSearch 14px literal (#64)
+     doesn't visibly resize those cards. */
+  --radius-card: 14px;
 
   /* Easing curves — the complete measured set */
   --ease-house: cubic-bezier(0.22, 0.61, 0.36, 1);

@@ -9,7 +9,7 @@
   flex-direction: column;
   text-align: left;
   padding: 0;
-  border-radius: 14px;
+  border-radius: var(--radius-card);
   background: var(--panel-2);
   overflow: hidden;
   cursor: pointer;
@@ -62,7 +62,7 @@
   top: 12px;
   left: 12px;
   padding: 3px 10px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   border: 1px solid color-mix(in oklch, var(--card-color) 45%, transparent);
   background: color-mix(in oklch, var(--card-color) 16%, rgba(8, 8, 7, 0.6));
   color: color-mix(in oklch, var(--card-color) 80%, white);
