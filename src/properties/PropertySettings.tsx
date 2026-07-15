@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { overlayExitTransition } from '../components/motionPrefs'
+import { DIALOG_CHUNK_VARIANTS, dialogChunkTransition, dialogContainerVariants, overlayExitTransition } from '../components/motionPrefs'
 import { useUiStore } from '../state/uiStore'
 import type { CustomPropertyType, PropertyDef } from '../domain/types'
 import { icons } from '../icons'
@@ -78,19 +78,22 @@ export function PropertySettings({ definition, onSave }: PropertySettingsProps) 
             className={styles.settingsPanel}
             role="dialog"
             aria-label={`${definition.label} settings`}
-            initial={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={overlayExitTransition(motionScale)}
+            initial="hidden"
+            animate="visible"
+            variants={dialogContainerVariants(motionScale)}
+            exit={{ opacity: 0, transition: overlayExitTransition(motionScale) }}
           >
-            <p className={styles.settingsSummary}>
+            <motion.p className={styles.settingsSummary} variants={DIALOG_CHUNK_VARIANTS} transition={dialogChunkTransition(motionScale)}>
               {settingsTitle(definition.type)}
               <span>{summarize(draft)}</span>
-            </p>
-            <PropertyDefinitionEditor definition={draft} onChange={setDraft} />
-            <div className={styles.settingsActions}>
+            </motion.p>
+            <motion.div variants={DIALOG_CHUNK_VARIANTS} transition={dialogChunkTransition(motionScale)}>
+              <PropertyDefinitionEditor definition={draft} onChange={setDraft} />
+            </motion.div>
+            <motion.div className={styles.settingsActions} variants={DIALOG_CHUNK_VARIANTS} transition={dialogChunkTransition(motionScale)}>
               <button type="button" className={styles.tintButton} aria-label="Cancel settings" onClick={() => setOpen(false)}>Cancel</button>
               <button type="button" className={styles.tintPrimary} aria-label={`Save ${definition.label} settings`} onClick={save}>Save</button>
-            </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

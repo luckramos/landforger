@@ -152,3 +152,72 @@ describe('motion scale root sync', () => {
     expect(audit).toContain('All eight dead prototype keyframes are absent')
   })
 })
+
+/*
+ * Issue #61: Property dialogs and the page-lifecycle / Category dialogs
+ * split their single-container pop into staggered heading → fields → actions
+ * chunks; the Map Library gallery cascades per-card. happy-dom runs no
+ * animation, so — same approach as dock.test.tsx's DockableWindow guards —
+ * the timing constants are guarded at the source level, and the resulting
+ * DOM structure (chunk order, distinct nodes) is guarded behaviorally in
+ * PageScreen.test.tsx / MapLibrary.test.tsx.
+ */
+describe('staggered dialog and gallery entrances (#61)', () => {
+  const motionPrefs = () => readFileSync('src/components/motionPrefs.ts', 'utf8')
+
+  it('offsets staggered dialog chunks by ~100ms, collapsing to zero under reduced motion', () => {
+    const src = motionPrefs()
+    expect(src).toContain('staggerChildren: prefersReducedMotion() ? 0 : 0.1 * motionScale')
+  })
+
+  it('animates each dialog chunk on a critically damped spring — bounce: 0 — collapsing under reduced motion', () => {
+    const src = motionPrefs()
+    expect(src).toContain("type: 'spring' as const, duration: 0.3 * motionScale, bounce: 0")
+    expect(src).toMatch(/dialogChunkTransition[\s\S]*?prefersReducedMotion\(\)\s*\?\s*{ duration: 0 }/)
+  })
+
+  it('wires the Page-lifecycle dialog through the shared stagger container and chunk variants', () => {
+    const src = readFileSync('src/properties/PageProperties.tsx', 'utf8')
+    expect(src).toMatch(/aria-label="Page lifecycle"[\s\S]{0,200}variants={dialogContainerVariants\(motionScale\)}/)
+    expect(src).toContain('<motion.h2 variants={DIALOG_CHUNK_VARIANTS} transition={dialogChunkTransition(motionScale)}>Page details</motion.h2>')
+    expect(src).toContain('<motion.div className={styles.dialogFields} variants={DIALOG_CHUNK_VARIANTS} transition={dialogChunkTransition(motionScale)}>')
+    expect(src).toContain('<motion.div className={styles.dialogActions} variants={DIALOG_CHUNK_VARIANTS} transition={dialogChunkTransition(motionScale)}>')
+  })
+
+  it('wires the Category Template dialog through the shared stagger container and chunk variants', () => {
+    const src = readFileSync('src/properties/PageProperties.tsx', 'utf8')
+    expect(src).toMatch(/aria-label={`\$\{page\.category\} Category Template`}[\s\S]{0,200}variants={dialogContainerVariants\(motionScale\)}/)
+    // Three chunks in document order: heading (h2+p), fields (template rows + type picker), actions.
+    const dialogIndex = src.indexOf('Category Template`}')
+    const headingIndex = src.indexOf('<h2>{page.category} template</h2>', dialogIndex)
+    const fieldsIndex = src.indexOf('templateDraft.map', dialogIndex)
+    const actionsIndex = src.indexOf('Save Category Template', dialogIndex)
+    expect(headingIndex).toBeGreaterThan(dialogIndex)
+    expect(fieldsIndex).toBeGreaterThan(headingIndex)
+    expect(actionsIndex).toBeGreaterThan(fieldsIndex)
+  })
+
+  it('wires the Property settings dialog (the gear popover) through the shared stagger container and chunk variants', () => {
+    const src = readFileSync('src/properties/PropertySettings.tsx', 'utf8')
+    expect(src).toContain('initial="hidden"')
+    expect(src).toContain('animate="visible"')
+    expect(src).toContain('variants={dialogContainerVariants(motionScale)}')
+    expect(src).toContain('<motion.p className={styles.settingsSummary} variants={DIALOG_CHUNK_VARIANTS} transition={dialogChunkTransition(motionScale)}>')
+    expect(src).toContain('<motion.div className={styles.settingsActions} variants={DIALOG_CHUNK_VARIANTS} transition={dialogChunkTransition(motionScale)}>')
+  })
+
+  it('no longer pops the whole dialog box in as one block via CSS — Motion drives the staggered chunks now', () => {
+    const css = readFileSync('src/properties/Properties.module.css', 'utf8')
+    expect(css).not.toContain('properties-dialog-in')
+    expect(css).not.toContain('@keyframes properties-dialog-in')
+  })
+
+  it('gives each Map Library card a per-index entrance delay so the gallery cascades', () => {
+    const css = readFileSync('src/maps/MapLibrary.module.css', 'utf8')
+    expect(css).toContain('animation-delay: calc(var(--mo,1) * var(--card-index, 0) * 60ms);')
+    // The per-card delay collapses alongside the entrance duration under reduced motion.
+    expect(css).toMatch(/prefers-reduced-motion:reduce\)\s*{\s*\.card,\.preview img,\.scrim,\.confirm\s*{\s*animation-duration:\s*0ms;\s*animation-delay:\s*0ms;/)
+    const component = readFileSync('src/maps/MapLibrary.tsx', 'utf8')
+    expect(component).toContain("'--card-index': index")
+  })
+})

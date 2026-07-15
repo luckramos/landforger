@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { Link, useParams } from 'react-router-dom'
@@ -84,13 +85,21 @@ export function MapLibrary() {
         </section>
       ) : (
         <section className={styles.gallery} aria-label="Maps">
-          {world.maps.map((map) => {
+          {world.maps.map((map, index) => {
             const isRoot = world.rootMap === map.id
             const parent = map.parentMap ? world.maps.find((candidate) => candidate.id === map.parentMap) : undefined
             const image = resolveMapImage(map, world.activeEra, world.eraOrder)
             const eligiblePins = world.pins.filter((pin) => pin.mapId !== map.id && (!pin.childMap || pin.childMap === map.id))
             return (
-              <article key={map.id} aria-label={map.title} className={styles.card}>
+              <article
+                key={map.id}
+                aria-label={map.title}
+                className={styles.card}
+                // Per-index entrance delay so the gallery cascades in (#61) —
+                // the reduced-motion universal collapse (global.css) zeroes
+                // both the duration and this delay.
+                style={{ '--card-index': index } as CSSProperties}
+              >
                 <Link className={styles.preview} to={`/w/${world.slug}/map/${map.id}`}>
                   {image ? <img src={image} alt="" /> : <span>No image</span>}
                   {isRoot && <b>Root Map</b>}

@@ -570,13 +570,17 @@
 .segChoice button:hover { color: var(--bronze-light); }
 .segChoice button[data-active] { background: color-mix(in oklab, var(--bronze) 22%, transparent); color: var(--bronze-light); }
 
-/* --- Dialogs (page details, category template) ------------------------ */
+/* --- Dialogs (page details, category template) ------------------------
+   The dialog box itself no longer carries a CSS pop-in: its contents enter
+   as three staggered Motion chunks (heading → fields → actions, #61) so the
+   dialog reads as composed rather than popping in as one block. */
 .dialogScrim { position: fixed; z-index: 90; inset: 0; display: grid; place-items: center; padding: 16px; background: #0009; animation: lf-fade-in calc(var(--mo, 1) * 160ms) ease backwards; }
-.dialog { width: min(560px, calc(100vw - 32px)); max-height: 80vh; overflow: auto; padding: 22px; border: 1px solid var(--hairline-strong); border-radius: 12px; background: var(--panel-1); box-shadow: 0 30px 90px rgba(0, 0, 0, .7); animation: properties-dialog-in calc(var(--mo, 1) * 180ms) var(--ease-house); }
+.dialog { width: min(560px, calc(100vw - 32px)); max-height: 80vh; overflow: auto; padding: 22px; border: 1px solid var(--hairline-strong); border-radius: 12px; background: var(--panel-1); box-shadow: 0 30px 90px rgba(0, 0, 0, .7); }
 .dialog h2 { margin: 0 0 14px; color: var(--text-hi); font-weight: 500; }
 .dialog p { color: var(--text-faint); font-size: 11px; }
-.dialog > label { display: grid; gap: 5px; margin: 12px 0; color: var(--text-faint); font-size: 10px; }
-.dialog > .checkbox { display: flex; flex-direction: row; align-items: center; gap: 8px; }
+/* Fields chunk: wraps the lifecycle dialog's labels (Category Template's own fields chunk holds its rows directly). */
+.dialogFields > label { display: grid; gap: 5px; margin: 12px 0; color: var(--text-faint); font-size: 10px; }
+.dialogFields > .checkbox { display: flex; flex-direction: row; align-items: center; gap: 8px; }
 .checkbox input { width: auto; }
 .dialog input, .dialog select, .templateRow input { width: 100%; min-height: 31px; padding: 6px 8px; border: 1px solid var(--hairline); border-radius: 6px; outline: 0; background: var(--panel-2); color: var(--text); font: inherit; transition: var(--tint-transition); }
 .dialog input:focus, .dialog select:focus, .templateRow input:focus { border-color: var(--bronze); }
@@ -587,10 +591,9 @@
 .templateRow > button { display: inline-flex; align-items: center; justify-content: center; padding: 5px; border: 1px solid transparent; border-radius: var(--radius-sm); background: transparent; color: var(--text-faint); cursor: pointer; transition: var(--tint-transition); }
 .templateRow > button:hover { border-color: var(--danger-subtle); background: var(--danger-bg); color: var(--danger); }
 
-@keyframes properties-dialog-in { from { opacity: 0; transform: translateY(8px) scale(.98); } }
 @media (max-width: 620px) {
   .sharedRow, .propertyRow { grid-template-columns: 84px minmax(0, 1fr) auto; }
   .propertyFooter { padding-left: 0; }
   .typePicker { left: 0; }
 }
-@media (prefers-reduced-motion: reduce) { .dialog, .dialogScrim { animation-duration: .01ms; } }
+@media (prefers-reduced-motion: reduce) { .dialogScrim { animation-duration: .01ms; } }

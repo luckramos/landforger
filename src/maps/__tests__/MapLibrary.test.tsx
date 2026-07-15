@@ -61,4 +61,16 @@ describe('Map Library', () => {
       expect(world.maps.find((map) => map.id === 'ninth-vale')).not.toHaveProperty('parentMap')
     })
   })
+
+  // Issue #61: each card carries its list index as a CSS custom property, so
+  // MapLibrary.module.css's `animation-delay: calc(... * var(--card-index) * 60ms)`
+  // cascades the gallery in — first card first, last card last.
+  it('gives each card a distinct --card-index so the gallery cascades in', async () => {
+    await renderLibrary()
+    const cards = screen.getAllByRole('article')
+    expect(cards.length).toBeGreaterThan(1)
+    cards.forEach((card, index) => {
+      expect(card.style.getPropertyValue('--card-index')).toBe(String(index))
+    })
+  })
 })

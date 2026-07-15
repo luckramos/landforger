@@ -3,7 +3,7 @@
 // slugs. Runs under happy-dom like the rest of the suite.
 
 import type { Editor } from '@tiptap/core'
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createInMemoryStorage } from '../../__tests__/testStorage'
@@ -440,6 +440,52 @@ describe('PageScreen — lifecycle and templates', () => {
 
     expect(await repo.getPage('testland', 'alaric')).toBeUndefined()
     expect((await repo.getPage('testland', 'chronicle'))?.body).toContain('[[alaric]]')
+  })
+})
+
+/*
+ * Issue #61: these three dialogs split their single-container entrance into
+ * staggered heading → fields → actions chunks (motion.test.tsx guards the
+ * ~100ms offset and bounce:0 spring at the source level, since happy-dom
+ * runs no animation). What IS observable here is the structural precondition
+ * the stagger depends on: three distinct, correctly ordered chunk nodes.
+ */
+describe('PageScreen — staggered dialog entrances (#61)', () => {
+  it('renders the Page lifecycle dialog as three ordered chunks: heading, fields, actions', async () => {
+    await mountScreen('alaric')
+    fireEvent.click(screen.getByRole('button', { name: 'Page actions' }))
+    const dialog = screen.getByRole('dialog', { name: 'Page lifecycle' })
+    const [heading, fields, actions] = [...dialog.children] as HTMLElement[]
+
+    expect(heading.tagName).toBe('H2')
+    expect(heading.textContent).toBe('Page details')
+    expect(within(fields).getByLabelText('Page title')).toBeTruthy()
+    expect(within(fields).getByLabelText('Category')).toBeTruthy()
+    expect(within(actions).getByRole('button', { name: 'Delete page' })).toBeTruthy()
+    expect(within(actions).getByRole('button', { name: 'Save page details' })).toBeTruthy()
+  })
+
+  it('renders the Category Template dialog as three ordered chunks: heading, fields, actions', async () => {
+    await mountScreen('alaric')
+    fireEvent.click(screen.getByRole('button', { name: 'Page actions' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Edit characters template' }))
+    const dialog = screen.getByRole('dialog', { name: 'characters Category Template' })
+    const [heading, fields, actions] = [...dialog.children] as HTMLElement[]
+
+    expect(within(heading).getByRole('heading', { name: 'characters template' })).toBeTruthy()
+    expect(within(fields).getByRole('button', { name: 'Add text to template' })).toBeTruthy()
+    expect(within(actions).getByRole('button', { name: 'Save Category Template' })).toBeTruthy()
+  })
+
+  it('renders a Property settings dialog as three ordered chunks: heading, fields, actions', async () => {
+    await mountScreen('alaric')
+    fireEvent.click(screen.getByRole('button', { name: 'Configure Rank' }))
+    const dialog = screen.getByRole('dialog', { name: 'Rank settings' })
+    const [heading, fields, actions] = [...dialog.children] as HTMLElement[]
+
+    expect(heading.textContent).toContain('Select options')
+    expect(within(fields).getByLabelText('Options for Rank')).toBeTruthy()
+    expect(within(actions).getByRole('button', { name: 'Save Rank settings' })).toBeTruthy()
   })
 })
 
