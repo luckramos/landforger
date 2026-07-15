@@ -13,6 +13,7 @@ import Mention, { type MentionOptions } from '@tiptap/extension-mention'
 import { PluginKey } from '@tiptap/pm/state'
 import { NodeViewWrapper, ReactNodeViewRenderer, type NodeViewProps } from '@tiptap/react'
 import { useCallback, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { createPortal } from 'react-dom'
 import { CATEGORY_ICON, WikiLinkRegistry, type WikiLinkPage } from '../WikiLinkRegistry'
 import { canonicalWikilinkRegex, wikilinkMarkdown } from '../../domain/wikilink'
 import { suggestionMenuRenderer, type SuggestionMenuItem } from './SuggestionMenu'
@@ -64,13 +65,17 @@ function WikiLinkChip({ node, extension }: NodeViewProps) {
   })
 
   const positionPreview = useCallback(() => {
-    if (!chipRef.current || !previewRef.current) return
-    const rect = chipRef.current.getBoundingClientRect()
-    const previewRect = previewRef.current.getBoundingClientRect()
-    const left = Math.max(8, Math.min(rect.left, window.innerWidth - previewRect.width - 8))
-    const top = rect.bottom + 10 + previewRect.height > window.innerHeight - 8
-      ? Math.max(8, rect.top - previewRect.height - 10)
-      : rect.bottom + 10
+    const chip = chipRef.current
+    const card = previewRef.current
+    if (!chip || !card) return
+    const rect = chip.getBoundingClientRect()
+    const { width, height } = card.getBoundingClientRect()
+    const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8))
+    const below = rect.bottom + 10
+    // Prefer below the chip; flip above only when it would overflow.
+    const top = below + height > window.innerHeight - 8
+      ? Math.max(8, rect.top - height - 10)
+      : below
     setPreview({ left, top, positioned: true })
   }, [])
 
@@ -108,7 +113,12 @@ function WikiLinkChip({ node, extension }: NodeViewProps) {
     >
       {page && <span className={styles.categoryIcon} aria-hidden="true">{CATEGORY_ICON[page.category]}</span>}
       {ghost ? wikilinkMarkdown(slug) : title}
-      {previewOpen && page && (
+      {/* Portaled to <body>: the card is `position: fixed`, and the Page/route
+          entrance animations transform its ancestors — a transformed ancestor
+          becomes the containing block and would re-anchor the card far from
+          the chip. On <body> it stays pinned to the measured chip rect.
+          It also keeps this card out of the DOM ProseMirror manages. */}
+      {previewOpen && page && createPortal(
         <span
           ref={previewRef}
           role="tooltip"
@@ -128,7 +138,8 @@ function WikiLinkChip({ node, extension }: NodeViewProps) {
               {page.tags.map((tag) => <span key={tag}>{tag}</span>)}
             </span>
           )}
-        </span>
+        </span>,
+        document.body,
       )}
     </NodeViewWrapper>
   )

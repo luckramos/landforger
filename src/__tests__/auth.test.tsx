@@ -1,5 +1,4 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { act } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppRoutes } from '../routes'
@@ -49,22 +48,12 @@ describe('Auth screen', () => {
     expect(screen.getByRole('heading', { name: 'Chart your worlds.' })).toBeTruthy()
   })
 
-  it('successful submit plays the burst then navigates to /worlds after 780ms', async () => {
-    vi.useFakeTimers()
+  // The burst disc and its 780ms envelope are gone — the route swap is a View
+  // Transition now, so a successful submit lands on /worlds immediately.
+  it('successful submit navigates straight to /worlds', async () => {
     renderLogin()
     fireEvent.click(screen.getByRole('button', { name: 'Enter your worlds' }))
 
-    // Burst overlay is up; navigation has not fired yet.
-    expect(screen.getByText('Entering your worlds…')).toBeTruthy()
-    act(() => {
-      vi.advanceTimersByTime(779)
-    })
-    expect(screen.queryByText(/Welcome back/)).toBeNull()
-
-    act(() => {
-      vi.advanceTimersByTime(1)
-    })
-    vi.useRealTimers()
     expect(await screen.findByRole('heading', { name: /Welcome back, Sera\./ })).toBeTruthy()
     // The fake session recorded the signed-in user.
     expect(useSessionStore.getState().user).toEqual({ name: 'Sera Valen', email: 'sera@landforger.io' })

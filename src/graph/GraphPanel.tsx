@@ -100,6 +100,8 @@ interface PanDrag { startX: number; startY: number; originX: number; originY: nu
 
 const WIDTH = 1200
 const HEIGHT = 760
+// Freshly revealed nodes start at this scale and grow toward 1 as their links land.
+const NODE_BASE_SCALE = 0.45
 const clampZoom = (zoom: number) => Math.max(0.4, Math.min(2.6, zoom))
 
 /**
@@ -163,17 +165,46 @@ export function GraphCanvas({ graph, onNavigate }: GraphCanvasProps) {
     writePositions()
     applyTransform()
 
+    // Full link count per node in the current (possibly filtered) graph, so a
+    // node reaches full size once all of its visible links have landed.
+    const linkCount = new Map<string, number>()
+    for (const edge of graph.edges) {
+      linkCount.set(edge.sourceSlug, (linkCount.get(edge.sourceSlug) ?? 0) + 1)
+      linkCount.set(edge.targetSlug, (linkCount.get(edge.targetSlug) ?? 0) + 1)
+    }
+
     const run = () => {
       if (stopped) return
       const now = performance.now()
       const visibleCount = revealStep === 0 ? graph.nodes.length : Math.min(graph.nodes.length, Math.floor((now - startedAt) / revealStep) + 1)
       const positions = simulation.positions()
+      const revealed = new Set<string>()
       for (let index = 0; index < positions.length; index += 1) {
-        const element = nodeRefs.current.get(positions[index].slug)
+        const slug = positions[index].slug
+        const isRevealed = index < visibleCount
+        if (isRevealed) revealed.add(slug)
+        const element = nodeRefs.current.get(slug)
         if (!element) continue
-        const revealed = index < visibleCount
-        element.dataset.revealed = revealed ? 'true' : 'false'
-        element.tabIndex = revealed ? 0 : -1
+        element.dataset.revealed = isRevealed ? 'true' : 'false'
+        element.tabIndex = isRevealed ? 0 : -1
+      }
+      // A link only completes once both of its endpoints have appeared; each
+      // completed link nudges its endpoint nodes a little larger.
+      const landed = new Map<string, number>()
+      for (const edge of graph.edges) {
+        const complete = revealed.has(edge.sourceSlug) && revealed.has(edge.targetSlug)
+        const line = edgeRefs.current.get(edge.key)
+        if (line) line.dataset.revealed = complete ? 'true' : 'false'
+        if (!complete) continue
+        landed.set(edge.sourceSlug, (landed.get(edge.sourceSlug) ?? 0) + 1)
+        landed.set(edge.targetSlug, (landed.get(edge.targetSlug) ?? 0) + 1)
+      }
+      for (const slug of revealed) {
+        const element = nodeRefs.current.get(slug)
+        if (!element) continue
+        const total = linkCount.get(slug) ?? 0
+        const grown = total === 0 ? 1 : (landed.get(slug) ?? 0) / total
+        element.style.setProperty('--node-scale', (NODE_BASE_SCALE + (1 - NODE_BASE_SCALE) * grown).toFixed(3))
       }
       const frame = simulation.tick(visibleCount)
       writePositions()

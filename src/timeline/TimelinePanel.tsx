@@ -1,10 +1,12 @@
-import type { FormEvent, PointerEvent as ReactPointerEvent } from 'react'
+import type { CSSProperties, FormEvent, PointerEvent as ReactPointerEvent } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import type { DockableWindowHandle } from '../components/DockableWindow/DockableWindow'
 import { DockableWindow } from '../components/DockableWindow/DockableWindow'
 import { prefersReducedMotion } from '../components/motionPrefs'
 import { buildTimeline, reorderEras } from '../domain/timeline'
 import type { Page, World } from '../domain/types'
 import { icons } from '../icons'
+import { categoryMeta } from '../screens/Dashboard/categoryMeta'
 import type { WorldRepository } from '../repository/WorldRepository'
 import { useUiStore } from '../state/uiStore'
 import styles from './TimelinePanel.module.css'
@@ -26,6 +28,8 @@ export function TimelinePanel({ world, pages, repository, focusPage, onClose, on
   const [currentPages, setCurrentPages] = useState(pages)
   const [mode, setMode] = useState<Mode>('timeline')
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  /** Keyed `<eraSlug>::<category>`; absent means open, so groups start expanded. */
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
   const [occurrence, setOccurrence] = useState(0)
   const [pulseEra, setPulseEra] = useState<string>()
   const [createOpen, setCreateOpen] = useState(false)
@@ -33,7 +37,16 @@ export function TimelinePanel({ world, pages, repository, focusPage, onClose, on
   const eraDragRef = useRef<EraDrag | undefined>(undefined)
   const eraDragCleanupRef = useRef<() => void>(() => {})
   const scrollRef = useRef<HTMLDivElement>(null)
+  const windowRef = useRef<DockableWindowHandle>(null)
   const motionScale = useUiStore((state) => state.motionScale)
+
+  /* Docking first keeps the Page reachable behind the Timeline, so the reader
+     watches the Page they picked load instead of losing it under a fullscreen
+     panel. */
+  const openPage = (slug: string) => {
+    windowRef.current?.dock()
+    onNavigatePage(slug)
+  }
 
   useEffect(() => setCurrentWorld(world), [world])
   useEffect(() => setCurrentPages(pages), [pages])
@@ -145,6 +158,7 @@ export function TimelinePanel({ world, pages, repository, focusPage, onClose, on
 
   return (
     <DockableWindow
+      ref={windowRef}
       title="Timeline"
       subtitle={`${timeline.length} ${timeline.length === 1 ? 'Era' : 'Eras'}`}
       onClose={onClose}
@@ -177,53 +191,97 @@ export function TimelinePanel({ world, pages, repository, focusPage, onClose, on
                 >
                   <div className={styles.rail} aria-hidden="true"><i /><span /></div>
                   <div className={styles.card}>
-                    <button
-                      type="button"
-                      className={styles.expand}
-                      aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${era.page.title}`}
-                      aria-expanded={isExpanded}
-                      onClick={() => setExpanded((current) => toggleSet(current, era.page.slug))}
-                    >
-                      <span className={isExpanded ? styles.caretOpen : styles.caret}><icons.caretRight size={12} /></span>
-                      <span>
-                        <strong>{era.page.title}</strong>
-                        <small>{era.dateLabel}</small>
-                      </span>
-                      <b>{era.memberCount} {era.memberCount === 1 ? 'Page' : 'Pages'}</b>
-                    </button>
-                    <p>{era.page.summary}</p>
-                    <button
-                      type="button"
-                      className={styles.activeButton}
-                      aria-label={`Make ${era.page.title} the Active Era`}
-                      aria-pressed={isActive}
-                      onClick={() => void setActiveEra(era.page.slug)}
-                    >
-                      {isActive ? <><icons.circle size={10} weight="fill" /> Active Era</> : <><icons.circle size={10} /> Set active</>}
-                    </button>
+                    <div className={styles.cardMain}>
+                      {/* Stretched over the card face so the whole surface expands the Era.
+                          The controls below sit above it and keep their own clicks. */}
+                      <button
+                        type="button"
+                        className={styles.expandToggle}
+                        aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${era.page.title}`}
+                        aria-expanded={isExpanded}
+                        onClick={() => setExpanded((current) => toggleSet(current, era.page.slug))}
+                      />
+                      <div className={styles.cardHead}>
+                        <span className={isExpanded ? styles.caretOpen : styles.caret} aria-hidden="true"><icons.caretRight size={12} /></span>
+                        <span className={styles.titleBlock}>
+                          <strong>{era.page.title}</strong>
+                          <small>{era.dateLabel}</small>
+                        </span>
+                        <b className={styles.pageCount}>{era.memberCount} {era.memberCount === 1 ? 'Page' : 'Pages'}</b>
+                      </div>
+                      <p className={styles.summary}>{era.page.summary}</p>
+                      <div className={styles.cardActions}>
+                        <button
+                          type="button"
+                          className={styles.activeButton}
+                          aria-label={`Make ${era.page.title} the Active Era`}
+                          aria-pressed={isActive}
+                          onClick={() => void setActiveEra(era.page.slug)}
+                        >
+                          <icons.circle size={9} weight={isActive ? 'fill' : 'regular'} />
+                          {isActive ? 'Active Era' : 'Set as Active Era'}
+                        </button>
+                        <a
+                          className={styles.openEra}
+                          href={`/w/${currentWorld.slug}/p/${era.page.slug}`}
+                          onClick={(event) => {
+                            event.preventDefault()
+                            openPage(era.page.slug)
+                          }}
+                        >
+                          Open Era <icons.arrowRight size={13} />
+                        </a>
+                      </div>
+                    </div>
                     {isExpanded && (
                       <div className={styles.members}>
-                        {[...era.members.entries()].map(([category, entries]) => (
-                          <section key={category}>
-                            <h3>{category}</h3>
-                            <div>
-                              {entries.map((page, memberIndex) => (
-                                <a
-                                  key={page.slug}
-                                  href={`/w/${currentWorld.slug}/p/${page.slug}`}
-                                  aria-label={page.title}
-                                  style={{ animationDelay: `calc(var(--mo, 1) * ${memberIndex * 40}ms)` }}
-                                  onClick={(event) => {
-                                    event.preventDefault()
-                                    onNavigatePage(page.slug)
-                                  }}
+                        {[...era.members.entries()].map(([category, entries]) => {
+                          const meta = categoryMeta(category)
+                          const groupKey = `${era.page.slug}::${category}`
+                          const groupOpen = !collapsedGroups.has(groupKey)
+                          return (
+                            <section
+                              key={category}
+                              className={styles.group}
+                              style={{ '--group-color': `var(--cat-${category})` } as CSSProperties}
+                            >
+                              <h3 className={styles.groupHeading}>
+                                <button
+                                  type="button"
+                                  className={styles.groupToggle}
+                                  aria-expanded={groupOpen}
+                                  onClick={() => setCollapsedGroups((current) => toggleSet(current, groupKey))}
                                 >
-                                  <span style={{ color: `var(--cat-${page.category})` }}><icons.marker size={12} /></span>{page.title}
-                                </a>
-                              ))}
-                            </div>
-                          </section>
-                        ))}
+                                  <span className={styles.groupIcon} aria-hidden="true">{meta && <meta.icon size={13} />}</span>
+                                  <span className={styles.groupLabel}>{meta?.label ?? category}</span>
+                                  <span className={styles.groupCount}>{entries.length}</span>
+                                  <span className={groupOpen ? styles.groupCaretOpen : styles.groupCaret} aria-hidden="true"><icons.caretRight size={10} /></span>
+                                </button>
+                              </h3>
+                              <div className={styles.groupBody} data-open={groupOpen || undefined} inert={!groupOpen}>
+                                <div className={styles.groupBodyInner}>
+                                  <div className={styles.pills}>
+                                    {entries.map((page, memberIndex) => (
+                                      <a
+                                        key={page.slug}
+                                        className={styles.pill}
+                                        href={`/w/${currentWorld.slug}/p/${page.slug}`}
+                                        aria-label={page.title}
+                                        style={{ animationDelay: `calc(var(--mo, 1) * ${memberIndex * 40}ms)` }}
+                                        onClick={(event) => {
+                                          event.preventDefault()
+                                          openPage(page.slug)
+                                        }}
+                                      >
+                                        {page.title}
+                                      </a>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            </section>
+                          )
+                        })}
                         {era.memberCount === 0 && <p className={styles.noMembers}>No Pages belong to this Era yet.</p>}
                       </div>
                     )}

@@ -11,6 +11,7 @@
 // codeBlock removes that input rule with the node.
 
 import type { AnyExtension } from '@tiptap/core'
+import { Placeholder } from '@tiptap/extensions'
 import { Details, DetailsContent, DetailsSummary } from '@tiptap/extension-details'
 import Highlight from '@tiptap/extension-highlight'
 import Image from '@tiptap/extension-image'
@@ -33,12 +34,15 @@ export interface BlockExtensionOptions {
   resolveTitle?: (slug: string) => string | undefined
   wikiLinkRegistry?: WikiLinkRegistry
   onWikiLinkNavigate?: (slug: string) => void
+  /** Empty-document prompt. Omitted for headless codec use. */
+  placeholder?: string
 }
 
 /** The shared block set: one schema for the editor and the codec — they must never diverge. */
 export function buildBlockExtensions(opts: BlockExtensionOptions = {}): AnyExtension[] {
-  const { codeFenceGuard = true, resolveTitle, wikiLinkRegistry, onWikiLinkNavigate } = opts
+  const { codeFenceGuard = true, resolveTitle, wikiLinkRegistry, onWikiLinkNavigate, placeholder } = opts
   return [
+    ...(placeholder ? [Placeholder.configure({ placeholder, emptyNodeClass: 'is-empty-node' })] : []),
     StarterKit.configure({
       codeBlock: false, // no Code block in v1
       link: { openOnClick: false },

@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { Button } from '../../components/Button/Button'
 import { prefersReducedMotion } from '../../components/motionPrefs'
 import { useSessionStore } from '../../state/sessionStore'
-import { useUiStore } from '../../state/uiStore'
 import styles from './Auth.module.css'
 import { useFieldStagger } from './useFieldStagger'
 
@@ -21,20 +20,18 @@ function EyeIcon({ crossed }: { crossed: boolean }) {
   )
 }
 
-const COPY: Record<Mode, { eyebrow: string; heading: string; subtext: string; submit: string; overlay: string }> = {
+const COPY: Record<Mode, { eyebrow: string; heading: string; subtext: string; submit: string }> = {
   login: {
     eyebrow: 'Sign in',
     heading: 'Chart your worlds.',
     subtext: 'Continue where you left off — every page, map, and era waiting.',
     submit: 'Enter your worlds',
-    overlay: 'Entering your worlds…',
   },
   signup: {
     eyebrow: 'Begin the atlas',
     heading: 'Forge a new account.',
     subtext: 'Start a blank cosmos or bring your notes to life.',
     submit: 'Forge your account',
-    overlay: 'Forging your account…',
   },
 }
 
@@ -42,7 +39,6 @@ const COPY: Record<Mode, { eyebrow: string; heading: string; subtext: string; su
 export function Auth() {
   const navigate = useNavigate()
   const login = useSessionStore((s) => s.login)
-  const motionScale = useUiStore((state) => state.motionScale)
 
   const [mode, setMode] = useState<Mode>('login')
   const [name, setName] = useState('')
@@ -87,11 +83,13 @@ export function Auth() {
       return
     }
 
-    // Demo auth: any credentials pass.
+    // Demo auth: any credentials pass. The route swap is wrapped in a View
+    // Transition, so there's nothing to wait for — the old delay only existed
+    // to let the burst disc finish expanding.
     setError(null)
     setSubmitting(true)
     login({ name: 'Sera Valen', email })
-    window.setTimeout(() => navigate('/worlds'), prefersReducedMotion() ? 120 : 780 * motionScale)
+    navigate('/worlds', { viewTransition: true })
   }
 
   const imageTransform = mode === 'signup' ? 'translateX(100%)' : 'translateX(0%)'
@@ -222,15 +220,6 @@ export function Auth() {
         </form>
       </section>
 
-      {submitting && (
-        <div className={styles.scrim} role="status" aria-live="polite">
-          <div className={styles.burstDot} aria-hidden="true" />
-          <div className={styles.overlayContent}>
-            <div className={styles.spinner} aria-hidden="true" />
-            <p>{copy.overlay}</p>
-          </div>
-        </div>
-      )}
     </main>
   )
 }

@@ -6,6 +6,9 @@
   animation: view-in calc(var(--mo, 1) * 300ms) var(--ease-house) both;
 }
 
+/* `to` intentionally omits transform: with fill-mode both, the element settles
+   to transform:none, so it never becomes a containing block for the fixed
+   format toolbar / image lightbox living inside it. */
 @keyframes view-in {
   from {
     opacity: 0;
@@ -13,7 +16,6 @@
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
   }
 }
 
@@ -26,29 +28,48 @@
 
 .cover {
   width: 100%;
-  height: 300px;
-  margin-bottom: 22px;
-  border-radius: 12px;
-  object-fit: cover;
-  opacity: .72;
+  margin-bottom: 16px;
   animation: cover-fade calc(var(--mo, 1) * 380ms) var(--ease-house) both;
 }
 
 @keyframes cover-fade {
   from { opacity: 0; transform: scale(1.012); }
-  to { opacity: .72; transform: scale(1); }
+  to { opacity: 1; transform: scale(1); }
 }
 
-.summary { max-width: 680px; margin: 4px 0; color: var(--text-dim); font-family: var(--font-serif); font-size: 17px; line-height: 1.5; }
-.seeOnMap { justify-self: start; margin-top: 4px; padding: 5px 9px; border: 1px solid color-mix(in oklab,var(--cat-locations) 30%,transparent); border-radius: 999px; background: color-mix(in oklab,var(--cat-locations) 7%,transparent); color: var(--cat-locations); font: 10px var(--font-sans); text-decoration: none; }
-.tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 5px 0 8px; }
-.tags span { padding: 4px 9px; border: 1px solid var(--hairline); border-radius: 999px; color: var(--text-faint); font-size: 10px; }
+.summary { max-width: 680px; margin: 4px 0; color: var(--text-dim); font-size: 17px; line-height: 1.5; }
 
-.eras { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin-top: 8px; }
-.erasLabel { margin-right: 4px; color: var(--text-faint); font-family: var(--font-mono); font-size: 9px; letter-spacing: .1em; text-transform: uppercase; }
-.eraChip { padding: 5px 8px; border: 1px solid color-mix(in oklab, var(--cat-eras) 32%, transparent); border-radius: var(--radius-pill); background: color-mix(in oklab, var(--cat-eras) 9%, transparent); color: var(--cat-eras); font-size: 10px; }
-.eras a { margin-left: 3px; color: var(--text-dim); font-size: 10px; text-decoration: none; }
-.eras a:hover { color: var(--cat-eras); }
+/* Page actions — See on map · Connections · See on timeline, one aligned row. */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+.pageAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 11px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-dim);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color calc(var(--mo, 1) * 140ms) ease,
+    border-color calc(var(--mo, 1) * 140ms) ease,
+    color calc(var(--mo, 1) * 140ms) ease,
+    transform calc(var(--mo, 1) * 120ms) var(--ease-house);
+}
+.pageAction:active { transform: scale(0.97); }
+.actionMap:hover { border-color: color-mix(in oklab, var(--cat-locations) 55%, transparent); background: color-mix(in oklab, var(--cat-locations) 12%, transparent); color: var(--cat-locations); }
+.actionGraph:hover { border-color: color-mix(in oklab, var(--bronze) 55%, transparent); background: color-mix(in oklab, var(--bronze) 12%, transparent); color: var(--bronze-light); }
+.actionTimeline:hover { border-color: color-mix(in oklab, var(--cat-eras) 55%, transparent); background: color-mix(in oklab, var(--cat-eras) 12%, transparent); color: var(--cat-eras); }
 
 .eyebrow {
   font-family: var(--font-mono);
@@ -70,28 +91,17 @@
 }
 
 .saveState {
+  margin-left: auto;
   min-height: 16px;
+  padding-right: 2px;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 10px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
   color: var(--text-faint);
+  transition: color calc(var(--mo, 1) * 200ms) ease;
 }
-
-.graphButton {
-  justify-self: start;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  margin-top: 4px;
-  padding: 6px 10px;
-  border: 1px solid var(--hairline);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--text-dim);
-  font-size: 11px;
-  cursor: pointer;
-}
-
-.graphButton:hover { border-color: color-mix(in oklab, var(--bronze) 50%, var(--hairline)); color: var(--bronze-hi); }
+.saveState[data-save-state='saved'] { color: color-mix(in oklab, var(--cat-locations) 70%, var(--text-faint)); }
 
 .backlinks {
   width: var(--page-editor-width, min(760px, calc(100vw - 32px)));

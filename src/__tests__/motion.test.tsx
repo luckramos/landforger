@@ -23,17 +23,16 @@ describe('motion scale root sync', () => {
 
     useUiStore.getState().activateUser('sera@landforger.io')
     useUiStore.getState().setMotionScale(1.5)
-    useUiStore.getState().setBodyFont('sans')
     useUiStore.getState().activateUser('mira@landforger.io')
 
-    expect(useUiStore.getState()).toMatchObject({ motionScale: 1, bodyFont: 'serif' })
+    expect(useUiStore.getState()).toMatchObject({ motionScale: 1 })
     useUiStore.getState().setMotionScale(0.5)
 
     resetUiStore()
     useUiStore.getState().activateUser('SERA@LANDFORGER.IO')
-    expect(useUiStore.getState()).toMatchObject({ motionScale: 1.5, bodyFont: 'sans' })
+    expect(useUiStore.getState()).toMatchObject({ motionScale: 1.5 })
     useUiStore.getState().activateUser('mira@landforger.io')
-    expect(useUiStore.getState()).toMatchObject({ motionScale: 0.5, bodyFont: 'serif' })
+    expect(useUiStore.getState()).toMatchObject({ motionScale: 0.5 })
 
     setUiStorage(null)
     resetUiStore()
@@ -52,19 +51,6 @@ describe('motion scale root sync', () => {
     expect(document.documentElement.style.getPropertyValue('--mo')).toBe('1.5')
 
     act(() => useUiStore.getState().setMotionScale(1))
-  })
-
-  it('applies the selected Page body font live', () => {
-    useSessionStore.setState({ user: { name: 'Sera Valen', email: 'sera@landforger.io' } })
-    render(<MotionRoot><div /></MotionRoot>)
-
-    act(() => useUiStore.getState().setBodyFont('sans'))
-    expect(document.documentElement.style.getPropertyValue('--page-body-font')).toBe('var(--font-sans)')
-    act(() => useUiStore.getState().setBodyFont('serif'))
-    expect(document.documentElement.style.getPropertyValue('--page-body-font')).toBe('var(--font-serif)')
-
-    const editorCss = readFileSync('src/editor/PageEditor.module.css', 'utf8')
-    expect(editorCss).toContain('font-family: var(--page-body-font, var(--font-serif))')
   })
 
   it('placeholder screens scale their entrance by --mo (multiply-is-slower)', async () => {
@@ -108,7 +94,7 @@ describe('motion scale root sync', () => {
     expect(css).toContain('var(--ease-house)')
   })
 
-  it('keeps the eight dead prototype keyframes absent', () => {
+  it('keeps the dead prototype and retired burst keyframes absent', () => {
     const cssFiles = [
       'src/styles/tokens.css',
       'src/screens/Auth/Auth.module.css',
@@ -118,19 +104,29 @@ describe('motion scale root sync', () => {
       'src/graph/GraphPanel.module.css',
     ].map((file) => readFileSync(file, 'utf8')).join('\n')
 
-    for (const dead of ['lf-ring', 'lf-glowPulse', 'wf-drift', 'lw-shimmer', 'star-twinkle', 'arrow-draw', 'mp-bob', 'mp-tlOpen']) {
+    const deadPrototypes = ['lf-ring', 'lf-glowPulse', 'wf-drift', 'lw-shimmer', 'star-twinkle', 'arrow-draw', 'mp-bob', 'mp-tlOpen']
+    // The expanding burst disc, replaced by the View Transitions route fade.
+    const retiredBurst = ['auth-burst', 'auth-scrim-fade', 'auth-spin', 'auth-content-fade', 'map-navigation-burst', 'nb-expand', 'nb-fade']
+    for (const dead of [...deadPrototypes, ...retiredBurst]) {
       expect(cssFiles).not.toContain(`@keyframes ${dead}`)
     }
   })
 
-  it('guards the Maps load-bearing drill, crossfade and navigation-burst timings', () => {
+  it('guards the Maps load-bearing drill and crossfade timings', () => {
     const css = readFileSync('src/maps/MapScreen.module.css', 'utf8')
-    const source = readFileSync('src/maps/MapScreen.tsx', 'utf8')
     expect(css).toContain('calc(var(--mo,1) * 600ms) var(--ease-map-zoom)')
     expect(css).toContain('calc(var(--mo,1) * 520ms) ease')
-    expect(css).toContain('calc(var(--mo,1) * 620ms) var(--ease-burst)')
-    expect(source).toContain('640 * motionScale')
-    expect(source).toContain('prefersReducedMotion() ? 60')
+  })
+
+  // The burst disc is retired: route changes ride the View Transitions API.
+  // These pseudo-elements sit outside the universal `*` reduced-motion collapse,
+  // so they need their own guard — and they must stay on the house curve/scale.
+  it('routes transition through scaled, reduced-motion-safe view transitions', () => {
+    const css = readFileSync('src/styles/global.css', 'utf8')
+    expect(css).toContain('::view-transition-old(root)')
+    expect(css).toContain('::view-transition-new(root)')
+    expect(css).toContain('calc(var(--mo, 1) * 320ms) var(--ease-house)')
+    expect(css).toMatch(/prefers-reduced-motion: reduce\)\s*\{\s*::view-transition-old\(root\),\s*::view-transition-new\(root\)/)
   })
 
   it('records reduced-motion verification for all five catalog screens and top-10 sign-off', () => {

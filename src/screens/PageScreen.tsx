@@ -9,6 +9,7 @@ import type { Backlink } from '../domain/backlinks'
 import type { Category, CustomProperty, Page, PropertyDef, World } from '../domain/types'
 import { PageEditor } from '../editor/PageEditor'
 import { icons } from '../icons'
+import { ImageInput } from '../properties/ImageInput'
 import { PageProperties } from '../properties/PageProperties'
 import type { WorldRepository } from '../repository/WorldRepository'
 import { getRepository } from '../state/repository'
@@ -228,24 +229,41 @@ export function PageScreen({ repository, onEditorReady }: PageScreenProps) {
   return (
     <main className={styles.screen}>
       <header className={styles.header}>
-        {page.cover && <img className={styles.cover} src={page.cover} alt="" />}
+        {(!dashboard?.readOnly || page.cover) && (
+          <div className={styles.cover}>
+            <ImageInput value={page.cover} label="Cover" variant="banner" disabled={dashboard?.readOnly} onChange={(cover) => persistPagePatch(() => ({ cover }))} />
+          </div>
+        )}
         <span className={styles.eyebrow}>{page.category}</span>
         <h1 className={styles.title}>{page.title}</h1>
         <p className={styles.summary}>{page.summary}</p>
-        {worldData.pins.some((pin) => pin.pageSlug === page.slug) && (
-          <Link aria-label="See on map" className={styles.seeOnMap} to={`/w/${world}/map?page=${encodeURIComponent(page.slug)}`}><icons.map size={14} /> See on map</Link>
-        )}
-        <button
-          type="button"
-          className={styles.graphButton}
-          aria-label="Open local relationship graph"
-          onClick={() => navigate(`/w/${world}/p/${page.slug}?panel=graph`)}
-        >
-          <icons.graph size={14} /> <span>Connections</span>
-        </button>
-        <span className={styles.saveState} data-save-state={saveState}>
-          {saveState === 'saving' ? 'Saving' : saveState === 'saved' ? 'Saved' : ''}
-        </span>
+        <div className={styles.actions}>
+          {worldData.pins.some((pin) => pin.pageSlug === page.slug) && (
+            <Link aria-label="See on map" className={`${styles.pageAction} ${styles.actionMap}`} to={`/w/${world}/map?page=${encodeURIComponent(page.slug)}`}><icons.map size={14} /> See on map</Link>
+          )}
+          <button
+            type="button"
+            className={`${styles.pageAction} ${styles.actionGraph}`}
+            aria-label="Open local relationship graph"
+            onClick={() => navigate(`/w/${world}/p/${page.slug}?panel=graph`)}
+          >
+            <icons.graph size={14} /> Connections
+          </button>
+          {page.category !== 'eras' && page.eras.length > 0 && (
+            <button
+              type="button"
+              role="link"
+              className={`${styles.pageAction} ${styles.actionTimeline}`}
+              aria-label="See on timeline"
+              onClick={() => navigate(`/w/${world}?panel=timeline&focus=${page.slug}`)}
+            >
+              <icons.timeline size={14} /> See on timeline
+            </button>
+          )}
+          <span className={styles.saveState} data-save-state={saveState}>
+            {saveState === 'saving' ? 'Saving' : saveState === 'saved' ? 'Saved' : ''}
+          </span>
+        </div>
       </header>
       <PageProperties
         page={page}
@@ -255,11 +273,11 @@ export function PageScreen({ repository, onEditorReady }: PageScreenProps) {
         onPropertiesChange={(change: (properties: CustomProperty[]) => CustomProperty[]) => persistPagePatch((current) => ({ customProperties: change(current.customProperties) }))}
         onTagsChange={(change) => persistPagePatch((current) => ({ tags: change(current.tags) }))}
         onErasChange={(change) => persistPagePatch((current) => ({ eras: change(current.eras) }))}
-        onCoverChange={(cover) => persistPagePatch(() => ({ cover }))}
         onLifecycleChange={handleLifecycleChange}
         onDelete={handleDelete}
         onTemplateChange={handleTemplateChange}
-        onSeeTimeline={() => navigate(`/w/${world}?panel=timeline&focus=${page.slug}`)}
+        onOpenTag={(tag) => navigate(`/w/${world}/t/${encodeURIComponent(tag)}`)}
+        onOpenEra={(slug) => navigate(`/w/${world}/p/${slug}`)}
       />
       <PageEditor
         key={page.slug}

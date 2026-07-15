@@ -10,6 +10,8 @@
 .form > label { display: grid; gap: 6px; color: var(--text-faint); font-family: var(--font-mono); font-size: 10px; letter-spacing: .05em; }
 .form > label > input, .form > label > textarea { padding: 9px 11px; border: 1px solid var(--hairline); border-radius: 7px; outline: 0; background: var(--panel-2); color: var(--text); font: 13px var(--font-sans); }
 .form > label:first-child > input { font: 24px var(--font-serif); }
+.form > .field { display: grid; gap: 6px; }
+.fieldLabel { color: var(--text-faint); font-family: var(--font-mono); font-size: 10px; letter-spacing: .05em; }
 .form textarea { min-height: 76px; resize: vertical; }
 .create { justify-self: end; padding: 9px 16px; border: 1px solid var(--bronze); border-radius: 8px; background: color-mix(in oklab, var(--bronze) 18%, var(--panel-2)); color: var(--bronze-light); cursor: pointer; }
 .create:disabled { opacity: .4; cursor: default; }

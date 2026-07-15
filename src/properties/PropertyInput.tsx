@@ -4,7 +4,18 @@ import { overlayExitTransition } from '../components/motionPrefs'
 import { useUiStore } from '../state/uiStore'
 import type { CustomProperty, Page } from '../domain/types'
 import { icons } from '../icons'
+import { ImageInput } from './ImageInput'
+import { NumberInput } from './NumberInput'
+import { DateInput } from './DateInput'
 import styles from './Properties.module.css'
+
+/** Shared pill enter/exit for chips that can be added and removed. */
+const chipMotion = {
+  layout: true,
+  initial: { opacity: 0, scale: 0.85 },
+  animate: { opacity: 1, scale: 1 },
+  exit: { opacity: 0, scale: 0.85 },
+}
 
 interface PropertyInputProps {
   property: CustomProperty
@@ -30,30 +41,36 @@ export function PropertyInput({ property, pages, disabled = false, onChange }: P
     return (
       <div className={styles.relation} role="group" aria-label={property.label}>
         <div className={styles.chips}>
-          {slugs.map((slug) => {
-            const target = pages.find((candidate) => candidate.slug === slug)
-            return (
-              <span key={slug} className={target ? styles.relationChip : styles.ghostChip}>
-                {target?.title ?? slug}
-                {!disabled && (
-                  <button type="button" aria-label={`Remove ${target?.title ?? slug} from ${property.label}`} onClick={() => onChange(slugs.filter((item) => item !== slug))}><icons.close size={12} /></button>
+          <AnimatePresence initial={false}>
+            {slugs.map((slug) => {
+              const target = pages.find((candidate) => candidate.slug === slug)
+              return (
+                <motion.span key={slug} className={target ? styles.relationChip : styles.ghostChip} {...chipMotion} transition={overlayExitTransition(motionScale)}>
+                  <span className={styles.chipLabel}>{target?.title ?? slug}</span>
+                  {!disabled && (
+                    <button type="button" className={styles.chipRemove} aria-label={`Remove ${target?.title ?? slug} from ${property.label}`} onClick={() => onChange(slugs.filter((item) => item !== slug))}><icons.close size={12} /></button>
+                  )}
+                </motion.span>
+              )
+            })}
+          </AnimatePresence>
+          {!disabled && (
+            <span className={styles.chipAnchor}>
+              <button type="button" className={styles.addChip} aria-label={`Add ${property.label}`} aria-expanded={pickerOpen} onClick={() => setPickerOpen((open) => !open)}><icons.add size={14} /></button>
+              <AnimatePresence>
+                {pickerOpen && (
+                  <motion.div className={styles.dropdown} aria-label={`${property.label} choices`} initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={overlayExitTransition(motionScale)}>
+                    {targets.length > 0 ? targets.map((target) => (
+                      <button key={target.slug} type="button" aria-label={target.title} onClick={() => { onChange([...slugs, target.slug]); setPickerOpen(false) }}>
+                        <span style={{ color: `var(--cat-${target.category})` }}><icons.circle size={10} weight="fill" /></span>{target.title}
+                      </button>
+                    )) : <span className={styles.empty}>No matching Pages</span>}
+                  </motion.div>
                 )}
-              </span>
-            )
-          })}
-          {!disabled && <button type="button" className={styles.addChip} aria-label={`Add ${property.label}`} onClick={() => setPickerOpen((open) => !open)}><icons.add size={14} /></button>}
+              </AnimatePresence>
+            </span>
+          )}
         </div>
-        <AnimatePresence>
-        {pickerOpen && (
-          <motion.div className={styles.popover} aria-label={`${property.label} choices`} initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={overlayExitTransition(motionScale)}>
-            {targets.length > 0 ? targets.map((target) => (
-              <button key={target.slug} type="button" aria-label={target.title} onClick={() => { onChange([...slugs, target.slug]); setPickerOpen(false) }}>
-                <span style={{ color: `var(--cat-${target.category})` }}><icons.circle size={10} weight="fill" /></span>{target.title}
-              </button>
-            )) : <span className={styles.empty}>No matching Pages</span>}
-          </motion.div>
-        )}
-        </AnimatePresence>
       </div>
     )
   }
@@ -71,17 +88,35 @@ export function PropertyInput({ property, pages, disabled = false, onChange }: P
     )
   }
 
-  return (
-    <div className={property.type === 'image' ? styles.imageField : undefined}>
-      {property.type === 'image' && scalar !== '' && <img src={String(scalar)} alt="" className={styles.imagePreview} />}
-      <input
-        className={styles.input}
-        aria-label={property.label}
+  if (property.type === 'image') {
+    return (
+      <ImageInput
+        value={String(scalar)}
+        label={property.label}
         disabled={disabled}
-        type={property.type === 'number' ? 'number' : property.type === 'date' ? 'date' : property.type === 'image' ? 'url' : 'text'}
-        value={scalar}
-        onChange={(event) => onChange(property.type === 'number' ? event.target.valueAsNumber || 0 : event.target.value)}
+        size={property.size}
+        orientation={property.orientation}
+        onChange={(value) => onChange(value ?? '')}
       />
-    </div>
+    )
+  }
+
+  if (property.type === 'number') {
+    return <NumberInput value={typeof scalar === 'number' ? scalar : Number(scalar) || 0} label={property.label} disabled={disabled} onChange={onChange} />
+  }
+
+  if (property.type === 'date') {
+    return <DateInput value={String(scalar)} label={property.label} disabled={disabled} onChange={onChange} />
+  }
+
+  return (
+    <input
+      className={styles.input}
+      aria-label={property.label}
+      disabled={disabled}
+      type="text"
+      value={String(scalar)}
+      onChange={(event) => onChange(event.target.value)}
+    />
   )
 }

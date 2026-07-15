@@ -20,8 +20,8 @@ describe('design tokens match the measured design values', () => {
     expect(tokens).toContain('oklch(0.8 0.085 332)') // events
   })
 
-  it('carries the three font families', () => {
-    for (const font of ['Hanken Grotesk', 'Newsreader', 'IBM Plex Mono']) {
+  it('carries the sans and mono font families', () => {
+    for (const font of ['Onest', 'IBM Plex Mono']) {
       expect(tokens).toContain(font)
     }
   })

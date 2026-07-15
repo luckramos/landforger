@@ -1,14 +1,11 @@
-import { useEffect, useMemo, useState, type MouseEvent } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence } from 'motion/react'
 import { useNavigate } from 'react-router-dom'
-import { NavigationBurst } from '../../components/NavigationBurst/NavigationBurst'
-import { useNavigationBurst } from '../../components/NavigationBurst/useNavigationBurst'
 import { UserMenu } from '../../components/UserMenu/UserMenu'
 import type { World } from '../../domain/types'
 import type { CreateWorldInput } from '../../repository/WorldRepository'
 import { getRepository } from '../../state/repository'
 import { useSessionStore } from '../../state/sessionStore'
-import { useUiStore } from '../../state/uiStore'
 import { CreateWorldModal } from './CreateWorldModal'
 import { WorldCard } from './WorldCard'
 import styles from './Worlds.module.css'
@@ -33,8 +30,6 @@ export function Worlds() {
   const navigate = useNavigate()
   const user = useSessionStore((s) => s.user)
   const firstName = (user?.name ?? 'Sera Valen').split(/\s+/)[0]
-  const motionScale = useUiStore((state) => state.motionScale)
-  const { burst, begin } = useNavigationBurst(navigate, motionScale)
 
   const [worlds, setWorlds] = useState<World[] | null>(null)
   const [entryCounts, setEntryCounts] = useState<Record<string, number>>({})
@@ -76,14 +71,8 @@ export function Worlds() {
     navigate(`/w/${world.slug}`)
   }
 
-  function selectWorld(world: World, event: MouseEvent<HTMLButtonElement>) {
-    const rect = event.currentTarget.getBoundingClientRect()
-    begin({
-      to: `/w/${world.slug}`,
-      label: world.name,
-      color: world.color,
-      origin: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 },
-    })
+  function selectWorld(world: World) {
+    navigate(`/w/${world.slug}`, { viewTransition: true })
   }
 
   return (
@@ -122,7 +111,7 @@ export function Worlds() {
             world={world}
             entryCount={entryCounts[world.slug] ?? 0}
             index={index}
-            onClick={(event) => selectWorld(world, event)}
+            onClick={() => selectWorld(world)}
           />
         ))}
 
@@ -135,7 +124,6 @@ export function Worlds() {
         {creating && <CreateWorldModal onCancel={() => setCreating(false)} onCreate={handleCreate} />}
       </AnimatePresence>
 
-      {burst && <NavigationBurst color={burst.color} label={burst.label} origin={burst.origin} />}
     </main>
   )
 }

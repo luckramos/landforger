@@ -90,10 +90,6 @@
 .eraRail strong { color: var(--text); font: 10px var(--font-sans); }
 .eraRail small { color: var(--text-faint); font: 8px var(--font-mono); }
 .eraRail button[aria-pressed="true"] strong { color: var(--cat-eras); }
-.navigationBurst { position: fixed; z-index: 100; inset: 0; display: grid; place-items: center; overflow: hidden; background: #080807; color: var(--text-hi); }
-.navigationBurst i { position: absolute; width: 20px; height: 20px; border-radius: 50%; background: var(--burst-color); animation: map-navigation-burst calc(var(--mo,1) * 620ms) var(--ease-burst) forwards; }
-.navigationBurst span { z-index: 1; font: 11px var(--font-mono); letter-spacing: .08em; animation: lf-fade-in calc(var(--mo,1) * 300ms) ease calc(var(--mo,1) * 200ms) both; }
-@keyframes map-navigation-burst { from { opacity: .9; transform: scale(0); } to { opacity: 1; transform: scale(60); } }
 .state { display: grid; min-height: 100%; place-content: center; gap: 8px; text-align: center; }
 .state span { color: var(--bronze); font: 10px var(--font-mono); letter-spacing: .14em; text-transform: uppercase; }
 .state h1 { margin: 0; color: var(--text-hi); font: 400 36px var(--font-serif); }
@@ -120,4 +116,4 @@
 .imageSlots span { display: grid; gap: 3px; }
 .imageSlots small { color: var(--text-faint); font: 8px var(--font-mono); }
 .imageSlots input { max-width: 150px; color: var(--text-faint); font-size: 8px; }
-@media (prefers-reduced-motion:reduce) { .stage,.mapImage,.previousMapImage,.pin,.pin > i,.pin > span,.inspector,.reader,.placingBanner,.scrim,.modal,.settings,.eraRail button > i,.eraRail button > span,.eraRail strong,.eraRail small,.navigationBurst i,.navigationBurst span { animation-duration: .01ms; transition-duration: .01ms; } }
+@media (prefers-reduced-motion:reduce) { .stage,.mapImage,.previousMapImage,.pin,.pin > i,.pin > span,.inspector,.reader,.placingBanner,.scrim,.modal,.settings,.eraRail button > i,.eraRail button > span,.eraRail strong,.eraRail small { animation-duration: .01ms; transition-duration: .01ms; } }

@@ -81,7 +81,10 @@ export function NewPageScreen({ repository }: NewPageScreenProps) {
           <label>Tags<input aria-label="Tags" placeholder="coastal, mystery" value={tags} onChange={(event) => setTags(event.target.value)} /></label>
           <label>Cover<input aria-label="Cover" type="url" placeholder="Image URL" value={cover} onChange={(event) => setCover(event.target.value)} /></label>
           {properties.map((property, index) => (
-            <label key={property.key}>{property.label}<PropertyInput property={property} pages={dashboard?.pages ?? []} onChange={(value) => setProperties((current) => current.map((candidate, candidateIndex) => candidateIndex === index ? { ...candidate, value } : candidate))} /></label>
+            <div className={styles.field} key={property.key}>
+              <span className={styles.fieldLabel}>{property.label}</span>
+              <PropertyInput property={property} pages={dashboard?.pages ?? []} onChange={(value) => setProperties((current) => current.map((candidate, candidateIndex) => candidateIndex === index ? { ...candidate, value } : candidate))} />
+            </div>
           ))}
           <button type="submit" className={styles.create} disabled={!title.trim()}>Create {SINGULAR[category]}</button>
         </form>

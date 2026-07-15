@@ -1,6 +1,6 @@
 import { motion } from 'motion/react'
-import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode } from 'react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode, Ref } from 'react'
+import { useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import { icons } from '../../icons'
 import { useUiStore } from '../../state/uiStore'
 import { EASE_HOUSE, overlayExitTransition, prefersReducedMotion } from '../motionPrefs'
@@ -20,6 +20,11 @@ interface PointerOperation {
   geometry: Geometry
 }
 
+export interface DockableWindowHandle {
+  /** Docks the window to a floating pane, so whatever it covers stays visible. */
+  dock: () => void
+}
+
 export interface DockableWindowProps {
   title: string
   subtitle?: string
@@ -29,6 +34,7 @@ export interface DockableWindowProps {
   initialState?: 'fullscreen' | 'floating'
   icon?: ReactNode
   accent?: string
+  ref?: Ref<DockableWindowHandle>
 }
 
 const MIN_WIDTH = 560
@@ -75,6 +81,7 @@ export function DockableWindow({
   initialState = 'fullscreen',
   icon = <icons.panel size={16} aria-hidden="true" />,
   accent = 'var(--bronze)',
+  ref,
 }: DockableWindowProps) {
   const [mode, setMode] = useState<'fullscreen' | 'floating'>(initialState)
   const [minimized, setMinimized] = useState(false)
@@ -132,6 +139,15 @@ export function DockableWindow({
     event.preventDefault()
     setPointerOperation({ kind, startX: event.clientX, startY: event.clientY, geometry: floatingRef.current })
   }
+
+  /* Lets panel content dock the window when it navigates the page underneath —
+     the geometry morph below animates the change like any other dock. */
+  useImperativeHandle(ref, () => ({
+    dock: () => {
+      setMinimized(false)
+      setMode('floating')
+    },
+  }), [])
 
   const reduced = prefersReducedMotion()
   const dockState = minimized ? 'minimized' : mode

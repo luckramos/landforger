@@ -1,54 +1,596 @@
-.properties { position: relative; width: var(--page-editor-width, min(760px, calc(100vw - 32px))); margin: 12px auto 24px; padding: 14px 0; border-block: 1px solid var(--hairline-soft); color: var(--text-dim); }
-.topActions { display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 8px; }
-.topActions button, .propertyFooter > button { border: 0; background: transparent; color: var(--text-faint); cursor: pointer; font-size: 11px; }
-.sharedRow, .propertyRow { position: relative; display: grid; grid-template-columns: 120px minmax(0, 1fr) 28px; gap: 12px; align-items: start; min-height: 38px; padding: 5px 4px; }
-.label, .labelInput { padding-top: 7px; color: var(--text-faint); font-family: var(--font-mono); font-size: 10px; letter-spacing: .05em; }
-.labelInput { width: 100%; border: 0; border-bottom: 1px solid transparent; outline: 0; background: transparent; }
+/*
+ * Page Properties — the catalog-entry block beneath a Page's title. Every
+ * field (Tags, Eras, Cover, and each Custom Property) is its own inset card,
+ * and every control shares one tint-on-hover + press-on-click button system.
+ */
+.properties {
+  position: relative;
+  width: var(--page-editor-width, min(760px, calc(100vw - 32px)));
+  margin: 12px auto 24px;
+  padding: 10px 0 4px;
+  color: var(--text-dim);
+  /* One transition recipe shared by every tinting control below. */
+  --tint-transition:
+    background-color calc(var(--mo, 1) * 140ms) ease,
+    border-color calc(var(--mo, 1) * 140ms) ease,
+    color calc(var(--mo, 1) * 140ms) ease,
+    filter calc(var(--mo, 1) * 140ms) ease,
+    transform calc(var(--mo, 1) * 120ms) var(--ease-house);
+}
+
+.topActions { display: flex; justify-content: flex-end; margin-bottom: 8px; }
+
+/* --- Field cards ------------------------------------------------------- */
+.sharedRow, .propertyRow {
+  position: relative;
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+  margin-bottom: 6px;
+  padding: 7px 11px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  background: var(--panel-2);
+  transition: var(--tint-transition);
+}
+.sharedRow:hover, .propertyRow:hover { border-color: var(--hairline-strong); }
+
+/* Draggable rows reserve a left gutter for the grip; static (read-only) rows don't. */
+.propertyRowDraggable { padding-left: 26px; }
+.dragHandle {
+  position: absolute;
+  left: 5px;
+  top: 8px;
+  display: inline-flex;
+  padding: 3px 1px;
+  border: 0;
+  background: transparent;
+  color: var(--text-faint);
+  opacity: .35;
+  cursor: grab;
+  touch-action: none;
+  transition: opacity calc(var(--mo, 1) * 140ms) ease, color calc(var(--mo, 1) * 140ms) ease;
+}
+.propertyRow:hover .dragHandle { opacity: .7; }
+.dragHandle:hover { opacity: 1; color: var(--bronze-light); }
+.dragHandle:active { cursor: grabbing; }
+
+.label, .labelInput {
+  padding-top: 6px;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: .05em;
+}
+.sharedRow > .label { text-transform: uppercase; letter-spacing: .09em; }
+.labelInput {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  outline: 0;
+  background: transparent;
+  transition: var(--tint-transition);
+}
+.labelInput:hover { border-color: var(--hairline); }
 .labelInput:focus { border-color: var(--bronze); color: var(--text); }
+
+.rowActions { display: flex; align-items: center; gap: 4px; padding-top: 3px; }
+
+/* --- Chips (Tags, Eras, Relations) ------------------------------------ */
 .chips { display: flex; flex-wrap: wrap; gap: 6px; min-height: 30px; align-items: center; }
-.tagChip, .eraChip, .relationChip, .ghostChip { display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; border: 1px solid var(--hairline); border-radius: var(--radius-pill); background: var(--panel-2); color: var(--text-dim); font-size: 11px; }
-.eraChip { border-color: color-mix(in oklab, var(--cat-eras) 45%, transparent); color: var(--cat-eras); }
+.tagChip, .eraChip, .relationChip, .ghostChip {
+  display: inline-flex;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-pill);
+  background: var(--panel-3);
+  color: var(--text-dim);
+  font-size: 11px;
+  transition: var(--tint-transition);
+}
+.eraChip { border-color: color-mix(in oklab, var(--cat-eras) 40%, transparent); color: var(--cat-eras); }
 .relationChip { color: var(--bronze-light); }
-.ghostChip { border-style: dashed; color: var(--text-faint); text-decoration: line-through; }
-.tagChip button, .eraChip button, .relationChip button, .ghostChip button, .remove { border: 0; background: transparent; color: inherit; cursor: pointer; }
-.addChip { padding: 4px 8px; border: 1px dashed var(--hairline-strong); border-radius: var(--radius-pill); background: transparent; color: var(--text-faint); cursor: pointer; font-size: 10px; }
-.timelineChip { padding: 4px 9px; border: 1px solid color-mix(in oklab, var(--cat-eras) 40%, transparent); border-radius: var(--radius-pill); background: transparent; color: var(--cat-eras); cursor: pointer; font-size: 9px; }
-.input, .textarea, .inlinePopover input, .dialog input, .dialog select, .templateRow input { width: 100%; min-height: 31px; padding: 6px 8px; border: 1px solid transparent; border-radius: 6px; outline: 0; background: transparent; color: var(--text); font: inherit; }
-.input:hover, .textarea:hover, .input:focus, .textarea:focus, .dialog input, .dialog select, .templateRow input { border-color: var(--hairline); background: var(--panel-2); }
+.ghostChip { border-style: dashed; color: var(--text-faint); }
+
+/* Clickable label inside a chip (navigates to the tag view / era / relation). */
+.chipNav, .chipLabel {
+  padding: 4px 4px 4px 10px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+.chipNav { cursor: pointer; transition: var(--tint-transition); }
+.ghostChip .chipLabel { text-decoration: line-through; }
+
+/* Remove control inside a chip. */
+.chipRemove {
+  display: inline-flex;
+  padding: 4px 8px 4px 5px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  opacity: .6;
+  cursor: pointer;
+  transition: var(--tint-transition);
+}
+.chipRemove:hover { opacity: 1; color: var(--danger); }
+.chipRemove:active { transform: scale(0.88); }
+
+/* Whole-pill tint when the navigable label is hovered or focused. */
+.tagChip:has(.chipNav:hover), .relationChip:has(.chipNav:hover) {
+  border-color: color-mix(in oklab, var(--bronze) 55%, transparent);
+  background: color-mix(in oklab, var(--bronze) 16%, var(--panel-3));
+  color: var(--bronze-light);
+}
+.eraChip:has(.chipNav:hover) {
+  border-color: color-mix(in oklab, var(--cat-eras) 70%, transparent);
+  background: color-mix(in oklab, var(--cat-eras) 16%, var(--panel-3));
+}
+.chipNav:active { transform: scale(0.96); }
+.chipNav:focus-visible { outline: 0; text-decoration: underline; text-underline-offset: 3px; }
+
+/* Add-a-chip and the See-on-timeline link share the dashed/tinted treatment. */
+.addChip, .timelineChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 9px;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  cursor: pointer;
+  font-size: 10px;
+  transition: var(--tint-transition);
+}
+.addChip { border: 1px dashed var(--hairline-strong); color: var(--text-faint); }
+.addChip:hover {
+  border-color: color-mix(in oklab, var(--bronze) 55%, transparent);
+  background: color-mix(in oklab, var(--bronze) 12%, transparent);
+  color: var(--bronze-light);
+}
+.timelineChip { border: 1px solid color-mix(in oklab, var(--cat-eras) 40%, transparent); color: var(--cat-eras); font-size: 9px; }
+.timelineChip:hover { background: color-mix(in oklab, var(--cat-eras) 15%, transparent); border-color: var(--cat-eras); }
+.addChip:active, .timelineChip:active { transform: scale(0.96); }
+
+/* Add-a-chip dropdown — anchored to the add button so the row never reflows. */
+.chipAnchor { position: relative; display: inline-flex; }
+.dropdown {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 200px;
+  max-height: 260px;
+  overflow: auto;
+  padding: 8px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-md);
+  background: var(--panel-3);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, .5);
+}
+.dropdown input { width: 100%; min-height: 31px; padding: 6px 8px; border: 1px solid var(--hairline); border-radius: 6px; outline: 0; background: var(--panel-2); color: var(--text); font: inherit; }
+.dropdown input:focus { border-color: var(--bronze); }
+.dropdown button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 9px;
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  background: var(--panel-2);
+  color: var(--text-dim);
+  cursor: pointer;
+  text-align: left;
+  transition: var(--tint-transition);
+}
+.dropdown button:hover:not(:disabled) {
+  border-color: color-mix(in oklab, var(--bronze) 50%, transparent);
+  background: color-mix(in oklab, var(--bronze) 14%, var(--panel-2));
+  color: var(--bronze-light);
+}
+.dropdown button:active:not(:disabled) { transform: scale(0.97); }
+.dropdown button:disabled { opacity: .5; cursor: default; }
+
+/* --- Scalar / relation inputs ----------------------------------------- */
+.input, .textarea {
+  width: 100%;
+  min-height: 31px;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  transition: var(--tint-transition);
+}
+.input:hover, .textarea:hover, .input:focus, .textarea:focus { border-color: var(--hairline); background: var(--panel-1); }
+.input:focus, .textarea:focus { border-color: var(--bronze); }
 .textarea { min-height: 62px; resize: vertical; }
-.imageField { display: grid; grid-template-columns: 72px 1fr; gap: 10px; align-items: center; }
-.imagePreview { width: 72px; height: 72px; border-radius: 8px; object-fit: cover; }
-.coverSlot { display: grid; grid-template-columns: 72px 1fr; gap: 9px; align-items: center; }
-.coverSlot:not(:has(img)) { grid-template-columns: 1fr; }
-.coverSlot img { width: 72px; height: 48px; border-radius: 7px; object-fit: cover; }
-.coverSlot input { min-height: 31px; padding: 6px 8px; border: 1px solid transparent; border-radius: 6px; outline: 0; background: transparent; color: var(--text); }
-.coverSlot input:focus, .coverSlot input:hover { border-color: var(--hairline); background: var(--panel-2); }
 .relation { position: relative; }
-.popover, .inlinePopover, .typePicker { z-index: 12; display: flex; flex-wrap: wrap; gap: 5px; padding: 8px; border: 1px solid var(--hairline); border-radius: 8px; background: var(--panel-3); box-shadow: 0 12px 35px rgba(0,0,0,.35); }
-.popover { position: absolute; top: calc(100% + 4px); left: 0; min-width: 220px; flex-direction: column; }
-.popover button, .inlinePopover button, .typePicker button, .dialog button { padding: 6px 9px; border: 1px solid var(--hairline); border-radius: 6px; background: var(--panel-2); color: var(--text-dim); cursor: pointer; }
-.popover button { display: flex; gap: 7px; text-align: left; }
-.inlinePopover { grid-column: 2; }
 .empty { padding: 7px; color: var(--text-faint); font-size: 11px; }
-.remove { padding-top: 7px; }
-.propertyFooter { position: relative; display: flex; gap: 14px; padding: 8px 4px 0 132px; }
-.typePicker { position: absolute; top: 100%; left: 132px; }
-.dialogScrim { position: fixed; z-index: 90; inset: 0; display: grid; place-items: center; padding: 16px; background: #0009; animation: lf-fade-in calc(var(--mo, 1) * 160ms) ease backwards; }
-.dialog { width: min(560px, calc(100vw - 32px)); max-height: 80vh; overflow: auto; padding: 22px; border: 1px solid var(--hairline-strong); border-radius: 12px; background: var(--panel-1); box-shadow: 0 30px 90px rgba(0,0,0,.7); animation: properties-dialog-in calc(var(--mo, 1) * 180ms) var(--ease-house); }
-.dialog h2 { margin: 0 0 14px; color: var(--text-hi); font-family: var(--font-serif); font-weight: 400; }
-.dialog p { color: var(--text-faint); font-size: 11px; }
-.dialog > label { display: grid; gap: 5px; margin: 12px 0; color: var(--text-faint); font-size: 10px; }
-.dialog > .checkbox { display: flex; grid-template-columns: auto 1fr; flex-direction: row; align-items: center; }
-.checkbox input { width: auto; }
-.dialogActions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
-.dialogActions .danger { margin-right: auto; border-color: var(--danger-subtle); color: var(--danger); }
-.templateRow { display: grid; grid-template-columns: 1fr 90px 30px; gap: 8px; align-items: center; margin: 6px 0; }
-.definitionEditor { display: grid; gap: 5px; margin: 5px 0 8px; padding: 0; border: 0; color: var(--text-faint); font-family: var(--font-mono); font-size: 9px; }
-.definitionEditor > input { width: 100%; padding: 5px 7px; border: 1px solid var(--hairline-soft); border-radius: 5px; background: var(--panel-2); color: var(--text-dim); }
+
+/* --- Number field (custom steppers, native spinner suppressed) -------- */
+.numberField {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  transition: var(--tint-transition);
+}
+.numberField:hover, .numberField:focus-within { border-color: var(--hairline); background: var(--panel-1); }
+.numberField:focus-within { border-color: var(--bronze); }
+.numberField[data-disabled] { opacity: .6; }
+.numberInput {
+  width: 82px;
+  min-height: 29px;
+  padding: 4px 6px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: center;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.numberInput::-webkit-outer-spin-button, .numberInput::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.stepButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+  transition: var(--tint-transition);
+}
+.stepButton:hover:not(:disabled) { background: color-mix(in oklab, var(--bronze) 14%, transparent); color: var(--bronze-light); }
+.stepButton:active:not(:disabled) { transform: scale(0.9); }
+.stepButton:disabled { opacity: .4; cursor: default; }
+
+/* --- Date field + custom calendar ------------------------------------- */
+.dateField { position: relative; display: inline-flex; align-items: center; width: 100%; max-width: 220px; }
+.dateField .input { padding-right: 32px; }
+.dateTrigger {
+  position: absolute;
+  right: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+  transition: var(--tint-transition);
+}
+.dateTrigger:hover { color: var(--bronze-light); background: color-mix(in oklab, var(--bronze) 14%, transparent); }
+.calendar {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 236px;
+  padding: 10px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-md);
+  background: var(--panel-3);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, .5);
+}
+.calendarHead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; color: var(--text-hi); font-size: 12px; }
+.calendarWeekdays, .calendarGrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.calendarWeekdays { margin-bottom: 4px; }
+.calendarWeekdays span { text-align: center; color: var(--text-faint); font-family: var(--font-mono); font-size: 9px; }
+.calendarDay {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  transition: var(--tint-transition);
+}
+.calendarDay:hover { background: color-mix(in oklab, var(--bronze) 16%, transparent); color: var(--bronze-light); }
+.calendarDay[data-selected] { background: linear-gradient(180deg, var(--bronze-light), var(--bronze)); color: var(--on-bronze); }
+.calendarClear { width: 100%; margin-top: 8px; padding: 5px; border: 1px solid var(--hairline); border-radius: 6px; background: transparent; color: var(--text-faint); cursor: pointer; font-size: 10px; transition: var(--tint-transition); }
+.calendarClear:hover { border-color: var(--danger-subtle); background: var(--danger-bg); color: var(--danger); }
+
+/* --- Image field (Cover + image Properties) ---------------------------
+   The preview tile is the control: click empty to upload, click filled to
+   open the lightbox. A slim URL field sits below for pasting a remote image. */
+.imageInput { position: relative; display: grid; gap: 7px; justify-items: start; min-width: 0; }
+.imageTile {
+  display: block;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  background: var(--panel-1);
+  color: var(--text-faint);
+  cursor: pointer;
+  transition: var(--tint-transition);
+}
+.imageTile:disabled { cursor: default; }
+.imageTile img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.imageTile:hover:not(:disabled) { border-color: color-mix(in oklab, var(--bronze) 50%, transparent); }
+.imagePlaceholder {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px dashed var(--hairline-strong);
+  font-size: 11px;
+}
+/* Image source chooser (upload a file / paste a link) — anchored to the tile. */
+.imageMenu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  left: 0;
+  display: grid;
+  gap: 6px;
+  min-width: 200px;
+  padding: 8px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-md);
+  background: var(--panel-3);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, .5);
+}
+.imageMenu .input { font-size: 12px; }
+.imageMenuActions { display: flex; justify-content: flex-end; gap: 6px; }
+
+/* Cover banner: full-width tile above the page title. */
+.imageInputBanner { justify-items: stretch; }
+.imageInputBanner .imageTile { width: 100%; height: 240px; }
+.imageInputBanner .imageTile:has(.imagePlaceholder) { height: auto; }
+.imageInputBanner .imagePlaceholder { justify-content: center; width: 100%; padding: 26px 12px; }
+
+/* Lightbox (fancybox) for an existing image. */
+.lightbox {
+  position: fixed;
+  z-index: 95;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  gap: 12px;
+  padding: 32px;
+  background: #000b;
+  animation: lf-fade-in calc(var(--mo, 1) * 160ms) ease backwards;
+}
+.lightboxInner { display: grid; justify-items: center; gap: 14px; max-width: min(900px, 100%); }
+.lightboxInner img { max-width: 100%; max-height: 74vh; border-radius: 10px; box-shadow: 0 30px 90px rgba(0, 0, 0, .7); }
+.lightboxActions { display: flex; gap: 8px; }
+
+/* --- Tint button system ----------------------------------------------- */
+.tintButton, .tintPrimary, .tintDanger, .danger {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 11px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  transition: var(--tint-transition);
+}
+.tintButton { border: 1px solid var(--hairline); background: transparent; color: var(--text-dim); }
+.tintButton:hover {
+  border-color: color-mix(in oklab, var(--bronze) 50%, transparent);
+  background: color-mix(in oklab, var(--bronze) 12%, transparent);
+  color: var(--bronze-light);
+}
+.tintPrimary {
+  border: 0;
+  background: linear-gradient(180deg, var(--bronze-light), var(--bronze));
+  color: var(--on-bronze);
+  font-weight: 600;
+}
+.tintPrimary:hover { filter: brightness(1.08); }
+.tintDanger, .danger { border: 1px solid var(--hairline); background: transparent; color: var(--text-faint); }
+.tintDanger:hover, .danger:hover {
+  border-color: var(--danger-subtle);
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+.tintButton:active, .tintPrimary:active, .tintDanger:active, .danger:active { transform: scale(0.97); }
+
+/* Icon-only buttons (row settings gear, row remove, top actions). */
+.iconButton, .topActions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+  transition: var(--tint-transition);
+}
+.iconButton:hover, .topActions button:hover {
+  border-color: color-mix(in oklab, var(--bronze) 45%, transparent);
+  background: color-mix(in oklab, var(--bronze) 12%, transparent);
+  color: var(--bronze-light);
+}
+.rowActions button[aria-label^='Remove']:hover {
+  border-color: var(--danger-subtle);
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+.iconButton:active, .topActions button:active { transform: scale(0.94); }
+
+/* --- Add property (dashed card at the end of the list) ---------------- */
+.addRow { position: relative; }
+.addCard {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  margin-bottom: 6px;
+  padding: 9px 11px;
+  border: 1px dashed var(--hairline-strong);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+  font-size: 12px;
+  transition: var(--tint-transition);
+}
+.addCard:hover {
+  border-color: color-mix(in oklab, var(--bronze) 55%, transparent);
+  background: color-mix(in oklab, var(--bronze) 8%, transparent);
+  color: var(--bronze-light);
+}
+.addCard:active { transform: scale(0.995); }
+
+/* Edit-template link inside the ⋯ page-actions dialog. */
+.templateLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0 0;
+  padding: 7px 10px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 11px;
+  transition: var(--tint-transition);
+}
+.templateLink:hover {
+  border-color: color-mix(in oklab, var(--bronze) 50%, transparent);
+  background: color-mix(in oklab, var(--bronze) 12%, transparent);
+  color: var(--bronze-light);
+}
+.templateLink:active { transform: scale(0.98); }
+
+/* --- Popovers (add tag/era, relation picker, type picker) ------------- */
+.popover, .inlinePopover, .typePicker, .typePickerInline {
+  z-index: 12;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 8px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+  background: var(--panel-3);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, .35);
+}
+.popover { position: absolute; top: calc(100% + 4px); left: 0; min-width: 220px; flex-direction: column; }
+.inlinePopover { grid-column: 2; }
+.typePicker { position: absolute; top: calc(100% - 2px); left: 0; right: 0; }
+/* Inline type picker inside the Category Template dialog — no absolute anchor. */
+.typePickerInline { position: static; margin: 8px 0; box-shadow: none; background: var(--panel-2); }
+.popover button, .inlinePopover button, .typePicker button, .typePickerInline button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 9px;
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  background: var(--panel-2);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: var(--tint-transition);
+}
+.popover button { text-align: left; }
+.inlinePopover input { width: 100%; min-height: 31px; padding: 6px 8px; border: 1px solid var(--hairline); border-radius: 6px; outline: 0; background: var(--panel-2); color: var(--text); font: inherit; }
+.popover button:hover, .inlinePopover button:hover, .typePicker button:hover, .typePickerInline button:hover {
+  border-color: color-mix(in oklab, var(--bronze) 50%, transparent);
+  background: color-mix(in oklab, var(--bronze) 14%, var(--panel-2));
+  color: var(--bronze-light);
+}
+.popover button:active, .inlinePopover button:active, .typePicker button:active, .typePickerInline button:active { transform: scale(0.97); }
+.typePickerInline button { background: var(--panel-1); }
+
+/* --- Property settings popover (gear) --------------------------------- */
+.settingsAnchor { position: relative; display: inline-flex; }
+.settingsPanel {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  right: 0;
+  display: grid;
+  gap: 10px;
+  width: max(240px, 100%);
+  padding: 12px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-md);
+  background: var(--panel-3);
+  box-shadow: 0 18px 45px rgba(0, 0, 0, .5);
+}
+.settingsSummary {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+.settingsSummary span { color: var(--bronze); text-transform: none; }
+.settingsActions { display: flex; justify-content: flex-end; gap: 8px; }
+
+/* --- Property definition editor (inside popover + template dialog) ---- */
+.definitionEditor { display: grid; gap: 5px; margin: 0; padding: 0; border: 0; color: var(--text-faint); font-family: var(--font-mono); font-size: 9px; }
+.definitionEditor > input { width: 100%; padding: 6px 8px; border: 1px solid var(--hairline); border-radius: 6px; background: var(--panel-2); color: var(--text-dim); outline: 0; transition: var(--tint-transition); }
+.definitionEditor > input:focus { border-color: var(--bronze); }
 .definitionEditor legend { padding: 0; }
 .definitionEditor small { margin-left: 6px; color: var(--bronze); }
-.categoryChecks { display: flex; flex-wrap: wrap; gap: 5px 9px; padding-top: 3px; }
-.categoryChecks label { display: flex; align-items: center; gap: 3px; font-size: 8px; }
+.categoryChecks { display: flex; flex-wrap: wrap; gap: 5px 10px; padding-top: 4px; }
+.categoryChecks label { display: flex; align-items: center; gap: 4px; font-size: 9px; cursor: pointer; }
+
+/* Image size / orientation segmented control. */
+.segChoiceRow { display: flex; align-items: center; justify-content: space-between; gap: 8px; text-transform: uppercase; }
+.segChoice { display: inline-flex; gap: 3px; padding: 2px; border: 1px solid var(--hairline); border-radius: var(--radius-sm); background: var(--panel-2); }
+.segChoice button { padding: 3px 8px; border: 0; border-radius: 5px; background: transparent; color: var(--text-faint); cursor: pointer; font: inherit; font-size: 10px; text-transform: none; transition: var(--tint-transition); }
+.segChoice button:hover { color: var(--bronze-light); }
+.segChoice button[data-active] { background: color-mix(in oklab, var(--bronze) 22%, transparent); color: var(--bronze-light); }
+
+/* --- Dialogs (page details, category template) ------------------------ */
+.dialogScrim { position: fixed; z-index: 90; inset: 0; display: grid; place-items: center; padding: 16px; background: #0009; animation: lf-fade-in calc(var(--mo, 1) * 160ms) ease backwards; }
+.dialog { width: min(560px, calc(100vw - 32px)); max-height: 80vh; overflow: auto; padding: 22px; border: 1px solid var(--hairline-strong); border-radius: 12px; background: var(--panel-1); box-shadow: 0 30px 90px rgba(0, 0, 0, .7); animation: properties-dialog-in calc(var(--mo, 1) * 180ms) var(--ease-house); }
+.dialog h2 { margin: 0 0 14px; color: var(--text-hi); font-weight: 500; }
+.dialog p { color: var(--text-faint); font-size: 11px; }
+.dialog > label { display: grid; gap: 5px; margin: 12px 0; color: var(--text-faint); font-size: 10px; }
+.dialog > .checkbox { display: flex; flex-direction: row; align-items: center; gap: 8px; }
+.checkbox input { width: auto; }
+.dialog input, .dialog select, .templateRow input { width: 100%; min-height: 31px; padding: 6px 8px; border: 1px solid var(--hairline); border-radius: 6px; outline: 0; background: var(--panel-2); color: var(--text); font: inherit; transition: var(--tint-transition); }
+.dialog input:focus, .dialog select:focus, .templateRow input:focus { border-color: var(--bronze); }
+.dialogActions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+.dialogActions .danger { margin-right: auto; }
+.templateRow { display: grid; grid-template-columns: 1fr 84px 30px; gap: 8px; align-items: start; margin: 8px 0; }
+.templateRow > span { padding-top: 8px; color: var(--text-faint); font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; }
+.templateRow > button { display: inline-flex; align-items: center; justify-content: center; padding: 5px; border: 1px solid transparent; border-radius: var(--radius-sm); background: transparent; color: var(--text-faint); cursor: pointer; transition: var(--tint-transition); }
+.templateRow > button:hover { border-color: var(--danger-subtle); background: var(--danger-bg); color: var(--danger); }
+
 @keyframes properties-dialog-in { from { opacity: 0; transform: translateY(8px) scale(.98); } }
-@media (max-width: 620px) { .sharedRow, .propertyRow { grid-template-columns: 90px minmax(0, 1fr) 24px; } .propertyFooter { padding-left: 102px; } }
+@media (max-width: 620px) {
+  .sharedRow, .propertyRow { grid-template-columns: 84px minmax(0, 1fr) auto; }
+  .propertyFooter { padding-left: 0; }
+  .typePicker { left: 0; }
+}
 @media (prefers-reduced-motion: reduce) { .dialog, .dialogScrim { animation-duration: .01ms; } }

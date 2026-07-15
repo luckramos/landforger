@@ -42,6 +42,36 @@ a {
   color: var(--text-hi);
 }
 
+/* Route transitions (View Transitions API) — replaces the expanding burst disc
+   that used to cover Auth→Worlds, Worlds→Dashboard and Map→Page. The outgoing
+   view fades while the incoming one rises in, reusing the same vocabulary as
+   the per-view `view-in` entrance so navigation reads as one continuous move.
+   React Router falls back to an instant swap where the API is unsupported. */
+::view-transition-old(root) {
+  animation: lf-route-exit calc(var(--mo, 1) * 180ms) var(--ease-house) both;
+}
+
+::view-transition-new(root) {
+  animation: lf-route-enter calc(var(--mo, 1) * 320ms) var(--ease-house) both;
+}
+
+@keyframes lf-route-exit {
+  to { opacity: 0; }
+}
+
+@keyframes lf-route-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* The universal reduced-motion collapse below can't reach these pseudos. */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 0.01ms;
+  }
+}
+
 /* Universal reduced-motion collapse (animation catalog §1.3, Dashboard variant) */
 @media (prefers-reduced-motion: reduce) {
   *,

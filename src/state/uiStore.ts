@@ -1,16 +1,12 @@
 import { create } from 'zustand'
 
-export type BodyFont = 'serif' | 'sans'
-
 export interface UserSettings {
   /** Motion scale — multiply-is-slower; written to `--mo` on the app root. */
   motionScale: number
-  bodyFont: BodyFont
 }
 
 export const DEFAULT_USER_SETTINGS: UserSettings = {
   motionScale: 1,
-  bodyFont: 'serif',
 }
 
 const SETTINGS_STORAGE_KEY = 'landforger:user-settings:v1'
@@ -29,10 +25,6 @@ function userId(value: string): string {
   return value.trim().toLocaleLowerCase()
 }
 
-function isBodyFont(value: unknown): value is BodyFont {
-  return value === 'serif' || value === 'sans'
-}
-
 function clampMotionScale(value: number): number {
   if (!Number.isFinite(value)) return DEFAULT_USER_SETTINGS.motionScale
   return Math.max(0.5, Math.min(1.5, value))
@@ -42,7 +34,6 @@ function normalizeSettings(value: unknown): UserSettings {
   const candidate = value && typeof value === 'object' ? value as Partial<UserSettings> : {}
   return {
     motionScale: clampMotionScale(Number(candidate.motionScale)),
-    bodyFont: isBodyFont(candidate.bodyFont) ? candidate.bodyFont : DEFAULT_USER_SETTINGS.bodyFont,
   }
 }
 
@@ -73,7 +64,6 @@ interface UiState extends UserSettings {
   settingsByUser: Record<string, UserSettings>
   activateUser: (email?: string) => void
   setMotionScale: (scale: number) => void
-  setBodyFont: (font: BodyFont) => void
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -94,19 +84,10 @@ export const useUiStore = create<UiState>((set) => ({
     if (!current.activeUserId) return { ...current, motionScale }
     const settingsByUser = {
       ...current.settingsByUser,
-      [current.activeUserId]: { motionScale, bodyFont: current.bodyFont },
+      [current.activeUserId]: { motionScale },
     }
     writeSettings(settingsByUser)
     return { ...current, motionScale, settingsByUser }
-  }),
-  setBodyFont: (bodyFont) => set((current) => {
-    if (!current.activeUserId) return { ...current, bodyFont }
-    const settingsByUser = {
-      ...current.settingsByUser,
-      [current.activeUserId]: { motionScale: current.motionScale, bodyFont },
-    }
-    writeSettings(settingsByUser)
-    return { ...current, bodyFont, settingsByUser }
   }),
 }))
 

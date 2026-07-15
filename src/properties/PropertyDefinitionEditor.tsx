@@ -1,5 +1,9 @@
-import { CATEGORIES, type Category, type PropertyDef } from '../domain/types'
+import { CATEGORIES, type Category, type ImageOrientation, type ImageSize, type PropertyDef } from '../domain/types'
 import styles from './Properties.module.css'
+
+const cap = (value: string) => value[0].toUpperCase() + value.slice(1)
+const IMAGE_SIZES: ImageSize[] = ['small', 'medium', 'large']
+const IMAGE_ORIENTATIONS: ImageOrientation[] = ['landscape', 'portrait']
 
 interface PropertyDefinitionEditorProps {
   definition: PropertyDef
@@ -50,6 +54,51 @@ export function PropertyDefinitionEditor({ definition, disabled = false, onChang
           ))}
         </div>
       </fieldset>
+    )
+  }
+
+  if (definition.type === 'image') {
+    const size = definition.size ?? 'medium'
+    const orientation = definition.orientation ?? 'landscape'
+    return (
+      <div className={styles.definitionEditor}>
+        <div className={styles.segChoiceRow}>
+          <span>Size</span>
+          <div className={styles.segChoice}>
+            {IMAGE_SIZES.map((option) => (
+              <button
+                key={option}
+                type="button"
+                disabled={disabled}
+                aria-label={`${cap(option)} size for ${definition.label}`}
+                aria-pressed={size === option}
+                data-active={size === option || undefined}
+                onClick={() => onChange({ ...definition, size: option })}
+              >
+                {cap(option)}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className={styles.segChoiceRow}>
+          <span>Orientation</span>
+          <div className={styles.segChoice}>
+            {IMAGE_ORIENTATIONS.map((option) => (
+              <button
+                key={option}
+                type="button"
+                disabled={disabled}
+                aria-label={`${cap(option)} orientation for ${definition.label}`}
+                aria-pressed={orientation === option}
+                data-active={orientation === option || undefined}
+                onClick={() => onChange({ ...definition, orientation: option })}
+              >
+                {cap(option)}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
     )
   }
 

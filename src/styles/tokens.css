@@ -41,11 +41,15 @@
   --cat-organizations: oklch(0.79 0.085 268);
   --cat-events: oklch(0.8 0.085 332);
 
-  /* Fonts */
-  --font-sans: 'Hanken Grotesk', system-ui, sans-serif;
-  --font-serif: 'Newsreader', Georgia, serif;
+  /* Fonts — a fully sans-serif system. Onest (a soft humanist sans, tuned for
+     on-screen reading comfort) carries both the page reader and all UI/display
+     text; IBM Plex Mono stays for meta eyebrows and labels. The project no
+     longer uses a serif face: --font-serif is kept as an alias to Onest so the
+     ~45 heading/display call sites need no change. */
+  --font-sans: 'Onest', system-ui, sans-serif;
+  --font-serif: 'Onest', system-ui, sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
-  --page-body-font: var(--font-serif);
+  --page-body-font: var(--font-sans);
 
   /* Type scale — snapped from the ~150 hand-typed font sizes measured in
      docs/research/design-inventory.md §3 (a 10–68px spread). Existing

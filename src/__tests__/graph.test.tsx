@@ -35,8 +35,11 @@ describe('relationship graph panel', () => {
     const css = readFileSync('src/graph/GraphPanel.module.css', 'utf8')
 
     expect(component).toContain('170 * motionScale')
-    expect(css).toContain('transform: scale(.1)')
-    expect(css).toContain(".node[data-revealed='true'] .nodeCore { transform: scale(1); }")
+    // Node core scale is driven per-connection via the --node-scale custom property.
+    expect(component).toContain("setProperty('--node-scale'")
+    expect(css).toContain('transform: scale(var(--node-scale, .1))')
+    // Links stay hidden until both endpoints have appeared.
+    expect(css).toContain(".edges line[data-revealed='true'] { opacity: .42; }")
     expect(css).toContain('calc(var(--mo, 1) * 400ms) var(--ease-overshoot-soft)')
   })
 

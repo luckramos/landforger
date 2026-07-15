@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { LocalStorageWorldRepository } from '../../repository/LocalStorageWorldRepository'
 import { fixtureFiles } from '../../repository/fixtures'
 import { AppRoutes } from '../../routes'
@@ -104,16 +104,15 @@ describe('Maps viewing screen', () => {
     expect(screen.getByTestId('map-stage').style.transformOrigin).toBe('40% 58%')
   })
 
-  it('plays the Maps navigation burst before opening a full Page', async () => {
+  // The burst disc is gone: the route swap is now a View Transition, so the
+  // Pin inspector's link opens the Page immediately with no interstitial.
+  it('opens a full Page straight from the Pin inspector', async () => {
     await renderAt('/w/ninth-vale/map')
     fireEvent.click(await screen.findByRole('button', { name: 'Duskwater' }))
     const inspector = screen.getByRole('complementary', { name: 'Pin inspector' })
-    vi.useFakeTimers()
     fireEvent.click(within(inspector).getByRole('link', { name: 'Open full page' }))
 
-    expect(screen.getByRole('status', { name: 'Opening Duskwater' })).toBeTruthy()
-    await act(async () => vi.advanceTimersByTime(640))
-    vi.useRealTimers()
+    expect(screen.queryByRole('status', { name: /^Opening/ })).toBeNull()
     expect(await screen.findByRole('heading', { name: 'Duskwater' })).toBeTruthy()
   })
 

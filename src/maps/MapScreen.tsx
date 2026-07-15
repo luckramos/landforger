@@ -31,7 +31,6 @@ interface MapPositionPercent { x: number; y: number }
 interface MapTransition { mapTransition?: 'in' | 'out'; origin?: MapPositionPercent }
 interface MapImageState { mapId: string; activeEra: string; image?: string }
 interface PinDrag { pinId: string; originalPins: Pin[]; element: HTMLButtonElement }
-interface NavigationBurst { to: string; label: string; color: string }
 
 const MIN_ZOOM = 0.6
 const MAX_ZOOM = 3.4
@@ -85,7 +84,6 @@ export function MapScreen() {
   const [placingPageSlug, setPlacingPageSlug] = useState<string>()
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [pinDrag, setPinDrag] = useState<PinDrag>()
-  const [navigationBurst, setNavigationBurst] = useState<NavigationBurst>()
   const motionScale = useUiStore((state) => state.motionScale)
   const dragRef = useRef<DragStart | undefined>(undefined)
   const livePanRef = useRef<Pan | undefined>(undefined)
@@ -237,14 +235,6 @@ export function MapScreen() {
     return () => window.clearTimeout(timer)
   }, [location.key, motionScale, transition])
 
-  useEffect(() => {
-    if (!navigationBurst) return
-    const timer = window.setTimeout(
-      () => navigate(navigationBurst.to),
-      prefersReducedMotion() ? 60 : 640 * motionScale,
-    )
-    return () => window.clearTimeout(timer)
-  }, [motionScale, navigate, navigationBurst])
 
   if (loadState !== 'ready' || !world || !currentMap) {
     return (
@@ -343,11 +333,6 @@ export function MapScreen() {
 
   const navigateMap = (targetId: string, direction: 'in' | 'out', origin: MapPositionPercent) => {
     navigate(`/w/${world.slug}/map/${targetId}`, { state: { mapTransition: direction, origin } satisfies MapTransition })
-  }
-
-  const beginNavigationBurst = (event: ReactMouseEvent<HTMLAnchorElement>, burst: NavigationBurst) => {
-    event.preventDefault()
-    if (!navigationBurst) setNavigationBurst(burst)
   }
 
   const breadcrumbOrigin = (targetIndex: number) => {
@@ -486,14 +471,7 @@ export function MapScreen() {
               {selectedPage.eras.length === 0 && <small>Timeless · visible in every Era</small>}
             </section>
             <div className={styles.inspectorActions}>
-              <Link
-                to={`/w/${world.slug}/p/${selectedPage.slug}`}
-                onClick={(event) => beginNavigationBurst(event, {
-                  to: `/w/${world.slug}/p/${selectedPage.slug}`,
-                  label: selectedPage.title,
-                  color: `var(--cat-${selectedPage.category})`,
-                })}
-              >Open full page</Link>
+              <Link to={`/w/${world.slug}/p/${selectedPage.slug}`} viewTransition>Open full page</Link>
               <button type="button" onClick={() => setReaderOpen((open) => !open)}>{readerOpen ? 'Close reader' : 'Read in dock'}</button>
               {selectedPin.childMap && (
                 <button type="button" onClick={() => navigateMap(selectedPin.childMap!, 'in', { x: selectedPin.x, y: selectedPin.y })}>
@@ -523,14 +501,7 @@ export function MapScreen() {
             <header><span>Docked reader</span><button type="button" aria-label="Close reader" onClick={() => setReaderOpen(false)}><icons.close /></button></header>
             <h2>{selectedPage.title}</h2>
             {readerParagraphs(selectedPage.body).map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
-            <Link
-              to={`/w/${world.slug}/p/${selectedPage.slug}`}
-              onClick={(event) => beginNavigationBurst(event, {
-                to: `/w/${world.slug}/p/${selectedPage.slug}`,
-                label: selectedPage.title,
-                color: `var(--cat-${selectedPage.category})`,
-              })}
-            >Continue on full page <icons.arrowRight size={14} /></Link>
+            <Link to={`/w/${world.slug}/p/${selectedPage.slug}`} viewTransition>Continue on full page <icons.arrowRight size={14} /></Link>
           </motion.aside>
         )}
         </AnimatePresence>
@@ -622,17 +593,6 @@ export function MapScreen() {
         </div>
       </section>
 
-      {navigationBurst && (
-        <div
-          className={styles.navigationBurst}
-          role="status"
-          aria-label={`Opening ${navigationBurst.label}`}
-          style={{ '--burst-color': navigationBurst.color } as CSSProperties}
-        >
-          <i aria-hidden="true" />
-          <span>Opening {navigationBurst.label}…</span>
-        </div>
-      )}
     </main>
   )
 }

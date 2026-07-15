@@ -2,13 +2,13 @@
 .canvasWrap { position: absolute; inset: 0; }
 .canvas { width: 100%; height: 100%; touch-action: none; cursor: grab; }
 .canvas:active { cursor: grabbing; }
-.edges line { stroke: color-mix(in oklab, var(--ornament-faint) 58%, transparent); stroke-width: 1; opacity: .42; }
+.edges line { stroke: color-mix(in oklab, var(--ornament-faint) 58%, transparent); stroke-width: 1; opacity: 0; transition: opacity calc(var(--mo, 1) * 260ms) var(--ease-house); }
+.edges line[data-revealed='true'] { opacity: .42; }
 .edges line[data-dimmed='true'] { opacity: .09; }
 .node { cursor: pointer; opacity: 0; pointer-events: none; transition: opacity calc(var(--mo, 1) * 300ms) var(--ease-house); outline: none; }
 .node[data-revealed='true'] { opacity: 1; pointer-events: auto; }
 .node[data-dimmed='true'] { opacity: .2; }
-.nodeCore { fill: color-mix(in oklab, var(--node-color) 82%, #101014); stroke: color-mix(in oklab, var(--node-color) 70%, white); stroke-width: 1.4; filter: drop-shadow(0 0 9px color-mix(in oklab, var(--node-color) 38%, transparent)); transform: scale(.1); transform-box: fill-box; transform-origin: center; transition: transform calc(var(--mo, 1) * 400ms) var(--ease-overshoot-soft); }
-.node[data-revealed='true'] .nodeCore { transform: scale(1); }
+.nodeCore { fill: color-mix(in oklab, var(--node-color) 82%, #101014); stroke: color-mix(in oklab, var(--node-color) 70%, white); stroke-width: 1.4; filter: drop-shadow(0 0 9px color-mix(in oklab, var(--node-color) 38%, transparent)); transform: scale(var(--node-scale, .1)); transform-box: fill-box; transform-origin: center; transition: transform calc(var(--mo, 1) * 400ms) var(--ease-overshoot-soft); }
 .nodeHalo { fill: transparent; stroke: transparent; stroke-width: 2; }
 .node:hover .nodeHalo, .node:focus-visible .nodeHalo, .node[data-focal='true'] .nodeHalo { stroke: color-mix(in oklab, var(--node-color, var(--bronze)) 60%, transparent); }
 .node text { fill: var(--text-dim); font-family: var(--font-sans); font-size: 11px; paint-order: stroke; stroke: var(--bg); stroke-width: 3px; stroke-linejoin: round; }
@@ -41,5 +41,5 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .node, .nodeCore { transition-duration: .01ms; }
+  .node, .nodeCore, .edges line { transition-duration: .01ms; }
 }

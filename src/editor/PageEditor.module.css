@@ -12,17 +12,47 @@
 .content {
   width: var(--page-editor-width);
   margin: 0 auto;
+  /* Scroll room under the sheet (previously the editor's own bottom padding). */
+  padding-bottom: 96px;
 }
 
 /* ---- editor surface ---- */
 
+/* The writing area reads as a defined sheet: a nearly-invisible border and
+   real padding tell you where the text begins on an empty Page. */
 .content :global(.tiptap) {
-  outline: none;
+  min-height: 320px;
+  padding: 18px 20px;
+  border: 1px solid var(--hairline-soft);
+  border-radius: var(--radius-md);
   font-family: var(--page-body-font, var(--font-serif));
   font-size: 17px;
   line-height: 1.65;
   color: var(--text);
-  padding: 8px 0 96px;
+  transition: border-color calc(var(--mo, 1) * 200ms) ease;
+}
+
+.content :global(.tiptap:hover) {
+  border-color: var(--hairline);
+}
+
+/* The global :focus-visible ring is for discrete controls — on the writing
+   surface its outline+glow lit the whole sheet as you typed. The sheet shows
+   focus with a quiet border tint instead; the caret already marks the spot. */
+.content :global(.tiptap:focus),
+.content :global(.tiptap:focus-visible) {
+  outline: none;
+  box-shadow: none;
+  border-color: var(--hairline);
+}
+
+/* Placeholder — first line only, so it never shadows existing content. */
+.content :global(.tiptap p.is-empty-node:first-child::before) {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  color: var(--text-faint);
+  pointer-events: none;
 }
 
 .content :global(.tiptap h1),
@@ -133,43 +163,58 @@
   flex-shrink: 0;
 }
 
-/* ---- floating format toolbar ---- */
+/* ---- floating format toolbar ----
+   Rendered through a portal on <body> so no transformed/filtered ancestor can
+   ever trap `position: fixed` — the bar stays pinned to the viewport while the
+   page scrolls. `left` is set inline from the measured content-column center
+   (see PageEditor's ResizeObserver), so the pill is always horizontally
+   centered on the document text regardless of sidebar width or viewport size. */
 
-.toolbar {
+.toolbarDock {
   position: fixed;
-  left: calc((100vw + var(--dashboard-sidebar-width, 0px)) / 2);
-  transform: translateX(-50%);
   top: 66px;
   z-index: 40;
   display: flex;
-  align-items: center;
-  gap: 2px;
-  max-width: var(--page-editor-width);
-  padding: 5px 10px;
-  border: 1px solid var(--hairline);
-  border-radius: 999px;
-  background: var(--panel-3);
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  justify-content: center;
+  transform: translateX(-50%);
+  pointer-events: none;
   /* Anchor swap: top 66px ↔ calc(100vh − 58px), mo×340ms, house curve. */
   transition:
     top calc(var(--mo, 1) * 340ms) var(--ease-house),
     left calc(var(--mo, 1) * 300ms) var(--ease-house),
-    max-width calc(var(--mo, 1) * 300ms) var(--ease-house),
     opacity calc(var(--mo, 1) * 200ms) var(--ease-house),
     transform calc(var(--mo, 1) * 200ms) var(--ease-house);
 }
 
-.root[data-read-only] .toolbar {
+.toolbarDockBottom {
+  top: calc(100vh - 58px);
+}
+
+/* The portal detaches the bar from `.root`, so read-only is signalled by the
+   editor writing the flag onto the dock itself. */
+.toolbarDock[aria-hidden] {
   opacity: 0;
   pointer-events: none;
   transform: translateX(-50%) translateY(-6px) scale(.98);
 }
 
-.toolbarBottom {
-  top: calc(100vh - 58px);
+.toolbar {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  max-width: 100%;
+  padding: 5px 8px;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  background: var(--panel-3);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
 }
 
 .button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 29px;
   height: 29px;
   padding: 0 6px;
@@ -177,9 +222,6 @@
   border-radius: 7px;
   background: transparent;
   color: var(--text-dim);
-  font-family: var(--font-sans);
-  font-size: 13px;
-  line-height: 1;
   cursor: pointer;
   transition:
     background calc(var(--mo, 1) * 130ms),
@@ -218,12 +260,12 @@
 
 .segment,
 .segmentActive {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: none;
   border-radius: 999px;
-  padding: 3px 8px;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.04em;
+  padding: 4px 7px;
   cursor: pointer;
   background: transparent;
   color: var(--text-faint);
@@ -238,7 +280,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .toolbar,
+  .toolbarDock,
   .button,
   .segment,
   .segmentActive {

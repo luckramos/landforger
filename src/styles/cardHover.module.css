@@ -1,0 +1,118 @@
+/* The house card hover, shared by every card grid (Pages, Categories, Worlds).
+   The card lifts, its border picks up a soft glow, and the ink bleeds down that
+   border — full strength at the crown, faded out by ~62% of the card's height.
+
+   To adopt it: `composes: ink from '../../styles/cardHover.module.css'` and set
+   `--card-ink` to the card's colour. The card must not declare its own border
+   (the ring below replaces it), `transition: transform`, `box-shadow`, or a
+   hover/active transform — those live here so the effect stays identical
+   across grids.
+
+   Use `inkDashed` instead for cards whose resting border is dashed: it keeps
+   the card's own border and overlays a dashed ring in the same bleed. */
+
+/* Registered so the bleed's depth can animate: without this the background /
+   mask size would snap rather than run down the card. */
+@property --tint-reach {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: 0%;
+}
+
+.lift {
+  position: relative;
+  transition:
+    transform calc(var(--mo, 1) * 200ms) var(--ease-house),
+    box-shadow calc(var(--mo, 1) * 200ms) var(--ease-house);
+}
+
+/* The glow sits on the card, not the ring: box-shadow is exempt from the
+   card's own overflow clip, so it reads the same on the cards that clip their
+   covers and the ones that don't. Biased upwards to sit under the ink.
+   :not(:disabled) so non-interactive cards (the Worlds create-modal preview)
+   stay inert. It is a no-op on the anchor-based cards. */
+.lift:hover:not(:disabled),
+.lift:focus-visible {
+  transform: translateY(-3px);
+  box-shadow: 0 -2px 14px -6px color-mix(in oklab, var(--card-ink) 55%, transparent);
+}
+
+.lift:active:not(:disabled) {
+  transform: translateY(-1px) scale(0.99);
+}
+
+.ink {
+  composes: lift;
+}
+
+/* The ring: a 1px frame masked hollow, hairline at rest, --card-ink on hover.
+   Drawn as a pseudo rather than a real border so it survives the cards'
+   overflow clip, which cuts to the padding box and would erase it. z-index
+   keeps it above positioned children like cover images.
+
+   The bleed is sized rather than stop-positioned: at rest the ink layer is
+   0% tall and so paints nothing. Fading it out via a coincident gradient stop
+   instead would leak ink into the ring's 1px top edge at rest. */
+.ink::before {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  padding: 1px;
+  border-radius: inherit;
+  background-image:
+    linear-gradient(180deg, var(--card-ink), transparent),
+    linear-gradient(var(--hairline) 0 0);
+  background-repeat: no-repeat;
+  background-size:
+    100% var(--tint-reach),
+    100% 100%;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  transition: --tint-reach calc(var(--mo, 1) * 200ms) var(--ease-house);
+}
+
+.ink:hover:not(:disabled)::before,
+.ink:focus-visible::before {
+  --tint-reach: 62%;
+}
+
+.inkDashed {
+  composes: lift;
+}
+
+/* Same bleed, but the ring keeps a dashed stroke. It sits on top of the card's
+   own resting border (hence the negative inset), and the mask — rather than a
+   gradient fill — is what fades it, so the dashes survive. */
+.inkDashed::before {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  inset: -1.5px;
+  border: 1.5px dashed var(--card-ink);
+  border-radius: 15.5px;
+  -webkit-mask-image: linear-gradient(180deg, #000, transparent);
+  mask-image: linear-gradient(180deg, #000, transparent);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 100% var(--tint-reach);
+  mask-size: 100% var(--tint-reach);
+  pointer-events: none;
+  transition: --tint-reach calc(var(--mo, 1) * 200ms) var(--ease-house);
+}
+
+.inkDashed:hover:not(:disabled)::before,
+.inkDashed:focus-visible::before {
+  --tint-reach: 62%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lift,
+  .ink::before,
+  .inkDashed::before {
+    transition-duration: 0.01ms;
+  }
+}

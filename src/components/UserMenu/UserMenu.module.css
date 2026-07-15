@@ -96,13 +96,8 @@
 .motionSetting { display: grid; gap: 7px; color: var(--text-dim); font-size: 11px; }
 .motionSetting > span { display: flex; align-items: center; justify-content: space-between; }
 .motionSetting b { color: var(--text); font-weight: 500; }
-.motionSetting output, .motionSetting small, .fontSetting legend { color: var(--text-faint); font: 9px var(--font-mono); }
+.motionSetting output, .motionSetting small { color: var(--text-faint); font: 9px var(--font-mono); }
 .motionSetting input { width: 100%; accent-color: var(--bronze); }
-.fontSetting { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin: 0; padding: 0; border: 0; }
-.fontSetting legend { grid-column: 1 / -1; margin-bottom: 6px; }
-.fontSetting label { padding: 6px 8px; border: 1px solid var(--hairline); border-radius: 6px; color: var(--text-dim); font-size: 11px; text-align: center; cursor: pointer; }
-.fontSetting label[data-selected] { border-color: var(--bronze); background: color-mix(in oklab, var(--bronze) 12%, transparent); color: var(--bronze-light); }
-.fontSetting input { position: absolute; opacity: 0; pointer-events: none; }
 
 @media (prefers-reduced-motion: reduce) {
   .avatar, .popover, .item, .settings { animation-duration: .01ms; transition-duration: .01ms; }

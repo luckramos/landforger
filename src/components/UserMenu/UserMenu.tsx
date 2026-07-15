@@ -29,10 +29,8 @@ export function UserMenu() {
   const user = useSessionStore((s) => s.user) ?? FALLBACK_USER
   const logout = useSessionStore((s) => s.logout)
   const motionScale = useUiStore((s) => s.motionScale)
-  const bodyFont = useUiStore((s) => s.bodyFont)
   const activateUser = useUiStore((s) => s.activateUser)
   const setMotionScale = useUiStore((s) => s.setMotionScale)
-  const setBodyFont = useUiStore((s) => s.setBodyFont)
 
   const [open, setOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -124,22 +122,6 @@ export function UserMenu() {
                   />
                   <small>Higher values make transitions slower.</small>
                 </label>
-                <fieldset className={styles.fontSetting}>
-                  <legend>Page body font</legend>
-                  {(['serif', 'sans'] as const).map((font) => (
-                    <label key={font} data-selected={bodyFont === font || undefined}>
-                      <input
-                        type="radio"
-                        name="body-font"
-                        value={font}
-                        checked={bodyFont === font}
-                        aria-label={font === 'serif' ? 'Serif' : 'Sans'}
-                        onChange={() => setBodyFont(font)}
-                      />
-                      {font === 'serif' ? 'Serif' : 'Sans'}
-                    </label>
-                  ))}
-                </fieldset>
               </section>
             )}
             <div className={styles.divider} role="separator" />

@@ -1,4 +1,4 @@
-import type { CSSProperties, MouseEvent } from 'react'
+import type { CSSProperties } from 'react'
 import type { World } from '../../domain/types'
 import { formatRelativeTime } from './relativeTime'
 import styles from './WorldCard.module.css'
@@ -10,10 +10,9 @@ interface WorldCardProps {
   index?: number
   /**
    * Fires on click and on Enter/Space (native `<button>` activation fires
-   * both as a `click`). Receives the event so callers can read
-   * `event.currentTarget`'s position — e.g. to anchor the selection burst.
+   * both as a `click`).
    */
-  onClick?: (event: MouseEvent<HTMLButtonElement>) => void
+  onClick?: () => void
   /** `false` for the live preview in the create modal: no click, no stagger delay. */
   interactive?: boolean
 }

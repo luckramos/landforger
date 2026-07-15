@@ -139,6 +139,30 @@ describe('PageEditor — 13 blocks render from a fixture body', () => {
     act(() => chip.dispatchEvent(new MouseEvent('click', { bubbles: true })))
     expect(onNavigate).toHaveBeenCalledWith('sera')
   })
+
+  // Same guard as the format toolbar: the card is `position: fixed`, so any
+  // transformed ancestor (the route/page entrance animations) would silently
+  // become its containing block and strand it away from the chip.
+  it('portals the hover preview to <body>, anchored below the chip', async () => {
+    const { container, getByRole } = await mountEditor()
+    const chip = container.querySelector('[data-wikilink="sera"]')!
+    // Roomy viewport: the card belongs directly below the chip, left-aligned.
+    vi.spyOn(chip, 'getBoundingClientRect').mockReturnValue({
+      left: 120,
+      top: 100,
+      bottom: 120,
+    } as DOMRect)
+
+    act(() => chip.dispatchEvent(new MouseEvent('mouseover', { bubbles: true })))
+    const preview = getByRole('tooltip')
+    vi.spyOn(preview, 'getBoundingClientRect').mockReturnValue({ width: 280, height: 100 } as DOMRect)
+    act(() => window.dispatchEvent(new Event('resize')))
+
+    expect(container.contains(preview)).toBe(false)
+    expect(document.body.contains(preview)).toBe(true)
+    expect(preview.style.left).toBe('120px')
+    expect(preview.style.top).toBe('130px') // chip.bottom + 10 → below, not flipped
+  })
 })
 
 describe('PageEditor — /, @ and [[ suggestion stack', () => {
@@ -156,8 +180,12 @@ describe('PageEditor — /, @ and [[ suggestion stack', () => {
       at.getByRole('option', { name: /The Gate of Ash/ }).dispatchEvent(new MouseEvent('mousedown', { bubbles: true })),
     )
     expect(pageBodyCodec.serialize(at.editor.getJSON()).trim()).toBe('[[gate-of-ash]]')
+    // Typing the trigger and picking the item land in one history group (they
+    // occur within ProseMirror's newGroupDelay), so undo clears both. This is
+    // how every Page with existing content already behaved; an empty Page now
+    // starts with a real paragraph instead of a block-less doc, so it matches.
     act(() => at.editor.commands.undo())
-    expect(at.editor.getText()).toBe('@gate')
+    expect(at.editor.getText()).toBe('')
 
     const brackets = await mountEditor({ body: '' })
     await open(brackets.editor, '[')
@@ -171,7 +199,8 @@ describe('PageEditor — /, @ and [[ suggestion stack', () => {
     )
     expect(pageBodyCodec.serialize(brackets.editor.getJSON()).trim()).toBe('[[gate-of-ash]]')
     act(() => brackets.editor.commands.undo())
-    expect(brackets.editor.getText()).toBe('[')
+    expect(brackets.editor.getText()).toBe('')
+    // Redo restores the chip — the two plugins keep independent history.
     act(() => brackets.editor.commands.redo())
     expect(pageBodyCodec.serialize(brackets.editor.getJSON()).trim()).toBe('[[gate-of-ash]]')
   })
@@ -185,8 +214,26 @@ describe('PageEditor — /, @ and [[ suggestion stack', () => {
     )
     expect(editor.isActive('heading', { level: 1 })).toBe(true)
     expect(editor.getText()).not.toContain('/head')
+    // One undo reverts the whole trigger-and-apply group (see the @/[[ test).
     act(() => editor.commands.undo())
-    expect(editor.getText()).toContain('/head')
+    expect(editor.getText()).toBe('')
+    expect(editor.isActive('heading', { level: 1 })).toBe(false)
+  })
+})
+
+describe('PageEditor — empty state', () => {
+  it('prompts where to start writing on an empty Page', async () => {
+    const { container } = await mountEditor({ body: '' })
+    const firstBlock = container.querySelector('.tiptap p')!
+    expect(firstBlock.getAttribute('data-placeholder')).toBe('Start writing, or press / for blocks')
+    expect(firstBlock.className).toContain('is-empty-node')
+  })
+
+  it('drops the prompt once the Page has content', async () => {
+    const { container } = await mountEditor({ body: 'Charted.\n' })
+    const firstBlock = container.querySelector('.tiptap p')!
+    expect(firstBlock.textContent).toBe('Charted.')
+    expect(firstBlock.className).not.toContain('is-empty-node')
   })
 })
 
@@ -205,7 +252,6 @@ describe('PageEditor — toolbar', () => {
       'Italic',
       'Underline',
       'Strikethrough',
-      'Inline code',
       'Highlight',
       'Link',
       'Wikilink',
@@ -246,13 +292,43 @@ describe('PageEditor — toolbar', () => {
   it('anchors bottom/top through the segmented control', async () => {
     const { getByRole } = await mountEditor()
     const toolbar = getByRole('toolbar', { name: 'Format' })
-    const bottom = getByRole('button', { name: '↓ Bottom' })
-    expect(toolbar.className).not.toContain('toolbarBottom')
+    const dock = toolbar.parentElement!
+    const bottom = getByRole('button', { name: 'Anchor toolbar to bottom' })
+    expect(dock.className).not.toContain('toolbarDockBottom')
 
     act(() => {
       bottom.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     })
-    expect(toolbar.className).toContain('toolbarBottom')
+    expect(dock.className).toContain('toolbarDockBottom')
+  })
+
+  // Regression guard: the bar must escape the editor subtree entirely. Any
+  // ancestor with a transform/filter (the view-in entrance animations) becomes
+  // the containing block for `position: fixed`, which silently re-anchors the
+  // bar to the page and makes it scroll away instead of staying pinned.
+  it('portals the toolbar to <body> so no ancestor can trap its fixed position', async () => {
+    const { container, getByRole } = await mountEditor()
+    const toolbar = getByRole('toolbar', { name: 'Format' })
+    const root = container.querySelector('[data-read-only], div')!
+
+    expect(root.contains(toolbar)).toBe(false)
+    expect(document.body.contains(toolbar)).toBe(true)
+    expect(toolbar.parentElement!.className).toContain('toolbarDock')
+  })
+
+  it('centers the toolbar on the measured content column, not the viewport', async () => {
+    // Sidebar-offset column: 264px sidebar + a 760px column → center at 644.
+    const rect = { left: 264, width: 760, right: 1024, top: 0, bottom: 0, height: 0, x: 264, y: 0, toJSON: () => ({}) }
+    const spy = vi
+      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockReturnValue(rect as DOMRect)
+
+    const { getByRole } = await mountEditor()
+    const dock = getByRole('toolbar', { name: 'Format' }).parentElement as HTMLElement
+
+    expect(dock.style.left).toBe('644px')
+    expect(dock.style.maxWidth).toBe('760px')
+    spy.mockRestore()
   })
 
   it('is hidden when readOnly, and the content is not editable', async () => {

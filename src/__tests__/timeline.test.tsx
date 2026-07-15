@@ -36,10 +36,54 @@ describe('Timeline panel', () => {
     expect(within(dialog).getByText('Before the First Sounding')).toBeTruthy()
 
     fireEvent.click(within(dialog).getByRole('button', { name: 'Expand The Salt & Cinder Days' }))
-    expect(within(dialog).getByRole('heading', { name: 'characters' })).toBeTruthy()
-    expect(within(dialog).getByRole('heading', { name: 'locations' })).toBeTruthy()
+    // Groups are headed by their Category label and member count, not the raw slug.
+    expect(within(dialog).getByRole('heading', { name: /^Characters/ })).toBeTruthy()
+    expect(within(dialog).getByRole('heading', { name: /^Locations/ })).toBeTruthy()
     expect(within(dialog).getByRole('link', { name: 'Sera Valen' })).toBeTruthy()
     expect(within(dialog).queryByText('The Ninth Vale')).toBeNull()
+  })
+
+  it('collapses a Category group without unmounting its Pages', async () => {
+    await renderAt('/w/ninth-vale?panel=timeline')
+    const dialog = await screen.findByRole('dialog', { name: 'Timeline' })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Expand The Salt & Cinder Days' }))
+
+    const group = within(dialog).getByRole('heading', { name: /^Characters/ })
+    const toggle = within(group).getByRole('button')
+    expect(toggle.getAttribute('aria-expanded')).toBe('true')
+
+    // Collapsing animates height, so the Pages stay mounted and are made inert
+    // rather than removed.
+    fireEvent.click(toggle)
+    expect(toggle.getAttribute('aria-expanded')).toBe('false')
+    expect(within(dialog).getByRole('link', { name: 'Sera Valen', hidden: true })).toBeTruthy()
+
+    fireEvent.click(toggle)
+    expect(toggle.getAttribute('aria-expanded')).toBe('true')
+  })
+
+  it('docks the Timeline when a member Page is opened, so the Page is visible behind it', async () => {
+    await renderAt('/w/ninth-vale?panel=timeline')
+    const dialog = await screen.findByRole('dialog', { name: 'Timeline' })
+    expect(dialog.getAttribute('data-dock-state')).toBe('fullscreen')
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Expand The Salt & Cinder Days' }))
+    fireEvent.click(within(dialog).getByRole('link', { name: 'Sera Valen' }))
+
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Sera Valen', level: 1 })).toBeTruthy())
+    expect(dialog.getAttribute('data-dock-state')).toBe('floating')
+  })
+
+  it('expands the Era from the card face and links out to the Era Page', async () => {
+    await renderAt('/w/ninth-vale?panel=timeline')
+    const dialog = await screen.findByRole('dialog', { name: 'Timeline' })
+    const era = within(dialog).getByTestId('timeline-era-era-saltcinder')
+
+    fireEvent.click(within(era).getByRole('button', { name: 'Expand The Salt & Cinder Days' }))
+    expect(within(era).getByRole('button', { name: 'Collapse The Salt & Cinder Days' })).toBeTruthy()
+
+    fireEvent.click(within(era).getByRole('link', { name: /Open Era/ }))
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'The Salt & Cinder Days', level: 1 })).toBeTruthy())
   })
 
   it('persists the Active Era for the World', async () => {

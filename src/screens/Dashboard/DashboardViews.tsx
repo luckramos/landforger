@@ -7,12 +7,15 @@ import styles from './DashboardViews.module.css'
 function PageCard({ page, worldSlug }: { page: Page; worldSlug: string }) {
   const meta = categoryMeta(page.category)
   return (
-    <Link to={`/w/${worldSlug}/p/${page.slug}`} className={styles.pageCard} aria-label={`${page.title}, ${page.summary}`}>
+    <Link
+      to={`/w/${worldSlug}/p/${page.slug}`}
+      className={styles.pageCard}
+      style={{ '--category-color': `var(--cat-${page.category})` } as React.CSSProperties}
+      aria-label={`${page.title}, ${page.summary}`}
+    >
       {page.cover && <div className={styles.cover} style={{ backgroundImage: `linear-gradient(180deg, transparent, rgba(8,8,7,.72)), url(${page.cover})` }} />}
       <div className={styles.cardBody}>
-        <span className={styles.eyebrow} style={{ color: `var(--cat-${page.category})` }}>
-          {meta && <meta.icon size={17} />} {meta?.label}
-        </span>
+        <span className={styles.eyebrow} style={{ color: 'var(--category-color)' }}>{meta?.label}</span>
         <h2>{page.title}</h2>
         <p>{page.summary}</p>
         <div className={styles.chips}>{page.tags.slice(0, 4).map((tag) => <span key={tag}>#{tag}</span>)}</div>

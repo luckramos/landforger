@@ -6,10 +6,12 @@
 
 import type { Editor } from '@tiptap/core'
 import { EditorContent, useEditor, useEditorState } from '@tiptap/react'
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { createPortal } from 'react-dom'
 import { pageBodyCodec } from './codec/TiptapMarkdownCodec'
 import { buildBlockExtensions } from './extensions'
 import { WikiLinkRegistry, type WikiLinkPage } from './WikiLinkRegistry'
+import { icons } from '../icons'
 import styles from './PageEditor.module.css'
 
 export interface PageEditorProps {
@@ -65,13 +67,20 @@ export function PageEditor({
   }, [pages, registry, resolveTitle])
 
   // Only the mount-time body is parsed — the editor owns the doc afterwards.
-  const initialDoc = useMemo(() => pageBodyCodec.parse(body), [body])
+  const initialDoc = useMemo(() => {
+    const doc = pageBodyCodec.parse(body)
+    // An empty Page parses to a doc with no blocks at all, which renders as a
+    // bare contenteditable: no caret target and nothing for the placeholder to
+    // hang on. Seed one paragraph so a new Page has somewhere to start.
+    return doc.content?.length ? doc : { ...doc, content: [{ type: 'paragraph' }] }
+  }, [body])
 
   const editor = useEditor({
     extensions: buildBlockExtensions({
       resolveTitle: (slug) => resolveTitleRef.current(slug),
       wikiLinkRegistry: registry,
       onWikiLinkNavigate: (slug) => navigateRef.current?.(slug),
+      placeholder: 'Start writing, or press / for blocks',
     }),
     content: initialDoc,
     editable: !readOnly,
@@ -86,10 +95,31 @@ export function PageEditor({
 
   const style = width ? ({ '--page-editor-width': width } as CSSProperties) : undefined
 
+  // Measure the content column so the fixed toolbar can be centered on the
+  // document body — independent of the sidebar width or any ancestor that
+  // might otherwise trap `position: fixed`.
+  const contentRef = useRef<HTMLDivElement>(null)
+  const [metrics, setMetrics] = useState<{ center: number; width: number } | null>(null)
+  useLayoutEffect(() => {
+    const el = contentRef.current
+    if (!el) return
+    const measure = () => {
+      const rect = el.getBoundingClientRect()
+      setMetrics({ center: rect.left + rect.width / 2, width: rect.width })
+    }
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(el)
+    window.addEventListener('resize', measure)
+    return () => { observer.disconnect(); window.removeEventListener('resize', measure) }
+  }, [editor])
+
   return (
     <div className={styles.root} style={style} data-read-only={readOnly || undefined}>
-      {editor && <Toolbar editor={editor} readOnly={readOnly} />}
-      <EditorContent editor={editor} className={styles.content} />
+      {editor && metrics && <Toolbar editor={editor} readOnly={readOnly} metrics={metrics} />}
+      <div ref={contentRef} className={styles.content}>
+        <EditorContent editor={editor} />
+      </div>
     </div>
   )
 }
@@ -101,7 +131,13 @@ export function PageEditor({
 // never re-renders per keystroke — only this bar does, on selected changes).
 // ---------------------------------------------------------------------------
 
-function Toolbar({ editor, readOnly }: { editor: Editor; readOnly: boolean }) {
+interface ToolbarMetrics {
+  /** Viewport x of the content column's center — the pill centers on this. */
+  center: number
+  width: number
+}
+
+function Toolbar({ editor, readOnly, metrics }: { editor: Editor; readOnly: boolean; metrics: ToolbarMetrics }) {
   const [anchor, setAnchor] = useState<ToolbarAnchor>('top')
 
   const s = useEditorState({
@@ -117,7 +153,6 @@ function Toolbar({ editor, readOnly }: { editor: Editor; readOnly: boolean }) {
       italic: editor.isActive('italic'),
       underline: editor.isActive('underline'),
       strike: editor.isActive('strike'),
-      code: editor.isActive('code'),
       highlight: editor.isActive('highlight'),
       link: editor.isActive('link'),
       bulletList: editor.isActive('bulletList'),
@@ -139,101 +174,102 @@ function Toolbar({ editor, readOnly }: { editor: Editor; readOnly: boolean }) {
     if (href) chain().setLink({ href }).run()
   }
 
-  return (
+  return createPortal(
     <div
-      role="toolbar"
-      aria-label="Format"
+      className={anchor === 'bottom' ? `${styles.toolbarDock} ${styles.toolbarDockBottom}` : styles.toolbarDock}
+      style={{ left: `${metrics.center}px`, maxWidth: `${metrics.width}px` }}
       aria-hidden={readOnly || undefined}
-      className={anchor === 'bottom' ? `${styles.toolbar} ${styles.toolbarBottom}` : styles.toolbar}
     >
-      <ToolbarButton label="Undo" disabled={!s.canUndo} onRun={() => chain().undo().run()}>
-        ↺
-      </ToolbarButton>
-      <ToolbarButton label="Redo" disabled={!s.canRedo} onRun={() => chain().redo().run()}>
-        ↻
-      </ToolbarButton>
+      <div role="toolbar" aria-label="Format" className={styles.toolbar}>
+        <ToolbarButton label="Undo" disabled={!s.canUndo} onRun={() => chain().undo().run()}>
+          <icons.editorUndo size={17} />
+        </ToolbarButton>
+        <ToolbarButton label="Redo" disabled={!s.canRedo} onRun={() => chain().redo().run()}>
+          <icons.editorRedo size={17} />
+        </ToolbarButton>
 
-      <span className={styles.divider} />
+        <span className={styles.divider} />
 
-      <ToolbarButton label="Text" active={s.paragraph} onRun={() => chain().setParagraph().run()}>
-        ¶
-      </ToolbarButton>
-      <ToolbarButton label="Heading 1" active={s.h1} onRun={() => chain().toggleHeading({ level: 1 }).run()}>
-        H1
-      </ToolbarButton>
-      <ToolbarButton label="Heading 2" active={s.h2} onRun={() => chain().toggleHeading({ level: 2 }).run()}>
-        H2
-      </ToolbarButton>
-      <ToolbarButton label="Heading 3" active={s.h3} onRun={() => chain().toggleHeading({ level: 3 }).run()}>
-        H3
-      </ToolbarButton>
+        <ToolbarButton label="Text" active={s.paragraph} onRun={() => chain().setParagraph().run()}>
+          <icons.editorText size={17} />
+        </ToolbarButton>
+        <ToolbarButton label="Heading 1" active={s.h1} onRun={() => chain().toggleHeading({ level: 1 }).run()}>
+          <icons.editorH1 size={17} />
+        </ToolbarButton>
+        <ToolbarButton label="Heading 2" active={s.h2} onRun={() => chain().toggleHeading({ level: 2 }).run()}>
+          <icons.editorH2 size={17} />
+        </ToolbarButton>
+        <ToolbarButton label="Heading 3" active={s.h3} onRun={() => chain().toggleHeading({ level: 3 }).run()}>
+          <icons.editorH3 size={17} />
+        </ToolbarButton>
 
-      <span className={styles.divider} />
+        <span className={styles.divider} />
 
-      <ToolbarButton label="Bold" active={s.bold} onRun={() => chain().toggleBold().run()}>
-        <strong>B</strong>
-      </ToolbarButton>
-      <ToolbarButton label="Italic" active={s.italic} onRun={() => chain().toggleItalic().run()}>
-        <em>I</em>
-      </ToolbarButton>
-      <ToolbarButton label="Underline" active={s.underline} onRun={() => chain().toggleUnderline().run()}>
-        <u>U</u>
-      </ToolbarButton>
-      <ToolbarButton label="Strikethrough" active={s.strike} onRun={() => chain().toggleStrike().run()}>
-        <s>S</s>
-      </ToolbarButton>
-      <ToolbarButton label="Inline code" active={s.code} onRun={() => chain().toggleCode().run()}>
-        {'</>'}
-      </ToolbarButton>
-      <ToolbarButton label="Highlight" active={s.highlight} onRun={() => chain().toggleHighlight().run()}>
-        ✺
-      </ToolbarButton>
+        <ToolbarButton label="Bold" active={s.bold} onRun={() => chain().toggleBold().run()}>
+          <icons.editorBold size={17} />
+        </ToolbarButton>
+        <ToolbarButton label="Italic" active={s.italic} onRun={() => chain().toggleItalic().run()}>
+          <icons.editorItalic size={17} />
+        </ToolbarButton>
+        <ToolbarButton label="Underline" active={s.underline} onRun={() => chain().toggleUnderline().run()}>
+          <icons.editorUnderline size={17} />
+        </ToolbarButton>
+        <ToolbarButton label="Strikethrough" active={s.strike} onRun={() => chain().toggleStrike().run()}>
+          <icons.editorStrike size={17} />
+        </ToolbarButton>
+        <ToolbarButton label="Highlight" active={s.highlight} onRun={() => chain().toggleHighlight().run()}>
+          <icons.editorHighlight size={17} />
+        </ToolbarButton>
 
-      <span className={styles.divider} />
+        <span className={styles.divider} />
 
-      <ToolbarButton label="Link" active={s.link} onRun={setLink}>
-        ⌁
-      </ToolbarButton>
-      <ToolbarButton label="Wikilink" onRun={() => chain().insertContent('@').run()}>
-        @
-      </ToolbarButton>
+        <ToolbarButton label="Link" active={s.link} onRun={setLink}>
+          <icons.editorLink size={17} />
+        </ToolbarButton>
+        <ToolbarButton label="Wikilink" onRun={() => chain().insertContent('@').run()}>
+          <icons.editorWikilink size={17} />
+        </ToolbarButton>
 
-      <span className={styles.divider} />
+        <span className={styles.divider} />
 
-      <ToolbarButton label="Bulleted list" active={s.bulletList} onRun={() => chain().toggleBulletList().run()}>
-        ••
-      </ToolbarButton>
-      <ToolbarButton label="Numbered list" active={s.orderedList} onRun={() => chain().toggleOrderedList().run()}>
-        1.
-      </ToolbarButton>
-      <ToolbarButton label="To-do list" active={s.taskList} onRun={() => chain().toggleTaskList().run()}>
-        ☑
-      </ToolbarButton>
-      <ToolbarButton label="Quote" active={s.blockquote} onRun={() => chain().toggleBlockquote().run()}>
-        ❝
-      </ToolbarButton>
+        <ToolbarButton label="Bulleted list" active={s.bulletList} onRun={() => chain().toggleBulletList().run()}>
+          <icons.editorBulletList size={17} />
+        </ToolbarButton>
+        <ToolbarButton label="Numbered list" active={s.orderedList} onRun={() => chain().toggleOrderedList().run()}>
+          <icons.editorNumberedList size={17} />
+        </ToolbarButton>
+        <ToolbarButton label="To-do list" active={s.taskList} onRun={() => chain().toggleTaskList().run()}>
+          <icons.editorTaskList size={17} />
+        </ToolbarButton>
+        <ToolbarButton label="Quote" active={s.blockquote} onRun={() => chain().toggleBlockquote().run()}>
+          <icons.editorQuote size={17} />
+        </ToolbarButton>
 
-      <span className={styles.divider} />
+        <span className={styles.divider} />
 
-      <div className={styles.segmented} role="group" aria-label="Toolbar position">
-        <button
-          type="button"
-          className={anchor === 'top' ? styles.segmentActive : styles.segment}
-          aria-pressed={anchor === 'top'}
-          onClick={() => setAnchor('top')}
-        >
-          ↑ Top
-        </button>
-        <button
-          type="button"
-          className={anchor === 'bottom' ? styles.segmentActive : styles.segment}
-          aria-pressed={anchor === 'bottom'}
-          onClick={() => setAnchor('bottom')}
-        >
-          ↓ Bottom
-        </button>
+        <div className={styles.segmented} role="group" aria-label="Toolbar position">
+          <button
+            type="button"
+            className={anchor === 'top' ? styles.segmentActive : styles.segment}
+            aria-label="Anchor toolbar to top"
+            aria-pressed={anchor === 'top'}
+            onClick={() => setAnchor('top')}
+          >
+            <icons.anchorTop size={13} />
+          </button>
+          <button
+            type="button"
+            className={anchor === 'bottom' ? styles.segmentActive : styles.segment}
+            aria-label="Anchor toolbar to bottom"
+            aria-pressed={anchor === 'bottom'}
+            onClick={() => setAnchor('bottom')}
+          >
+            <icons.anchorBottom size={13} />
+          </button>
+        </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 

@@ -321,14 +321,22 @@ describe('PageScreen — Properties', () => {
     expect((await repo.getPage('testland', 'alaric'))?.customProperties.some((property) => property.key === 'dateProperty')).toBe(false)
   })
 
-  it('configures options and Relation target Categories on page-local Properties', async () => {
+  it('configures options and Relation target Categories from the settings popover', async () => {
     const { repo } = await mountScreen('alaric')
+    // Select options now live behind the property's settings gear and commit on Save.
+    fireEvent.click(screen.getByRole('button', { name: 'Configure Rank' }))
     fireEvent.change(screen.getByLabelText('Options for Rank'), { target: { value: 'Guard, Captain, Marshal' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save Rank settings' }))
+    await act(async () => {})
+
     fireEvent.click(screen.getByRole('button', { name: 'Add property' }))
     fireEvent.click(screen.getByRole('button', { name: 'Add relation property' }))
     await act(async () => {})
+    fireEvent.click(screen.getByRole('button', { name: 'Configure Relation property' }))
     fireEvent.click(screen.getByLabelText('Target locations for Relation property'))
+    fireEvent.click(screen.getByRole('button', { name: 'Save Relation property settings' }))
     await act(async () => {})
+
     fireEvent.click(screen.getByRole('button', { name: 'Add Relation property' }))
     expect(screen.getByRole('button', { name: 'The Gate of Ash' })).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'The Watch' })).toBeNull()
@@ -351,12 +359,16 @@ describe('PageScreen — Properties', () => {
     expect(saved.eras).toEqual([])
   })
 
-  it('finds an existing World tag and edits the shared Cover slot', async () => {
+  it('finds an existing World tag and sets the Cover from a pasted link', async () => {
     const { repo } = await mountScreen('alaric')
     fireEvent.click(screen.getByRole('button', { name: 'Add tag' }))
     fireEvent.change(screen.getByLabelText('New tag'), { target: { value: 'hist' } })
     fireEvent.click(screen.getByRole('button', { name: 'Use tag history' }))
-    fireEvent.change(screen.getByLabelText('Cover'), { target: { value: '/covers/alaric.webp' } })
+    // Cover is an image field at the top of the page — set it via paste-a-link.
+    fireEvent.click(screen.getByRole('button', { name: 'Cover' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Paste a link for Cover' }))
+    fireEvent.change(screen.getByLabelText('Image URL for Cover'), { target: { value: '/covers/alaric.webp' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Use link for Cover' }))
     await act(async () => {})
 
     expect(await repo.getPage('testland', 'alaric')).toEqual(
@@ -388,6 +400,7 @@ describe('PageScreen — lifecycle and templates', () => {
   it('edits the World Category Template and leaves the current Page untouched', async () => {
     const { repo } = await mountScreen('alaric')
     const before = (await repo.getPage('testland', 'alaric'))!.customProperties
+    fireEvent.click(screen.getByRole('button', { name: 'Page actions' }))
     fireEvent.click(screen.getByRole('button', { name: 'Edit characters template' }))
     fireEvent.click(screen.getByRole('button', { name: 'Add number to template' }))
     fireEvent.change(screen.getByLabelText('Template property name for numberProperty'), { target: { value: 'Reputation' } })
@@ -403,6 +416,7 @@ describe('PageScreen — lifecycle and templates', () => {
 
   it('persists select options and Relation target Categories in a Category Template', async () => {
     const { repo } = await mountScreen('alaric')
+    fireEvent.click(screen.getByRole('button', { name: 'Page actions' }))
     fireEvent.click(screen.getByRole('button', { name: 'Edit characters template' }))
     fireEvent.click(screen.getByRole('button', { name: 'Add select to template' }))
     fireEvent.change(screen.getByLabelText('Options for Select property'), { target: { value: 'Known, Unknown' } })

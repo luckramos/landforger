@@ -8,6 +8,10 @@ export type Category = (typeof CATEGORIES)[number]
 /** The seven Custom Property types (CONTEXT.md — "Custom Property"). */
 export type CustomPropertyType = 'text' | 'textarea' | 'select' | 'relation' | 'image' | 'number' | 'date'
 
+/** `image` preview footprint. Size sets the base edge; orientation its aspect. */
+export type ImageSize = 'small' | 'medium' | 'large'
+export type ImageOrientation = 'landscape' | 'portrait'
+
 /** Everything but `value` — a Custom Property definition a Category Template seeds new Pages with. */
 export interface PropertyDef {
   key: string
@@ -17,6 +21,9 @@ export interface PropertyDef {
   options?: string[]
   /** `relation` only: Categories the picker constrains to. Omitted = unconstrained ("any"). */
   targetCategories?: Category[]
+  /** `image` only: preview footprint. Default `medium` / `landscape`. */
+  size?: ImageSize
+  orientation?: ImageOrientation
 }
 
 /** Frontmatter is flat: a Custom Property's value is a scalar or a flat array of Slugs (for `relation`). */

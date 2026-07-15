@@ -113,7 +113,11 @@
   width: 100%;
 }
 
+/* `backwards`, not `both`: a filling animation keeps overriding transform after
+   it ends, which would make the shared hover lift snap instead of ease. */
 .createCard {
+  composes: inkDashed from '../../styles/cardHover.module.css';
+  --card-ink: var(--bronze);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -126,22 +130,7 @@
   cursor: pointer;
   color: var(--text-dim);
   font-family: var(--font-sans);
-  animation: wf-cardIn calc(var(--mo, 1) * 460ms) var(--ease-house) both;
-  transition:
-    border-color calc(var(--mo, 1) * 180ms),
-    background calc(var(--mo, 1) * 180ms),
-    box-shadow calc(var(--mo, 1) * 180ms),
-    transform calc(var(--mo, 1) * 160ms) var(--ease-house);
-}
-
-.createCard:hover {
-  border-color: color-mix(in oklch, var(--bronze) 55%, transparent);
-  background: color-mix(in oklch, var(--bronze) 6%, transparent);
-  box-shadow: 0 8px 34px -14px color-mix(in oklch, var(--bronze) 45%, transparent);
-}
-
-.createCard:active {
-  transform: scale(0.97);
+  animation: wf-cardIn calc(var(--mo, 1) * 460ms) var(--ease-house) backwards;
 }
 
 @keyframes wf-cardIn {

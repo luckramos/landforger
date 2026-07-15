@@ -63,7 +63,7 @@ describe('UserMenu', () => {
     expect(useSessionStore.getState().user).toBeNull()
   })
 
-  it('applies motion intensity and Page body font live from Settings', async () => {
+  it('applies motion intensity live from Settings', async () => {
     renderWorlds()
     await screen.findByText('The Ninth Vale')
     fireEvent.click(screen.getByRole('button', { name: 'User menu' }))
@@ -71,8 +71,5 @@ describe('UserMenu', () => {
 
     fireEvent.change(screen.getByRole('slider', { name: 'Motion intensity' }), { target: { value: '1.5' } })
     expect(useUiStore.getState().motionScale).toBe(1.5)
-
-    fireEvent.click(screen.getByRole('radio', { name: 'Sans' }))
-    expect(useUiStore.getState().bodyFont).toBe('sans')
   })
 })

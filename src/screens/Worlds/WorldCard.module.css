@@ -1,31 +1,22 @@
+/* `backwards`, not `both`: a filling animation keeps overriding transform after
+   it ends, which would make the shared hover lift snap instead of ease. */
 .card {
+  composes: ink from '../../styles/cardHover.module.css';
+  /* Bronze, not --card-color: the world's own colour already owns the cover,
+     initial and genre badge, so the border stays the project accent. */
+  --card-ink: var(--bronze);
   display: flex;
   flex-direction: column;
   text-align: left;
   padding: 0;
-  border: 1px solid var(--hairline);
   border-radius: 14px;
   background: var(--panel-2);
   overflow: hidden;
   cursor: pointer;
   color: inherit;
   font-family: inherit;
-  animation: wf-cardIn calc(var(--mo, 1) * 460ms) var(--ease-house) both;
-  transition:
-    border-color calc(var(--mo, 1) * 200ms),
-    box-shadow calc(var(--mo, 1) * 200ms),
-    transform calc(var(--mo, 1) * 160ms) var(--ease-house);
-}
-
-.card:hover:not(:disabled) {
-  border-color: color-mix(in oklch, var(--bronze) 55%, transparent);
-  box-shadow:
-    0 0 0 1px color-mix(in oklch, var(--bronze) 35%, transparent),
-    0 8px 34px -12px color-mix(in oklch, var(--bronze) 45%, transparent);
-}
-
-.card:active:not(:disabled) {
-  transform: scale(0.97);
+  animation: wf-cardIn calc(var(--mo, 1) * 460ms) var(--ease-house) backwards;
+  border: none;
 }
 
 .card:disabled {
