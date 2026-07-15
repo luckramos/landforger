@@ -377,7 +377,7 @@
   animation: lf-fade-in calc(var(--mo, 1) * 160ms) ease backwards;
 }
 .lightboxInner { display: grid; justify-items: center; gap: 14px; max-width: min(900px, 100%); }
-.lightboxInner img { max-width: 100%; max-height: 74vh; border-radius: 10px; box-shadow: 0 30px 90px rgba(0, 0, 0, .7); }
+.lightboxInner img { max-width: 100%; max-height: 74vh; border-radius: 10px; box-shadow: 0 30px 90px rgba(0, 0, 0, .7); outline: 1px solid oklch(1 0 0 / 0.1); outline-offset: -1px; }
 .lightboxActions { display: flex; gap: 8px; }
 
 /* --- Tint button system ----------------------------------------------- */
