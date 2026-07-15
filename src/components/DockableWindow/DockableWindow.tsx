@@ -41,6 +41,13 @@ const MIN_WIDTH = 560
 const MIN_HEIGHT = 360
 const HEADER_HEIGHT = 52
 
+/* Entry states. Both are transform-only: the geometry they are spread over is
+   already final, so the mount delta is zero and no morph can occur. */
+/** Mirrors `lw-view-in` (DashboardShell.module.css) — the app's route transition. */
+const FULLSCREEN_ENTRY = { opacity: 0, y: 10, scale: 0.994 }
+/** A floating window is not a page: it pops in place, origin at its own centre. */
+const FLOATING_ENTRY = { opacity: 0, scale: 0.96 }
+
 function viewport() {
   return {
     width: typeof window === 'undefined' ? 1440 : window.innerWidth,
@@ -151,6 +158,9 @@ export function DockableWindow({
 
   const reduced = prefersReducedMotion()
   const dockState = minimized ? 'minimized' : mode
+  const entry = mode === 'fullscreen' ? FULLSCREEN_ENTRY : FLOATING_ENTRY
+  const entryDuration = reduced ? 0 : (mode === 'fullscreen' ? 0.3 : 0.2) * motionScale
+  const entryTransition = { duration: entryDuration, ease: EASE_HOUSE }
 
   return (
     <motion.section
@@ -161,13 +171,19 @@ export function DockableWindow({
       data-dock-state={dockState}
       data-dragging={pointerOperation ? 'true' : undefined}
       style={{ '--dock-accent': accent } as CSSProperties}
-      initial={{ opacity: 0 }}
-      animate={{ ...geometry, opacity: 1, borderRadius: mode === 'fullscreen' && !minimized ? 0 : 12 }}
-      exit={{ opacity: 0 }}
+      /* Geometry belongs in `initial`: without it Motion resolves the start
+         value from the DOM, which for a fixed element with no offsets is its
+         static position beside the sidebar — and the window flies in from
+         there. With it, the mount delta is zero and only the transforms move. */
+      initial={{ ...geometry, ...entry }}
+      animate={{ ...geometry, opacity: 1, y: 0, scale: 1, borderRadius: mode === 'fullscreen' && !minimized ? 0 : 12 }}
+      exit={{ opacity: 0, transition: overlayExitTransition(motionScale) }}
       transition={{
         duration: reduced || pointerOperation ? 0 : 0.34 * motionScale,
         ease: EASE_HOUSE,
-        opacity: overlayExitTransition(motionScale),
+        opacity: entryTransition,
+        y: entryTransition,
+        scale: entryTransition,
       }}
     >
       <header
