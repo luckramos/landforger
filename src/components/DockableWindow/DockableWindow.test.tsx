@@ -64,4 +64,27 @@ describe('DockableWindow', () => {
     expect(window.getAttribute('data-dragging')).toBe('true')
     fireEvent.pointerUp(document)
   })
+
+  it('cross-fades the float/maximize glyph instead of hard-swapping it, both glyphs coexisting mid-swap (#66)', () => {
+    render(
+      <DockableWindow panelId="timeline" title="Timeline" onClose={() => {}}>
+        <p>Timeline body</p>
+      </DockableWindow>,
+    )
+
+    const toggle = screen.getByRole('button', { name: 'Float window' })
+    // Before any toggle, only the current mode's glyph is mounted.
+    expect(toggle.querySelectorAll('[data-dock-mode-icon]')).toHaveLength(1)
+    expect(toggle.querySelector('[data-dock-mode-icon]')?.getAttribute('data-dock-mode-icon')).toBe('fullscreen')
+
+    fireEvent.click(toggle)
+
+    // AnimatePresence keeps the outgoing glyph mounted alongside the incoming
+    // one for the exit animation — a hard swap would remove the old glyph in
+    // the same tick the new one appears, instead of letting both coexist.
+    const midSwap = screen.getByRole('button', { name: 'Maximize window' })
+    const glyphs = [...midSwap.querySelectorAll('[data-dock-mode-icon]')]
+    expect(glyphs.length).toBeGreaterThanOrEqual(2)
+    expect(glyphs.map((glyph) => glyph.getAttribute('data-dock-mode-icon')).sort()).toEqual(['floating', 'fullscreen'])
+  })
 })
