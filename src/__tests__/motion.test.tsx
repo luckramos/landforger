@@ -311,7 +311,12 @@ describe('press feedback normalization (#65)', () => {
 
   it('the Create World "Cancel" button gained a press reaction with transform in its transition', () => {
     const css = readFileSync('src/screens/Worlds/CreateWorldModal.module.css', 'utf8')
-    expect(css).toMatch(/\.cancelButton\s*\{[^}]*transition: transform calc\(var\(--mo, 1\) \* 120ms\) var\(--ease-house\);[^}]*\}/)
+    // #67 extends this same declaration with background/color (see the
+    // "scoped transitions" describe block below), so this only pins that
+    // transform survives at its original timing — not that it's the sole
+    // property, which the flexible [^}]* on both sides already allowed
+    // everywhere else in this file (graph/canvas/editor-toolbar/Wikilink).
+    expect(css).toMatch(/\.cancelButton\s*\{[^}]*transition:[^}]*transform calc\(var\(--mo, 1\) \* 120ms\) var\(--ease-house\)[^}]*\}/)
     expect(css).toContain('.cancelButton:active {\n  transform: scale(0.96);\n}')
   })
 
@@ -342,5 +347,70 @@ describe('press feedback normalization (#65)', () => {
     // hover/press are new behavior on a previously-inert element.
     const css = readFileSync('src/editor/extensions/WikiLink.module.css', 'utf8')
     expect(css).toMatch(/prefers-reduced-motion:\s*reduce\)\s*\{\s*\.chip\s*\{\s*transition-duration:\s*0ms;/)
+  })
+})
+
+/*
+ * Issue #67: state toggles that used to snap now ease via explicit,
+ * property-scoped `transition` declarations on the base rule (never
+ * `transition: all`) — the graph Category filter's fade/desaturate, the
+ * graph zoom controls' hover, the canvas tool's aria-pressed swap, and the
+ * Create World Cancel hover. Each base rule keeps the `transform` #65 added
+ * for press feedback in the same declaration. prefers-reduced-motion is
+ * covered by the existing universal `*` collapse (asserted above), so no
+ * per-module reduced-motion re-declaration is needed here.
+ */
+describe('scoped transitions on snapping toggles (#67)', () => {
+  const touchedModules = [
+    'src/graph/GraphPanel.module.css',
+    'src/canvas/ReferenceCanvasPanel.module.css',
+    'src/screens/Worlds/CreateWorldModal.module.css',
+  ]
+
+  it('never introduces transition: all in the touched modules', () => {
+    for (const file of touchedModules) {
+      const css = readFileSync(file, 'utf8')
+      expect(css, `${file} should not use transition: all`).not.toMatch(/transition:\s*all\b/)
+    }
+  })
+
+  it('the graph Category filter base rule enumerates opacity/filter/color/border-color on the --mo scale, alongside transform', () => {
+    const css = readFileSync('src/graph/GraphPanel.module.css', 'utf8')
+    const base = css.match(/\.categories button, \.scopeToggle button, \.zoomControls button \{[^}]*\}/)?.[0]
+    expect(base).toBeDefined()
+    expect(base).toContain('transition: transform calc(var(--mo, 1) * 120ms) var(--ease-house)')
+    expect(base).toContain('opacity calc(var(--mo, 1) * 160ms) var(--ease-house)')
+    expect(base).toContain('filter calc(var(--mo, 1) * 160ms) var(--ease-house)')
+    expect(base).toContain('color calc(var(--mo, 1) * 160ms) var(--ease-house)')
+    expect(base).toContain('border-color calc(var(--mo, 1) * 160ms) var(--ease-house)')
+    expect(base).not.toMatch(/transition:\s*all\b/)
+  })
+
+  it('the graph zoom controls share the same eased color/border-color transition on hover (same base rule as Category)', () => {
+    const css = readFileSync('src/graph/GraphPanel.module.css', 'utf8')
+    // .zoomControls button:hover only sets values; the eased transition it
+    // rides lives on the shared base rule asserted above.
+    expect(css).toContain(".zoomControls button:hover { color: var(--text-hi); border-color: var(--hairline-strong); }")
+  })
+
+  it('the Reference Canvas tool base rule enumerates background/border-color/color on the --mo scale for its aria-pressed swap, alongside transform', () => {
+    const css = readFileSync('src/canvas/ReferenceCanvasPanel.module.css', 'utf8')
+    const base = css.match(/\.tools button,\s*\n\.shapePicker button \{[^}]*\}/)?.[0]
+    expect(base).toBeDefined()
+    expect(base).toContain('transition: transform calc(var(--mo, 1) * 120ms) var(--ease-house)')
+    expect(base).toContain('background calc(var(--mo, 1) * 160ms) var(--ease-house)')
+    expect(base).toContain('border-color calc(var(--mo, 1) * 160ms) var(--ease-house)')
+    expect(base).toContain('color calc(var(--mo, 1) * 160ms) var(--ease-house)')
+    expect(base).not.toMatch(/transition:\s*all\b/)
+  })
+
+  it('the Create World Cancel base rule enumerates background/color on the --mo scale for its hover, alongside transform', () => {
+    const css = readFileSync('src/screens/Worlds/CreateWorldModal.module.css', 'utf8')
+    const base = css.match(/\.cancelButton \{[^}]*\}/)?.[0]
+    expect(base).toBeDefined()
+    expect(base).toContain('transition: transform calc(var(--mo, 1) * 120ms) var(--ease-house)')
+    expect(base).toContain('background calc(var(--mo, 1) * 160ms) var(--ease-house)')
+    expect(base).toContain('color calc(var(--mo, 1) * 160ms) var(--ease-house)')
+    expect(base).not.toMatch(/transition:\s*all\b/)
   })
 })

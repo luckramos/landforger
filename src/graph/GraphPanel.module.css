@@ -15,7 +15,11 @@
 .canvasWrap[data-large] .node text { display: none; }
 
 .categories { position: absolute; z-index: 2; top: 16px; left: 50%; display: flex; max-width: calc(100% - 150px); gap: 5px; transform: translateX(-50%); }
-.categories button, .scopeToggle button, .zoomControls button { border: 1px solid var(--hairline); background: color-mix(in oklab, var(--panel-2) 92%, transparent); color: var(--text-dim); transition: transform calc(var(--mo, 1) * 120ms) var(--ease-house); }
+/* Scoped transitions (#67): Category filter fades/desaturates on toggle
+   (opacity, filter) and every button here eases its hover/press color and
+   border (color, border-color) instead of snapping; transform (#65's press
+   scale) is kept, not dropped, in the same declaration. */
+.categories button, .scopeToggle button, .zoomControls button { border: 1px solid var(--hairline); background: color-mix(in oklab, var(--panel-2) 92%, transparent); color: var(--text-dim); transition: transform calc(var(--mo, 1) * 120ms) var(--ease-house), opacity calc(var(--mo, 1) * 160ms) var(--ease-house), filter calc(var(--mo, 1) * 160ms) var(--ease-house), color calc(var(--mo, 1) * 160ms) var(--ease-house), border-color calc(var(--mo, 1) * 160ms) var(--ease-house); }
 .categories button:active, .scopeToggle button:active, .zoomControls button:active { transform: scale(0.96); }
 /* Hit-area normalization (#59): Category pills sit directly adjacent in a
    packed row (5px gap), each containing an icon + label + count, so —
