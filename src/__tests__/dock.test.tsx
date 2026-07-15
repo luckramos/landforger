@@ -165,3 +165,57 @@ describe('relationship graph through the store', () => {
     await waitFor(() => expect(useDockStore.getState().panels.graph.mode).toBe('floating'))
   })
 })
+
+describe('multiple dockable windows', () => {
+  it('opens the Timeline and the Reference Canvas from their sidebar buttons, both on screen at once', async () => {
+    await renderAt('/w/ninth-vale?panel=graph')
+    await screen.findByRole('dialog', { name: 'Relationship graph' })
+    const sidebar = screen.getByRole('complementary', { name: 'World navigation' })
+
+    fireEvent.click(within(sidebar).getByRole('button', { name: 'Timeline' }))
+    fireEvent.click(within(sidebar).getByRole('button', { name: 'Reference canvas' }))
+    await act(async () => {})
+
+    expect(screen.getByRole('dialog', { name: 'Relationship graph' })).toBeTruthy()
+    expect(screen.getByRole('dialog', { name: 'Timeline' })).toBeTruthy()
+    expect(screen.getByRole('dialog', { name: 'Reference canvas' })).toBeTruthy()
+  })
+
+  it('opens each window from its own ?panel= deep link', async () => {
+    for (const [param, name] of [
+      ['timeline', 'Timeline'],
+      ['canvas', 'Reference canvas'],
+    ] as const) {
+      resetDockStore()
+      const view = await renderAt(`/w/ninth-vale?panel=${param}`)
+      expect(await screen.findByRole('dialog', { name })).toBeTruthy()
+      view.unmount()
+    }
+  })
+
+  it('brings a background window to the front on pointer-down', async () => {
+    await renderAt('/w/ninth-vale?panel=graph')
+    await screen.findByRole('dialog', { name: 'Relationship graph' })
+    fireEvent.click(within(screen.getByRole('complementary', { name: 'World navigation' })).getByRole('button', { name: 'Timeline' }))
+    await act(async () => {})
+
+    // The Timeline opened last, so it is on top.
+    expect(useDockStore.getState().zOrder.at(-1)).toBe('timeline')
+    fireEvent.pointerDown(screen.getByRole('dialog', { name: 'Relationship graph' }))
+    expect(useDockStore.getState().zOrder.at(-1)).toBe('graph')
+  })
+
+  it('opening a second window never changes the first window mode', async () => {
+    await renderAt('/w/ninth-vale?panel=graph')
+    const graph = await screen.findByRole('dialog', { name: 'Relationship graph' })
+    fireEvent.click(within(graph).getByRole('button', { name: 'Float window' }))
+    await waitFor(() => expect(useDockStore.getState().panels.graph.mode).toBe('floating'))
+
+    fireEvent.click(within(screen.getByRole('complementary', { name: 'World navigation' })).getByRole('button', { name: 'Timeline' }))
+    await act(async () => {})
+
+    // The Graph stays floating; the Timeline keeps its own (independent) mode.
+    expect(useDockStore.getState().panels.graph.mode).toBe('floating')
+    expect(useDockStore.getState().panels.timeline.mode).toBeUndefined()
+  })
+})
