@@ -43,7 +43,10 @@
   background: var(--panel-1);
   color: var(--text-dim);
   cursor: pointer;
-  transition: transform calc(var(--mo, 1) * 120ms) var(--ease-house);
+  /* Scoped transitions (#67): the aria-pressed/aria-selected active-tool
+     state (below) eases in instead of snapping; transform (#65's press
+     scale) is kept, not dropped, in the same declaration. */
+  transition: transform calc(var(--mo, 1) * 120ms) var(--ease-house), background calc(var(--mo, 1) * 160ms) var(--ease-house), border-color calc(var(--mo, 1) * 160ms) var(--ease-house), color calc(var(--mo, 1) * 160ms) var(--ease-house);
 }
 .tools button::after,
 .shapePicker button::after {
