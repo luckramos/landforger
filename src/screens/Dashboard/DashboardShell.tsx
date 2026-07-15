@@ -2,14 +2,12 @@ import type { CSSProperties } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence } from 'motion/react'
 import { Link, matchPath, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { ReferenceCanvasPanel } from '../../canvas/ReferenceCanvasPanel'
 import { DockLayer } from '../../components/DockableWindow/DockLayer'
 import { UserMenu } from '../../components/UserMenu/UserMenu'
 import type { Page, World } from '../../domain/types'
 import type { WorldRepository } from '../../repository/WorldRepository'
 import { getRepository } from '../../state/repository'
-import { useDockStore } from '../../state/dockStore'
-import { TimelinePanel } from '../../timeline/TimelinePanel'
+import { isDockPanelId, useDockStore } from '../../state/dockStore'
 import { icons } from '../../icons'
 import { CATEGORY_META, categoryMeta } from './categoryMeta'
 import { SpotlightSearch } from './SpotlightSearch'
@@ -110,13 +108,12 @@ export function DashboardShell() {
     return () => document.removeEventListener('keydown', handleSearchShortcut)
   }, [])
 
-  /* `?panel=graph` is a deep-link entry point, not state: it opens the Graph
-     once and is then stripped, so navigation and the Back button never fight
-     the store over what is on screen. Timeline and Canvas keep their own
-     `?panel=` handling until #54 migrates them, so we touch only `graph`. */
+  /* `?panel=<id>` is a deep-link entry point, not state: it opens the named
+     window once and is then stripped, so navigation and the Back button never
+     fight the store over what is on screen. */
   useEffect(() => {
-    if (panel !== 'graph') return
-    openDock('graph')
+    if (!isDockPanelId(panel)) return
+    openDock(panel)
     const next = new URLSearchParams(location.search)
     next.delete('panel')
     navigate({ pathname: location.pathname, search: next.toString() }, { replace: true })
@@ -140,12 +137,6 @@ export function DashboardShell() {
   const tagSlug = matchPath('/w/:world/t/:tag', location.pathname)?.params.tag
   const currentPage = pageSlug ? pages.find((page) => page.slug === pageSlug) : undefined
   const currentLabel = currentPage?.title ?? categoryMeta(categorySlug ?? '')?.label ?? (tagSlug ? `#${tagSlug}` : undefined)
-  const closePanel = () => {
-    const next = new URLSearchParams(location.search)
-    next.delete('panel')
-    next.delete('focus')
-    navigate({ pathname: location.pathname, search: next.toString() }, { replace: true })
-  }
   if (loadState !== 'ready' || !world) {
     return (
       <main className={styles.loading}>
@@ -203,9 +194,9 @@ export function DashboardShell() {
 
           <nav className={styles.bottomNav}>
             <Link className={styles.navItem} to={`/w/${world.slug}/map`}><span><icons.map /></span><span className={styles.expandedOnly}>World map</span></Link>
-            <Link className={styles.navItem} to={`/w/${world.slug}?panel=timeline`}><span><icons.timeline /></span><span className={styles.expandedOnly}>Timeline</span></Link>
+            <button type="button" className={styles.navItem} onClick={() => openDock('timeline')}><span><icons.timeline /></span><span className={styles.expandedOnly}>Timeline</span></button>
             <button type="button" className={styles.navItem} onClick={() => openDock('graph')}><span><icons.graph /></span><span className={styles.expandedOnly}>Graph view</span></button>
-            <Link className={styles.navItem} to={`/w/${world.slug}?panel=canvas`}><span><icons.canvas /></span><span className={styles.expandedOnly}>Reference canvas</span></Link>
+            <button type="button" className={styles.navItem} onClick={() => openDock('canvas')}><span><icons.canvas /></span><span className={styles.expandedOnly}>Reference canvas</span></button>
           </nav>
       </aside>
 
@@ -240,24 +231,15 @@ export function DashboardShell() {
         </div>
       </div>
 
-      <DockLayer world={world} pages={pages} pageSlug={pageSlug} />
+      <DockLayer
+        world={world}
+        pages={pages}
+        repository={repository}
+        focusedPageSlug={focusedPageSlug}
+        pageSlug={pageSlug}
+      />
 
       <AnimatePresence>
-      {panel === 'timeline' && (
-        <TimelinePanel
-          world={world}
-          pages={pages}
-          repository={repository}
-          focusPage={focusedPageSlug}
-          onClose={closePanel}
-          onNavigatePage={(slug) => navigate(`/w/${world.slug}/p/${slug}?panel=timeline`)}
-        />
-      )}
-
-      {panel === 'canvas' && (
-        <ReferenceCanvasPanel world={world} repository={repository} onClose={closePanel} />
-      )}
-
       {searchOpen && (
         <SpotlightSearch pages={pages} worldSlug={world.slug} onClose={() => setSearchOpen(false)} />
       )}
