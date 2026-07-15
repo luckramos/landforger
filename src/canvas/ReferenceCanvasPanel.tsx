@@ -485,9 +485,10 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
                     type="button"
                     aria-label={`Use color ${entry}`}
                     aria-pressed={color === entry}
-                    style={{ background: entry }}
                     onClick={() => setColor(entry)}
-                  />
+                  >
+                    <span className={styles.dot} style={{ background: entry }} />
+                  </button>
                 ))}
               </div>
             ))}

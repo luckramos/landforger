@@ -2,7 +2,12 @@
   display: grid;
   height: 100%;
   min-height: 0;
-  grid-template-columns: 74px minmax(0, 1fr);
+  /* Widened from 74px (#59): the palette below is now a real grid of 40px
+     cells (4 * 40 = 160px content), so the sidebar has to make room for it
+     instead of growing an invisible, overlapping hit target on top of an
+     11px dot. 180px = 160px palette content + 2*9px toolbar padding + 2px
+     rounding slack. */
+  grid-template-columns: 180px minmax(0, 1fr);
   background: #0d0d0f;
 }
 
@@ -14,13 +19,21 @@
   flex-direction: column;
   gap: 10px;
   padding: 10px 9px;
+  overflow-y: auto;
   border-right: 1px solid var(--hairline);
   background: var(--panel-2);
 }
 
-.tools { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; }
+/* Hit-area normalization (#59): fixed 25px columns (not 1fr — a 1fr track
+   would stretch far past the button's own width now that the sidebar is
+   wider, distorting the pitch math below) with a 15px gap so growing each
+   button's invisible target to the 40px floor can't reach a neighbour.
+   size 25px | gap 15px | pitch 25+15=40 | inset -7.5px | target 25+15=40
+   40 <= 40 — targets abut, they never overlap. */
+.tools { display: grid; grid-template-columns: repeat(2, 25px); justify-content: center; gap: 15px; }
 .tools button,
 .shapePicker button {
+  position: relative;
   display: grid;
   width: 25px;
   height: 25px;
@@ -31,6 +44,12 @@
   color: var(--text-dim);
   cursor: pointer;
 }
+.tools button::after,
+.shapePicker button::after {
+  content: '';
+  position: absolute;
+  inset: -7.5px;
+}
 .tools button[aria-pressed='true'],
 .shapePicker button[aria-selected='true'] {
   border-color: color-mix(in oklab, var(--bronze) 65%, transparent);
@@ -38,15 +57,19 @@
   color: var(--bronze-hi);
 }
 
+/* Same 25px/15px/40px pitch math as .tools above, so the shape picker's own
+   box has to grow to fit 3 real 40px pitches: 8px padding * 2 + 3*25
+   (buttons) + 2*15 (gaps) = 121px. */
 .shapePicker {
   position: absolute;
   z-index: 8;
   top: 110px;
   left: 66px;
   display: grid;
-  width: 112px;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 5px;
+  width: 121px;
+  grid-template-columns: repeat(3, 25px);
+  justify-content: center;
+  gap: 15px;
   padding: 8px;
   border: 1px solid var(--hairline-strong);
   border-radius: 9px;
@@ -55,20 +78,52 @@
   animation: canvas-pop calc(var(--mo, 1) * 150ms) ease-out;
 }
 
-.palette { display: grid; gap: 4px; margin-top: auto; }
-.palette > div { display: flex; gap: 3px; }
+/* Hit-area normalization (#59): each swatch button IS now the 40x40 target,
+   laid out as real grid cells (0 gap needed — adjoining grid tracks can
+   never overlap each other, unlike a pseudo-element). The painted dot moves
+   to an inner .dot span sized 11px, unaffected by the button's grid size, so
+   the palette still *looks* like an 11px dot grid. 4 columns of 40px wrap
+   the 12 swatches into 3 rows instead of growing a single 480px-wide row —
+   this restructure (rather than a bigger overlapping ::after) is the
+   deliberate fix for the catastrophic swatch-overlap the old pseudo-element
+   approach produced on this control. */
+.palette { display: grid; gap: 0; margin-top: auto; }
+.palette > div {
+  display: grid;
+  grid-template-columns: repeat(4, 40px);
+}
 .palette button {
-  width: 11px;
-  height: 11px;
+  position: relative;
+  display: grid;
+  width: 40px;
+  height: 40px;
   padding: 0;
-  border: 1px solid rgba(255, 255, 255, .15);
-  border-radius: 50%;
+  border: 0;
+  background: transparent;
+  place-items: center;
   cursor: pointer;
 }
-.palette button[aria-pressed='true'] { outline: 2px solid var(--text-hi); outline-offset: 1px; }
-.zoomControls { display: grid; grid-template-columns: 18px 1fr 18px; gap: 2px; }
+.palette .dot {
+  width: 11px;
+  height: 11px;
+  border: 1px solid rgba(255, 255, 255, .15);
+  border-radius: 50%;
+}
+.palette button[aria-pressed='true'] .dot { outline: 2px solid var(--text-hi); outline-offset: 1px; }
+
+/* Hit-area normalization (#59): the side zoom buttons' width comes from the
+   grid track (18px, unchanged); height is pinned explicitly to make it a
+   provable 18px square (was an implicit ~16px from padding + line height).
+   A 22px gap means the ::after inset that reaches the 40px floor can't
+   bridge to a neighbour.
+   size 18px | gap 22px | pitch 18+22=40 | inset -11px | target 18+22=40
+   40 <= 40 for every adjacent pair (left↔middle, middle↔right), since the
+   grid gap is uniform across all three tracks. */
+.zoomControls { display: grid; grid-template-columns: 18px 1fr 18px; gap: 22px; }
 .zoomControls button {
+  position: relative;
   display: grid;
+  height: 18px;
   min-width: 0;
   place-items: center;
   padding: 3px 1px;
@@ -78,6 +133,11 @@
   color: var(--text-dim);
   font: 8px var(--font-mono);
   cursor: pointer;
+}
+.zoomControls button::after {
+  content: '';
+  position: absolute;
+  inset: -11px;
 }
 .toolbar p { margin: 0; color: var(--text-faint); font: 8px/1.45 var(--font-mono); }
 
@@ -159,9 +219,13 @@
 @keyframes canvas-pop { from { opacity: 0; transform: translateY(-4px) scale(.96); } }
 
 @media (max-width: 700px) {
-  .canvas { grid-template-columns: 64px minmax(0, 1fr); }
+  /* Narrow viewport: the palette drops to 2 columns of 40px (80px content,
+     fits the narrower 100px sidebar with its 6px inline padding) instead of
+     the desktop's 4 columns, so it wraps to 6 rows rather than overflowing. */
+  .canvas { grid-template-columns: 100px minmax(0, 1fr); }
   .toolbar { padding-inline: 6px; }
   .shapePicker { left: 58px; }
+  .palette > div { grid-template-columns: repeat(2, 40px); }
 }
 
 @media (prefers-reduced-motion: reduce) {

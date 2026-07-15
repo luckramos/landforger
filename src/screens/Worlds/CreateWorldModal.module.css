@@ -115,8 +115,14 @@
   gap: 8px;
 }
 
+/* Hit-area normalization (#59): genre chips sit in a tightly packed, wrapping
+   row (8px gap) where a negative-inset ::after would overlap its neighbour,
+   so the pointer target grows via a padding bump on the chip itself instead
+   — each chip keeps its own box, so the row never overlaps. native height
+   was padding(6*2=12) + text line-box (13px * ~1.15 ≈ 15) ≈ 27; padding-block
+   13px brings it to 13*2+15=41 >= 40. */
 .chip {
-  padding: 6px 12px;
+  padding: 13px 12px;
   border-radius: var(--radius-pill);
   border: 1px solid var(--hairline);
   background: transparent;

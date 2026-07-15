@@ -47,11 +47,17 @@
   gap: 8px;
   margin-top: 8px;
 }
+/* Hit-area normalization (#59): the action pills sit in a tightly packed,
+   wrapping row (8px gap) where a negative-inset ::after would overlap its
+   neighbour, so the pointer target grows via a padding bump on the pill
+   itself instead — each pill keeps its own box, so the row never overlaps.
+   native height was padding(6*2=12) + max(icon 14, text line-box ~13) = 26;
+   padding-block 14px brings it to 14*2+14=42 >= 40. */
 .pageAction {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 11px;
+  padding: 14px 11px;
   border: 1px solid var(--hairline);
   border-radius: var(--radius-pill);
   background: transparent;

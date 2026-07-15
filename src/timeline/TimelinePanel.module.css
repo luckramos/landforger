@@ -5,8 +5,14 @@
    which the mono face still resolves at these weights:
    era title 22 · summary 14 · controls and pills 12 · labels and meta 11. */
 .occurrences { gap: 5px; padding: 3px; border: 1px solid var(--hairline); border-radius: 8px; color: var(--text-faint); font-family: var(--font-mono); font-size: 11px; }
-.occurrences button, .modeToggle button { border: 0; background: transparent; color: var(--text-dim); cursor: pointer; font-family: inherit; }
+.occurrences button, .modeToggle button { position: relative; border: 0; background: transparent; color: var(--text-dim); cursor: pointer; font-family: inherit; }
 .occurrences button { width: 26px; height: 24px; }
+/* Hit-area normalization (#59): the prev/next buttons are separated by a
+   non-interactive "N / M" span, not by each other — each button's target
+   can only reach into that inert span, never onto the *other* button's own
+   visible box, so the plain negative-inset ::after is safe regardless of
+   the row's 5px gap. */
+.occurrences button::after { content: ''; position: absolute; inset: -8px; }
 .modeToggle { gap: 2px; padding: 3px; border: 1px solid var(--hairline); border-radius: 8px; }
 .modeToggle button { padding: 6px 11px; border-radius: 5px; font-family: var(--font-sans); font-size: 11px; }
 .modeToggle button[aria-pressed='true'] { background: color-mix(in oklab, var(--cat-eras) 16%, var(--panel-3)); color: var(--text-hi); }

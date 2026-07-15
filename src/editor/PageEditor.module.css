@@ -204,7 +204,12 @@
   pointer-events: auto;
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  /* Hit-area normalization (#59): 29px buttons | gap 11px | pitch 29+11=40 |
+     ::after inset -5.5px (=-(40-29)/2) | target 29+11=40. 40 <= 40 — adjacent
+     buttons' targets abut, never overlap. Dividers between groups get
+     proportionally more breathing room as a side effect of the shared flex
+     gap; spacing grows, painted size doesn't. */
+  gap: 11px;
   max-width: 100%;
   padding: 5px 8px;
   border: 1px solid var(--hairline);
@@ -214,6 +219,7 @@
 }
 
 .button {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -228,6 +234,11 @@
   transition:
     background calc(var(--mo, 1) * 130ms),
     color calc(var(--mo, 1) * 130ms);
+}
+.button::after {
+  content: '';
+  position: absolute;
+  inset: -5.5px;
 }
 
 .button:hover:not(:disabled) {

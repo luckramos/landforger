@@ -10,10 +10,22 @@
 .titleBlock > span,.eyebrow { color: var(--bronze); font: 9px var(--font-mono); letter-spacing: .14em; text-transform: uppercase; }
 .titleBlock h1 { margin: 1px 0 0; color: var(--text-hi); font: 400 23px var(--font-serif); }
 .mapActions { display: flex; align-items: center; gap: 6px; }
-.mapActions button,.mapActions a { height: 32px; padding: 0 10px; border: 1px solid var(--hairline); border-radius: 7px; background: var(--panel-3); color: var(--text-dim); text-decoration: none; font: 9px var(--font-mono); line-height: 30px; cursor: pointer; }
+.mapActions button,.mapActions a { position: relative; height: 32px; padding: 0 10px; border: 1px solid var(--hairline); border-radius: 7px; background: var(--panel-3); color: var(--text-dim); text-decoration: none; font: 9px var(--font-mono); line-height: 30px; cursor: pointer; }
+/* Hit-area normalization (#59): height 32px | gap 6px | vertical inset -5px
+   -> target height 32+10=42 (isolated vertically, no row above/below, so no
+   pitch constraint on that axis). Horizontal inset capped at -3px (half the
+   6px row gap) so two neighbours can each grow into the gap by 3px without
+   meeting: pitch 6 == 2*3 == target growth. That's enough to clear the 40px
+   floor even for the narrowest (icon-only "Map settings") button: its
+   native width is icon 16 + padding 10*2 + border 1*2 = 38px, so 38+6=44 >=
+   40. */
+.mapActions button::after,.mapActions a::after { content: ''; position: absolute; inset: -5px -3px; }
 .mapActions button[aria-pressed="true"] { border-color: var(--bronze); color: var(--bronze-light); background: color-mix(in oklab,var(--bronze) 12%,var(--panel-3)); }
+/* The zoom segments touch with no gap inside an overflow:hidden rounded
+   container, so a pseudo-element would be clipped or overlap — the buttons
+   are bumped to the 40px floor directly instead (#59). */
 .zoomControls { display: flex; border: 1px solid var(--hairline); border-radius: 8px; overflow: hidden; }
-.zoomControls button { min-width: 34px; height: 32px; border: 0; border-right: 1px solid var(--hairline); background: var(--panel-3); color: var(--text); cursor: pointer; }
+.zoomControls button { min-width: 40px; height: 40px; border: 0; border-right: 1px solid var(--hairline); background: var(--panel-3); color: var(--text); cursor: pointer; }
 .zoomControls button:nth-child(2) { width: 58px; font: 9px var(--font-mono); }
 .zoomControls button:last-child { border-right: 0; }
 .mapArea { position: relative; min-height: 0; overflow: hidden; }

@@ -217,6 +217,14 @@
     color calc(var(--mo, 1) * 140ms),
     background calc(var(--mo, 1) * 140ms);
 }
+/* Hit-area normalization (#59): the only interactive control inside its
+   input — no neighbour within reach, so a plain negative-inset ::after
+   (target 28+12=40) is safe as-is. */
+.eyeButton::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+}
 
 .eyeButton:hover {
   color: var(--text-hi);

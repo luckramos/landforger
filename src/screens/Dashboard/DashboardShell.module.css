@@ -45,11 +45,25 @@
 .brand strong { font-family: var(--font-serif); font-size: 16px; font-weight: 500; }
 .brand small { color: var(--text-faint); font-family: var(--font-mono); font-size: 9px; letter-spacing: .08em; }
 
-.iconButton, .topbarButton, .bottomNav button { border: 0; background: transparent; color: var(--text-dim); cursor: pointer; }
+.iconButton, .topbarButton, .bottomNav button { position: relative; border: 0; background: transparent; color: var(--text-dim); cursor: pointer; }
 .iconButton { width: 26px; height: 26px; flex: 0 0 26px; border: 1px solid var(--hairline); border-radius: var(--radius-sm); }
+/* Hit-area normalization (#59): the sidebar collapse toggle is the only
+   interactive control in its row (its sibling is the .brand <Link>, not
+   another ::after-enlarged button) — isolated, so a plain -8px inset is
+   safe as-is. */
+.iconButton::after { content: ''; position: absolute; inset: -8px; }
 .newPage { display: flex; height: 38px; align-items: center; gap: 11px; padding: 0 11px; border: 1px solid color-mix(in oklab, var(--bronze) 45%, transparent); border-radius: 8px; color: var(--bronze-light); text-decoration: none; white-space: nowrap; }
+/* Hit-area normalization (#59): nav items are already full sidebar width, so
+   only the 36px row height needs bumping toward the 40px floor — but they
+   stack vertically with (previously) 0 declared gap, so a -2px vertical
+   ::after (36+4=40 target) would overlap the next item's own 36px box by
+   4px (pitch was 36+0=36 < 40). A 4px column gap raises the pitch to
+   36+4=40, matching the target exactly — adjacent items' targets now abut
+   instead of overlapping. */
+.primaryNav, .bottomNav { display: flex; flex-direction: column; gap: 4px; }
 .primaryNav { margin-top: 14px; }
-.navItem { width: 100%; height: 36px; gap: 12px; padding: 0 11px; border-radius: 7px; color: var(--text-dim); font-size: 13px; text-decoration: none; white-space: nowrap; transition: background calc(var(--mo, 1) * 140ms), color calc(var(--mo, 1) * 140ms); }
+.navItem { position: relative; width: 100%; height: 36px; gap: 12px; padding: 0 11px; border-radius: 7px; color: var(--text-dim); font-size: 13px; text-decoration: none; white-space: nowrap; transition: background calc(var(--mo, 1) * 140ms), color calc(var(--mo, 1) * 140ms); }
+.navItem::after { content: ''; position: absolute; inset: -2px 0; }
 /* Some nav items open dockable windows and are <button>s; strip the browser
    chrome so they read identically to the <a> nav items beside them. */
 button.navItem { appearance: none; border: 0; background: none; font-family: inherit; text-align: left; cursor: pointer; }
@@ -74,12 +88,21 @@ button.navItem { appearance: none; border: 0; background: none; font-family: inh
 .crumbs { min-width: 0; gap: 8px; font-size: 12px; }
 .crumbs a { color: var(--text); text-decoration: none; }
 .crumbs span { color: var(--text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.searchTrigger { display: flex; min-width: 190px; max-width: 320px; height: 32px; flex: 1; align-items: center; gap: 8px; margin-left: auto; padding: 0 10px; border: 1px solid var(--hairline); border-radius: 8px; background: var(--panel-2); color: var(--text-faint); cursor: pointer; }
+.searchTrigger { position: relative; display: flex; min-width: 190px; max-width: 320px; height: 32px; flex: 1; align-items: center; gap: 8px; margin-left: auto; padding: 0 10px; border: 1px solid var(--hairline); border-radius: 8px; background: var(--panel-2); color: var(--text-faint); cursor: pointer; }
+/* Hit-area normalization (#59): already comfortably wide (its only neighbour,
+   the save indicator, isn't interactive); only the 32px height needs
+   bumping toward the 40px floor. */
+.searchTrigger::after { content: ''; position: absolute; inset: -4px 0; }
 .searchTrigger kbd { margin-left: auto; font-family: var(--font-mono); font-size: 9px; }
 .saveIndicator { width: 58px; gap: 6px; color: var(--text-faint); font-family: var(--font-mono); font-size: 10px; }
 .saveIndicator i { width: 6px; height: 6px; border-radius: 50%; background: oklch(.7 .1 145); }
 .saveIndicator[data-saving] i { background: var(--bronze); animation: saving-pulse calc(var(--mo, 1) * 1s) linear infinite; }
 .topbarButton { display: grid; width: 30px; height: 30px; place-items: center; border-radius: var(--radius-sm); }
+/* Hit-area normalization (#59): 30px buttons | topbar gap 14px | pitch
+   30+14=44 | inset -6px | target 30+12=42. 42 <= 44 — the two topbar
+   buttons (and the User Menu avatar beside them) never overlap; the
+   topbar's 14px gap is already generous enough without any change. */
+.topbarButton::after { content: ''; position: absolute; inset: -6px; }
 .topbarButton:hover { background: var(--hairline-soft); color: var(--text-hi); }
 .exitFocus { position: fixed; top: 14px; right: 18px; z-index: 50; padding: 7px 12px; border: 1px solid var(--hairline); border-radius: 999px; background: var(--panel-3); color: var(--text-dim); cursor: pointer; }
 
