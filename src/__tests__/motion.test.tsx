@@ -1,8 +1,9 @@
 import { readFileSync } from 'node:fs'
 import { render } from '@testing-library/react'
 import { act } from 'react'
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { MotionRoot } from '../App'
+import { resetDockStore, setDockStorage } from '../state/dockStore'
 import { DEFAULT_USER_SETTINGS, setUiStorage, useUiStore } from '../state/uiStore'
 import { useSessionStore } from '../state/sessionStore'
 import { createInMemoryStorage } from './testStorage'
@@ -14,6 +15,19 @@ function resetUiStore() {
     ...DEFAULT_USER_SETTINGS,
   })
 }
+
+// MotionRoot now activates the dock store for the signed-in user, so it must
+// write to an injected seam here — not ambient localStorage — and reset between
+// cases like the UI store already does.
+beforeEach(() => {
+  setDockStorage(createInMemoryStorage())
+  resetDockStore()
+})
+
+afterEach(() => {
+  setDockStorage(null)
+  resetDockStore()
+})
 
 describe('motion scale root sync', () => {
   it('persists settings per user and restores each user independently', () => {

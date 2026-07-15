@@ -5,6 +5,7 @@ import { LocalStorageWorldRepository } from '../repository/LocalStorageWorldRepo
 import { fixtureFiles } from '../repository/fixtures'
 import { AppRoutes } from '../routes'
 import { setRepository } from '../state/repository'
+import { resetDockStore, setDockStorage } from '../state/dockStore'
 import { createInMemoryStorage } from './testStorage'
 
 let repo: LocalStorageWorldRepository
@@ -22,10 +23,13 @@ async function renderAt(path: string) {
 beforeEach(() => {
   repo = new LocalStorageWorldRepository(createInMemoryStorage(), fixtureFiles)
   setRepository(repo)
+  setDockStorage(createInMemoryStorage())
+  resetDockStore()
 })
 
 afterEach(() => {
   setRepository(undefined)
+  setDockStorage(null)
   vi.useRealTimers()
 })
 

@@ -48,7 +48,8 @@ function dockStorage(): Storage | undefined {
   }
 }
 
-function viewport() {
+/** The viewport size, with an SSR/test fallback; the one definition. */
+export function viewport() {
   return {
     width: typeof window === 'undefined' ? 1440 : window.innerWidth,
     height: typeof window === 'undefined' ? 900 : window.innerHeight,
@@ -172,14 +173,14 @@ interface DockState {
   focus: (id: DockPanelId) => void
 }
 
-/** Applies a prefs patch to live state and mirrors the persisted half to storage. */
+/** Writes a concrete pref to live state and mirrors it to storage. Callers pass
+    a concrete mode — this is the point at which an implicit mode becomes fixed. */
 function persistPanel(
   current: DockState,
   id: DockPanelId,
-  patch: Partial<DockPanelPrefs>,
+  prefs: DockPanelPrefs,
 ): DockState {
-  const panel = { ...current.panels[id], ...patch }
-  const panels = { ...current.panels, [id]: panel }
+  const panels = { ...current.panels, [id]: { ...current.panels[id], ...prefs } }
   if (!current.activeUserId) return { ...current, panels }
   // Persist a concrete pref only for the touched panel — never seed the others,
   // or they would lose their "no persisted opinion" state and ignore defaultMode.
@@ -187,7 +188,7 @@ function persistPanel(
     ...current.prefsByUser,
     [current.activeUserId]: {
       ...(current.prefsByUser[current.activeUserId] ?? {}),
-      [id]: { mode: panel.mode ?? 'fullscreen', geometry: panel.geometry },
+      [id]: prefs,
     },
   }
   writePrefs(prefsByUser)
@@ -235,7 +236,7 @@ export const useDockStore = create<DockState>((set) => ({
     panels: { ...current.panels, [id]: { ...current.panels[id], minimized } },
   })),
 
-  setMode: (id, mode) => set((current) => persistPanel(current, id, { mode })),
+  setMode: (id, mode) => set((current) => persistPanel(current, id, { mode, geometry: current.panels[id].geometry })),
   setGeometry: (id, geometry) => set((current) => {
     // Geometry only ever changes in floating mode; if the mode was still
     // implicit (defaultMode), dragging makes the floating choice concrete.

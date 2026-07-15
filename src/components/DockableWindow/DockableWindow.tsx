@@ -6,6 +6,7 @@ import {
   clampGeometry,
   dockZIndex,
   useDockStore,
+  viewport,
   type DockGeometry,
   type DockMode,
   type DockPanelId,
@@ -103,8 +104,7 @@ export function DockableWindow({
     return () => window.removeEventListener('resize', onResize)
   }, [panelId, setGeometry])
 
-  const width = typeof window === 'undefined' ? 1440 : window.innerWidth
-  const height = typeof window === 'undefined' ? 900 : window.innerHeight
+  const { width, height } = viewport()
   const geometry = minimized
     ? (() => {
         const barWidth = Math.min(460, width - 32)
