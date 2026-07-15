@@ -96,6 +96,23 @@ describe('Maps viewing screen', () => {
     expect(stage.hasAttribute('data-active')).toBe(false)
   })
 
+  it('does not promote the compositor layer when zooming is already clamped at the bound (#62)', async () => {
+    await renderAt('/w/ninth-vale/map')
+    const stage = await screen.findByTestId('map-stage')
+
+    // Drive the zoom to its maximum, settling each step.
+    for (let step = 0; step < 30; step += 1) {
+      fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }))
+      fireEvent.transitionEnd(stage)
+    }
+    expect(stage.hasAttribute('data-active')).toBe(false)
+
+    // At the bound the transform can't change, so no transitionend would ever
+    // fire to release the layer — it must never be promoted in the first place.
+    fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }))
+    expect(stage.hasAttribute('data-active')).toBe(false)
+  })
+
   it('opens an inspector and drills into a child Map with breadcrumbs back up', async () => {
     await renderAt('/w/ninth-vale/map')
     fireEvent.click(await screen.findByRole('button', { name: 'Duskwater' }))

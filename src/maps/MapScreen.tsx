@@ -321,11 +321,13 @@ export function MapScreen() {
   }
 
   const changeZoom = (delta: number) => {
-    // Compositor layer promotion (will-change) is released once the settling
-    // transition finishes — see the stage's onTransitionEnd below (#62).
-    setZooming(true)
     setZoom((current) => {
       const next = clampZoom(current + delta)
+      // At the zoom bounds the transform is unchanged, so no transitionend
+      // would ever fire to release the promoted layer — only promote when the
+      // stage will actually move. Released in the stage's onTransitionEnd (#62).
+      if (next === current) return current
+      setZooming(true)
       setPan((position) => panWithinViewport(position, next))
       return next
     })
