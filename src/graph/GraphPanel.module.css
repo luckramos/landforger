@@ -16,7 +16,19 @@
 
 .categories { position: absolute; z-index: 2; top: 16px; left: 50%; display: flex; max-width: calc(100% - 150px); gap: 5px; transform: translateX(-50%); }
 .categories button, .scopeToggle button, .zoomControls button { border: 1px solid var(--hairline); background: color-mix(in oklab, var(--panel-2) 92%, transparent); color: var(--text-dim); }
-.categories button { display: flex; align-items: center; gap: 5px; padding: 6px 9px; border-radius: 999px; font-size: 11px; white-space: nowrap; cursor: pointer; }
+/* Hit-area normalization (#59): Category pills sit directly adjacent in a
+   packed row (5px gap), each containing an icon + label + count, so —
+   unlike a fixed-size icon button — their *width* is never the tight
+   dimension: even a hypothetical zero-width label leaves icon(12) +
+   button's own internal gap*2(5+5) + count(>=6) + padding(9*2=18) +
+   border(1+1) = 48px, already >= 40. Height is the tight dimension
+   (line-height pinned to 1 below so it's provable: border(1+1) +
+   padding(6+6) + max(icon 12, text 11*1=11) = 26px). So the ::after only
+   grows *vertically* (-7px top/bottom, reaching 26+14=40) and 0px
+   horizontally — it can never reach the 5px row gap, so it can never
+   overlap the neighbour pill, regardless of that gap's value. */
+.categories button { position: relative; display: flex; align-items: center; gap: 5px; padding: 6px 9px; border-radius: 999px; font-size: 11px; line-height: 1; white-space: nowrap; cursor: pointer; }
+.categories button::after { content: ''; position: absolute; inset: -7px 0; }
 .categories button[aria-pressed='false'] { opacity: .42; filter: grayscale(1); }
 .categories button:hover { border-color: var(--hairline-strong); color: var(--text-hi); }
 .categories small { color: var(--text-faint); font-family: var(--font-mono); }
@@ -24,8 +36,12 @@
 .scopeToggle { display: flex; padding: 2px; border: 1px solid var(--hairline); border-radius: 8px; }
 .scopeToggle button { padding: 4px 9px; border: 0; border-radius: 5px; font-size: 10px; cursor: pointer; }
 .scopeToggle button[aria-pressed='true'] { background: color-mix(in oklab, var(--bronze) 16%, var(--panel-2)); color: var(--bronze-hi); }
-.zoomControls { position: absolute; z-index: 2; top: 68px; right: 16px; display: grid; gap: 4px; }
-.zoomControls button { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 8px; color: var(--text-dim); cursor: pointer; }
+/* Hit-area normalization (#59): 32px buttons | gap 8px | pitch 32+8=40 |
+   ::after inset -4px (=-(40-32)/2) | target 32+8=40. 40 <= 40 — safe
+   whether this stack reads as a row or a column. */
+.zoomControls { position: absolute; z-index: 2; top: 68px; right: 16px; display: grid; gap: 8px; }
+.zoomControls button { position: relative; display: grid; width: 32px; height: 32px; place-items: center; border-radius: 8px; color: var(--text-dim); cursor: pointer; }
+.zoomControls button::after { content: ''; position: absolute; inset: -4px; }
 .zoomControls button:hover { color: var(--text-hi); border-color: var(--hairline-strong); }
 .legend { position: absolute; z-index: 2; right: 18px; bottom: 14px; left: 18px; display: flex; justify-content: space-between; color: var(--text-faint); font-family: var(--font-mono); font-size: 9px; letter-spacing: .03em; pointer-events: none; }
 .legend span { display: flex; align-items: center; gap: 6px; }

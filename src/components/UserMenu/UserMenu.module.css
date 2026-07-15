@@ -1,4 +1,5 @@
 .avatar {
+  position: relative;
   width: 34px;
   height: 34px;
   border-radius: 50%;
@@ -13,6 +14,14 @@
   transition:
     border-color calc(var(--mo, 1) * 150ms),
     box-shadow calc(var(--mo, 1) * 150ms);
+}
+/* Hit-area normalization (#59): the sole trigger in the topbar's UserMenu
+   slot — no neighbour within reach, so a plain negative-inset ::after
+   (target 34+8=42) is safe as-is. */
+.avatar::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
 }
 
 .avatar:hover,

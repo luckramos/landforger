@@ -75,7 +75,11 @@
 .labelInput:hover { border-color: var(--hairline); }
 .labelInput:focus { border-color: var(--bronze); color: var(--text); }
 
-.rowActions { display: flex; align-items: center; gap: 4px; padding-top: 3px; }
+/* Hit-area normalization (#59): the settings-gear and remove icon buttons
+   (both 26px .iconButtons — 14px icon + 5px padding + 1px border on each
+   side, see below) sit directly adjacent here. A 14px gap means their -7px
+   ::after targets (pitch 26+14=40, target 26+14=40) can no longer overlap. */
+.rowActions { display: flex; align-items: center; gap: 14px; padding-top: 3px; }
 
 /* --- Chips (Tags, Eras, Relations) ------------------------------------ */
 .chips { display: flex; flex-wrap: wrap; gap: 6px; min-height: 30px; align-items: center; }
@@ -216,10 +220,16 @@
 .empty { padding: 7px; color: var(--text-faint); font-size: 11px; }
 
 /* --- Number field (custom steppers, native spinner suppressed) -------- */
+/* Hit-area normalization (#59): the two .stepButtons never sit next to each
+   other — they sandwich the .numberInput, so the overlap risk is a
+   stepButton's target reaching across the gap onto the *input's* visible
+   box (a real control) rather than button-on-button. A 14px gap means each
+   26px stepButton's -7px ::after (pitch 26+14=40, target 26+14=40) can no
+   longer touch the input. */
 .numberField {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  gap: 14px;
   border: 1px solid transparent;
   border-radius: 6px;
   background: transparent;
@@ -243,6 +253,7 @@
 }
 .numberInput::-webkit-outer-spin-button, .numberInput::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .stepButton {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -254,6 +265,14 @@
   color: var(--text-faint);
   cursor: pointer;
   transition: var(--tint-transition);
+}
+/* size 26px | gap 14px (.numberField, above) | pitch 26+14=40 | inset -7px
+   (=-(40-26)/2) | target 26+14=40. 40 <= 40 — the target can't reach the
+   numberInput on either side. */
+.stepButton::after {
+  content: '';
+  position: absolute;
+  inset: -7px;
 }
 .stepButton:hover:not(:disabled) { background: color-mix(in oklab, var(--bronze) 14%, transparent); color: var(--bronze-light); }
 .stepButton:active:not(:disabled) { transform: scale(0.9); }
@@ -276,6 +295,14 @@
   color: var(--text-faint);
   cursor: pointer;
   transition: var(--tint-transition);
+}
+/* Hit-area normalization (#59): the only interactive control inside
+   .dateField — no neighbour within reach, so a plain negative-inset ::after
+   (target 26+16=42) is safe as-is (isolated control). */
+.dateTrigger::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
 }
 .dateTrigger:hover { color: var(--bronze-light); background: color-mix(in oklab, var(--bronze) 14%, transparent); }
 .calendar {
@@ -415,6 +442,7 @@
 
 /* Icon-only buttons (row settings gear, row remove, top actions). */
 .iconButton, .topActions button {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -425,6 +453,15 @@
   color: var(--text-faint);
   cursor: pointer;
   transition: var(--tint-transition);
+}
+/* size 26px (14 icon + 5+5 padding + 1+1 border) | gap 14px (.rowActions,
+   above) | pitch 26+14=40 | inset -7px (=-(40-26)/2) | target 26+14=40.
+   40 <= 40 — the gear and remove buttons never overlap. .topActions has no
+   sibling button, so the same inset is safe there regardless (isolated). */
+.iconButton::after, .topActions button::after {
+  content: '';
+  position: absolute;
+  inset: -7px;
 }
 .iconButton:hover, .topActions button:hover {
   border-color: color-mix(in oklab, var(--bronze) 45%, transparent);
