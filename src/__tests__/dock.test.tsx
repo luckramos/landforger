@@ -84,4 +84,13 @@ describe('dockable window entrance motion', () => {
     // The regression guard, at the source level: `initial` must spread geometry.
     expect(component()).toContain('initial={{ ...geometry,')
   })
+
+  it('wires each mode to its own entry constant and spreads it into initial', () => {
+    // Without this, the timing assertions above would pass even if the two
+    // constants were swapped or bound to the wrong branch — happy-dom animates
+    // nothing, so the wiring is only checkable at the source level.
+    const src = component()
+    expect(src).toContain("const entry = mode === 'fullscreen' ? FULLSCREEN_ENTRY : FLOATING_ENTRY")
+    expect(src).toContain('initial={{ ...geometry, ...entry }}')
+  })
 })

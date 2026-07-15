@@ -45,7 +45,7 @@ const HEADER_HEIGHT = 52
    already final, so the mount delta is zero and no morph can occur. */
 /** Mirrors `lw-view-in` (DashboardShell.module.css) — the app's route transition. */
 const FULLSCREEN_ENTRY = { opacity: 0, y: 10, scale: 0.994 }
-/** A floating window is not a page: it pops in place, origin at its own centre. */
+/** A floating window is not a Page: it pops in place, origin at its own centre. */
 const FLOATING_ENTRY = { opacity: 0, scale: 0.96 }
 
 function viewport() {
