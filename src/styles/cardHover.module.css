@@ -93,7 +93,9 @@
   z-index: 1;
   inset: -1.5px;
   border: 1.5px dashed var(--card-ink);
-  border-radius: 15.5px;
+  /* Concentric with the 14px card radius (--radius-card) this ring sits
+     outside of, offset by the same 1.5px as the inset above (#64). */
+  border-radius: calc(var(--radius-card) + 1.5px);
   -webkit-mask-image: linear-gradient(180deg, #000, transparent);
   mask-image: linear-gradient(180deg, #000, transparent);
   -webkit-mask-repeat: no-repeat;

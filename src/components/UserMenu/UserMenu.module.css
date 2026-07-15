@@ -31,12 +31,17 @@
 }
 
 .popover {
+  /* Concentric radius (#64): outer = inner + padding, so the menu items'
+     corners can't drift from the popover's own. --menu-pad is the popover's
+     padding and the gap .item sits inset by; .item derives its radius from
+     it below rather than restating a magic literal. */
+  --menu-pad: 6px;
   position: fixed;
   z-index: 30;
   width: 236px;
-  padding: 6px;
+  padding: var(--menu-pad);
   border: 1px solid var(--hairline);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: var(--panel-1);
   box-shadow: 0 18px 50px -18px rgba(0, 0, 0, 0.7);
   transform-origin: top right;
@@ -82,7 +87,8 @@
   padding: 9px 12px;
   text-align: left;
   border: none;
-  border-radius: 8px;
+  /* outer(--radius-md, 12px) = inner + --menu-pad(6px) — concentric with .popover (#64). */
+  border-radius: calc(var(--radius-md) - var(--menu-pad));
   background: transparent;
   color: var(--text);
   font-family: var(--font-sans);
