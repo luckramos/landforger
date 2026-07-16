@@ -54,13 +54,23 @@
   /* Type scale — snapped from the ~150 hand-typed font sizes measured in
      docs/research/design-inventory.md §3 (a 10–68px spread). Existing
      call sites are untouched; this scale is for new work and the named
-     convergence target below (--text-display). */
+     convergence target below (--text-display).
+     Reconciled (#69): the old lg(20)→xl(28) gap was wide enough that a
+     whole 19/20/21/22/23px cluster of near-duplicate ad hoc sizes
+     (~53 call sites) had nowhere to land. Rather than keep all five
+     near-identical sizes, one intermediate step (--text-xl: 24px) was
+     added, splitting the 8px gap into two 4px steps; the old 28px
+     step was renamed --text-2xl to make room. 19–21px round onto
+     --text-lg, 22–23px round onto the new --text-xl. No call sites
+     are migrated here — that's #76's job. */
   --text-xs: 10px; /* mono eyebrows, meta labels */
   --text-sm: 12px; /* secondary text, captions */
   --text-base: 14px; /* body-adjacent UI text */
   --text-md: 16px; /* emphasized UI text, brand wordmark */
   --text-lg: 20px; /* small headings, icon glyphs */
-  --text-xl: 28px; /* section headers */
+  --text-xl: 24px; /* new intermediate step — collapses the 22–23px slice of
+    the ad hoc cluster (large headings, stat numbers) */
+  --text-2xl: 28px; /* section headers (was --text-xl) */
   --text-display: 40px; /* screen-title heading — converges Auth .heading (36px),
     Worlds .welcome (38px), PageScreen .title (43px), NewPageScreen h1 (44px)
     and the Dashboard hero clamp's base (42px) onto one step */
