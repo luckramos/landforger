@@ -93,8 +93,18 @@
   padding: 10px 12px;
   color: var(--text-hi);
   font-family: var(--font-sans);
-  font-size: 14px;
+  /* #70: 16px by default so focusing Premise never zooms the viewport;
+     steps back to 14px once a pointer is likely. (.nameInput's own
+     `!important` 19px above is unaffected either way.) */
+  font-size: 16px;
   resize: vertical;
+}
+
+@media (min-width: 640px) {
+  .field input[type='text'],
+  .field textarea {
+    font-size: 14px;
+  }
 }
 
 .nameInput {
