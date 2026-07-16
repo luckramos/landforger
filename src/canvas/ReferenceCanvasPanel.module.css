@@ -235,8 +235,8 @@
 .laser { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
 .previewSvg path,
 .previewSvg line { fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
-.laser path { fill: none; stroke: #ff515f; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; opacity: .58; filter: drop-shadow(0 0 5px #ff3348); }
-.laser circle { fill: #ff4a5c; filter: drop-shadow(0 0 4px #ff3348); }
+.laser path { fill: none; stroke: var(--laser); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; opacity: .58; filter: drop-shadow(0 0 5px var(--laser)); }
+.laser circle { fill: var(--laser); filter: drop-shadow(0 0 4px var(--laser)); }
 
 @keyframes canvas-pop { from { opacity: 0; transform: translateY(-4px) scale(.96); } }
 

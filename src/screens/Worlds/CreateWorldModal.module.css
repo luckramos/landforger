@@ -5,7 +5,7 @@
   display: grid;
   place-items: center;
   padding: 24px;
-  background: rgba(8, 8, 7, 0.7);
+  background: var(--scrim);
   backdrop-filter: blur(10px);
   /* backwards (not both): the finished entrance must not override the
      Motion exit's inline opacity/transform. */

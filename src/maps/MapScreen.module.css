@@ -110,7 +110,7 @@
 .state a { font-size: var(--text-sm); }
 .placingBanner { position: fixed; z-index: 30; top: 84px; left: 50%; display: flex; align-items: center; gap: 18px; padding: 11px 16px; border: 1px solid color-mix(in oklab,var(--bronze) 48%,transparent); border-radius: 9px; background: var(--panel-2); box-shadow: 0 12px 40px #0009; color: var(--bronze-light); font: var(--text-sm) var(--font-mono); transform: translateX(-50%); animation: lf-banner-pop calc(var(--mo,1) * 240ms) var(--ease-house) backwards; }
 .placingBanner button { border: 0; background: transparent; color: var(--text-dim); cursor: pointer; }
-.scrim { position: fixed; z-index: 40; inset: 0; display: grid; place-items: center; background: #0009; animation: lf-fade-in calc(var(--mo,1) * 160ms) ease backwards; }
+.scrim { position: fixed; z-index: 40; inset: 0; display: grid; place-items: center; background: var(--scrim); animation: lf-fade-in calc(var(--mo,1) * 160ms) ease backwards; }
 .modal { width: min(480px,calc(100vw - 40px)); max-height: 72vh; padding: 20px; border: 1px solid var(--hairline-strong); border-radius: 13px; background: var(--panel-1); box-shadow: 0 30px 90px #000c; animation: lf-modal-pop calc(var(--mo,1) * 240ms) var(--ease-house) backwards; }
 .modal header,.settings header { display: flex; align-items: center; justify-content: space-between; }
 .modal h2,.settings h2 { margin: 0; color: var(--text-hi); font: 400 var(--text-xl) var(--font-serif); }

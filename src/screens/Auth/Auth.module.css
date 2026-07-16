@@ -296,9 +296,11 @@
   gap: 8px;
   padding: 10px 12px;
   border-radius: 8px;
-  border: 1px solid rgba(200, 90, 70, 0.35);
-  background: rgba(200, 90, 70, 0.1);
-  color: rgba(255, 210, 200, 0.92);
+  border: 1px solid var(--danger-subtle);
+  background: var(--danger-bg);
+  /* Light derivative of the danger token for the message text (was a raw
+     rgba pink); aligns the hue to --danger's 25. */
+  color: color-mix(in oklab, var(--danger) 60%, white);
   font-size: var(--text-base);
 }
 
