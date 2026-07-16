@@ -27,7 +27,7 @@
 .actions { display: flex; justify-content: space-between; gap: 8px; padding-top: 5px; border-top: 1px solid var(--hairline); }
 .actions button:disabled { opacity: .45; cursor: default; }
 .danger { border-color: color-mix(in oklab,var(--danger) 42%,transparent) !important; color: var(--danger) !important; }
-.scrim { position: fixed; z-index: 20; inset: 0; display: grid; place-items: center; background: #000b; animation: lf-fade-in calc(var(--mo,1) * 160ms) ease backwards; }
+.scrim { position: fixed; z-index: 20; inset: 0; display: grid; place-items: center; background: var(--scrim); animation: lf-fade-in calc(var(--mo,1) * 160ms) ease backwards; }
 .confirm { width: min(420px,calc(100vw - 40px)); padding: 24px; border: 1px solid var(--hairline-strong); border-radius: 12px; background: var(--panel-1); box-shadow: 0 28px 90px #000d; animation: lf-modal-pop calc(var(--mo,1) * 240ms) var(--ease-house) backwards; }
 .confirm > span { color: var(--danger); font: var(--text-xs) var(--font-mono); letter-spacing: .12em; text-transform: uppercase; }
 .confirm h2 { margin: 6px 0; color: var(--text-hi); font: 400 var(--text-2xl) var(--font-serif); }

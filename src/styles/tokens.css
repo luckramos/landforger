@@ -27,6 +27,16 @@
   --danger-subtle: color-mix(in oklab, var(--danger) 50%, transparent);
   --danger-bg: oklch(0.5 0.12 25 / 0.16);
 
+  /* Canvas laser pointer — one red drives the stroke, glow, and fill (was
+     three hand-mixed near-duplicates: #ff515f, #ff3348, #ff4a5c). */
+  --laser: oklch(0.67 0.22 21);
+
+  /* Overlay/scrim background — one bg-tinted black at one alpha, shared by
+     every full-screen dimming layer (Maps, Worlds, spotlight, Properties
+     dialogs, timeline create form). Per-overlay alpha/blur that differs on
+     purpose (e.g. the timeline create form's blur) stays local. */
+  --scrim: oklch(0.13 0.003 107 / 0.7);
+
   /* Hairlines — rgba(255,255,255, 0.05–0.12) */
   --hairline-soft: rgba(255, 255, 255, 0.05);
   --hairline: rgba(255, 255, 255, 0.08);
