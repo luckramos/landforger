@@ -204,8 +204,8 @@ export function DashboardShell() {
         <header className={styles.topbar} aria-hidden={focusMode || undefined}>
             <Link to="/worlds" className={styles.worldsBack}><icons.caretLeft size={12} /> Worlds</Link>
             <nav className={styles.crumbs} aria-label="Breadcrumb">
-              <Link to={`/w/${world.slug}`}>{world.name}</Link>
-              {currentLabel && <><span>/</span><span>{currentLabel}</span></>}
+              <Link to={`/w/${world.slug}`} title={world.name}>{world.name}</Link>
+              {currentLabel && <><span>/</span><span title={currentLabel}>{currentLabel}</span></>}
             </nav>
             <button type="button" className={styles.searchTrigger} onClick={() => setSearchOpen(true)}><icons.search size={16} /> <span>Search the world…</span><kbd>⌘K</kbd></button>
             <span className={styles.saveIndicator} data-testid="save-indicator" data-saving={saving || undefined}>

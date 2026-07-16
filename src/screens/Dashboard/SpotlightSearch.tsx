@@ -113,8 +113,8 @@ export function SpotlightSearch({ pages, worldSlug, onClose }: SpotlightSearchPr
               >
                 <span className={styles.resultIcon} style={{ color: `var(--cat-${result.category})` }}>{meta && <meta.icon size={16} />}</span>
                 <span className={styles.resultCopy}>
-                  <strong><HighlightedTitle title={result.title} indices={result.matchIndices} /></strong>
-                  <small>{result.kind === 'page' ? result.summary : 'Category'}</small>
+                  <strong title={result.title}><HighlightedTitle title={result.title} indices={result.matchIndices} /></strong>
+                  <small title={result.kind === 'page' ? result.summary : 'Category'}>{result.kind === 'page' ? result.summary : 'Category'}</small>
                 </span>
                 <span className={styles.resultKind}>{result.kind === 'page' ? meta?.label : `${pages.filter((page) => page.category === result.category).length} Pages`}</span>
               </button>
