@@ -1,6 +1,7 @@
-/* Wikilink chip — icon+title pill per the design's mentionEl()
-   (docs/research/design-inventory.md §2.3 "Mention chips"). The category
-   icon and hover preview card arrive with later slices. */
+/* Wikilink chip — inline, per-Category-tinted reference to another Page
+   (docs/adr/0004-oklch-color-system, design-inventory.md §2.3). Carries the
+   target's Category color via --chip-cat (set inline in WikiLink.tsx, the
+   same convention as Relation chips) and shows the Category's duotone icon. */
 
 .chip {
   display: inline-flex;
@@ -25,7 +26,9 @@
 }
 
 /* Hover/focus reveal: the tint intensifies and the text lifts to the
-   Category color, signaling the chip is navigable. */
+   Category color, signaling the chip is navigable. Kept as two standalone
+   rules (not `.chip:hover, .chip:focus-visible`) because the #65 motion
+   regression test asserts a standalone `.chip:hover { … }` selector. */
 .chip:hover {
   background: color-mix(in oklab, var(--chip-cat, var(--bronze)) 16%, transparent);
   color: var(--chip-cat, var(--bronze-light));

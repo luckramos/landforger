@@ -55,6 +55,9 @@ function WikiLinkChip({ node, extension }: NodeViewProps) {
   )
   void revision
   const page = options.registry.get(slug)
+  // `meta` and `chipCatStyle` stay in sync: Category is a closed 7-value union
+  // and CATEGORY_META + the --cat-* tokens all cover the same 7, so a resolved
+  // page always yields a meta and a --chip-cat.
   const meta = page ? categoryMeta(page.category) : undefined
   const chipCatStyle: CSSProperties | undefined = page
     ? ({ '--chip-cat': `var(--cat-${page.category})` } as CSSProperties)
@@ -143,7 +146,8 @@ function WikiLinkChip({ node, extension }: NodeViewProps) {
           data-preview-category={page.category}
         >
           <span className={styles.previewCategory}>
-            {meta && <meta.icon size={13} />} {page.category}
+            {meta && <meta.icon size={13} />}
+            {page.category}
           </span>
           <strong className={styles.previewTitle}>{page.title}</strong>
           {page.summary && <span className={styles.previewSummary}>{page.summary}</span>}
