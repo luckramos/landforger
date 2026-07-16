@@ -1,40 +1,40 @@
 .screen { min-height: 100%; padding: 32px clamp(24px,5vw,72px) 64px; background: radial-gradient(circle at 75% 0%,color-mix(in oklab,var(--bronze) 9%,transparent),transparent 34%),var(--bg); color: var(--text); }
 .header { display: grid; grid-template-columns: minmax(180px,1fr) auto minmax(180px,1fr); align-items: end; gap: 28px; max-width: 1280px; margin: 0 auto 34px; padding-bottom: 24px; border-bottom: 1px solid var(--hairline); }
 .header > div { display: grid; gap: 5px; }
-.header a { color: var(--bronze-light); font-size: 11px; text-decoration: none; }
-.header span { color: var(--text-faint); font: 9px var(--font-mono); letter-spacing: .12em; text-transform: uppercase; }
-.header h1 { margin: 0; color: var(--text-hi); font: 400 36px var(--font-serif); }
-.header p { margin: 0; color: var(--text-dim); font: 12px/1.5 var(--font-serif); text-align: right; }
+.header a { color: var(--bronze-light); font-size: var(--text-sm); text-decoration: none; }
+.header span { color: var(--text-faint); font: var(--text-xs) var(--font-mono); letter-spacing: .12em; text-transform: uppercase; }
+.header h1 { margin: 0; color: var(--text-hi); font: 400 var(--text-display) var(--font-serif); }
+.header p { margin: 0; color: var(--text-dim); font: var(--text-sm)/1.5 var(--font-serif); text-align: right; }
 .gallery { display: grid; grid-template-columns: repeat(auto-fill,minmax(290px,1fr)); gap: 20px; max-width: 1280px; margin: auto; }
 /* Per-index entrance delay (--card-index, set inline per card) cascades the gallery in. */
 .card { overflow: hidden; border: 1px solid var(--hairline); border-radius: 12px; background: var(--panel-1); box-shadow: 0 14px 42px #0005; animation: card-in calc(var(--mo,1) * 260ms) var(--ease-house) both; animation-delay: calc(var(--mo,1) * var(--card-index, 0) * 60ms); }
 .preview { position: relative; display: grid; height: 170px; place-items: center; overflow: hidden; background: var(--bg); color: var(--text-faint); text-decoration: none; }
 .preview img { width: 100%; height: 100%; object-fit: cover; opacity: .72; outline: 1px solid oklch(1 0 0 / 0.1); outline-offset: -1px; transition: transform calc(var(--mo,1) * 220ms),opacity calc(var(--mo,1) * 220ms); }
 .preview:hover img { opacity: .9; transform: scale(1.025); }
-.preview b { position: absolute; top: 10px; left: 10px; padding: 5px 7px; border-radius: 5px; background: var(--bronze); color: var(--bg); font: 8px var(--font-mono); letter-spacing: .1em; text-transform: uppercase; }
+.preview b { position: absolute; top: 10px; left: 10px; padding: 5px 7px; border-radius: 5px; background: var(--bronze); color: var(--bg); font: var(--text-xs) var(--font-mono); letter-spacing: .1em; text-transform: uppercase; }
 .cardBody { display: grid; grid-template-columns: 1fr auto; gap: 9px; padding: 16px; }
 .cardBody label { display: grid; gap: 5px; }
 .cardBody label:has(select),.cardBody > p,.actions { grid-column: 1/-1; }
-.cardBody label > span { color: var(--text-faint); font: 8px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
-.cardBody input,.cardBody select { width: 100%; min-width: 0; padding: 8px 9px; border: 1px solid var(--hairline); border-radius: 6px; outline: 0; background: var(--panel-3); color: var(--text); font-size: 11px; }
+.cardBody label > span { color: var(--text-faint); font: var(--text-xs) var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
+.cardBody input,.cardBody select { width: 100%; min-width: 0; padding: 8px 9px; border: 1px solid var(--hairline); border-radius: 6px; outline: 0; background: var(--panel-3); color: var(--text); font-size: var(--text-sm); }
 /* #70: input only — .cardBody select isn't a zoom-risk control. 16px by
    default so focusing "Map name" never zooms; steps back to 11px once a
    pointer is likely. */
-.cardBody input { font-size: 16px; }
-@media (min-width: 640px) { .cardBody input { font-size: 11px; } }
-.cardBody > button,.actions button,.confirm button { padding: 8px 10px; border: 1px solid var(--hairline); border-radius: 6px; background: var(--panel-3); color: var(--text); font-size: 10px; cursor: pointer; }
-.cardBody > p { margin: 3px 0; color: var(--text-faint); font: 9px var(--font-mono); }
+.cardBody input { font-size: var(--text-md); }
+@media (min-width: 640px) { .cardBody input { font-size: var(--text-sm); } }
+.cardBody > button,.actions button,.confirm button { padding: 8px 10px; border: 1px solid var(--hairline); border-radius: 6px; background: var(--panel-3); color: var(--text); font-size: var(--text-xs); cursor: pointer; }
+.cardBody > p { margin: 3px 0; color: var(--text-faint); font: var(--text-xs) var(--font-mono); }
 .actions { display: flex; justify-content: space-between; gap: 8px; padding-top: 5px; border-top: 1px solid var(--hairline); }
 .actions button:disabled { opacity: .45; cursor: default; }
 .danger { border-color: color-mix(in oklab,var(--danger) 42%,transparent) !important; color: var(--danger) !important; }
 .scrim { position: fixed; z-index: 20; inset: 0; display: grid; place-items: center; background: #000b; animation: lf-fade-in calc(var(--mo,1) * 160ms) ease backwards; }
 .confirm { width: min(420px,calc(100vw - 40px)); padding: 24px; border: 1px solid var(--hairline-strong); border-radius: 12px; background: var(--panel-1); box-shadow: 0 28px 90px #000d; animation: lf-modal-pop calc(var(--mo,1) * 240ms) var(--ease-house) backwards; }
-.confirm > span { color: var(--danger); font: 9px var(--font-mono); letter-spacing: .12em; text-transform: uppercase; }
-.confirm h2 { margin: 6px 0; color: var(--text-hi); font: 400 28px var(--font-serif); }
-.confirm p { color: var(--text-dim); font: 13px/1.5 var(--font-serif); }
+.confirm > span { color: var(--danger); font: var(--text-xs) var(--font-mono); letter-spacing: .12em; text-transform: uppercase; }
+.confirm h2 { margin: 6px 0; color: var(--text-hi); font: 400 var(--text-2xl) var(--font-serif); }
+.confirm p { color: var(--text-dim); font: var(--text-base)/1.5 var(--font-serif); }
 .confirm > div { display: flex; justify-content: flex-end; gap: 8px; }
 .empty,.state { display: grid; min-height: 70vh; place-content: center; text-align: center; }
-.empty h2,.state h1 { color: var(--text-hi); font: 400 32px var(--font-serif); }
+.empty h2,.state h1 { color: var(--text-hi); font: 400 var(--text-2xl) var(--font-serif); }
 .empty p,.state span { color: var(--text-dim); }
 @keyframes card-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 @media (prefers-reduced-motion:reduce) { .card,.preview img,.scrim,.confirm { animation-duration: 0ms; animation-delay: 0ms; transition-duration: 0ms; } }

@@ -1,17 +1,17 @@
 .screen { width: min(760px, calc(100% - 40px)); margin: 0 auto; padding: 54px 0 96px; animation: new-page-in calc(var(--mo, 1) * 300ms) var(--ease-house) both; }
-.screen header > span { color: var(--bronze); font-family: var(--font-mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; }
+.screen header > span { color: var(--bronze); font-family: var(--font-mono); font-size: var(--text-xs); letter-spacing: .14em; text-transform: uppercase; }
 .screen h1 { margin: 7px 0; color: var(--text-hi); font-family: var(--font-serif); font-size: var(--text-display); font-weight: 400; line-height: 1.1; letter-spacing: -.02em; text-wrap: balance; }
-.screen header p, .screen > p { color: var(--text-faint); font-size: 12px; }
+.screen header p, .screen > p { color: var(--text-faint); font-size: var(--text-sm); }
 .categoryGrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 7px; margin: 28px 0; }
-.categoryGrid button { display: grid; min-width: 0; min-height: 90px; place-items: center; gap: 6px; padding: 10px 4px; border: 1px solid var(--hairline); border-radius: 9px; background: var(--panel-1); color: var(--text-dim); cursor: pointer; font-size: 10px; transition: transform calc(var(--mo, 1) * 160ms), border-color calc(var(--mo, 1) * 160ms); }
-.categoryGrid button span { font-size: 21px; }
+.categoryGrid button { display: grid; min-width: 0; min-height: 90px; place-items: center; gap: 6px; padding: 10px 4px; border: 1px solid var(--hairline); border-radius: 9px; background: var(--panel-1); color: var(--text-dim); cursor: pointer; font-size: var(--text-xs); transition: transform calc(var(--mo, 1) * 160ms), border-color calc(var(--mo, 1) * 160ms); }
+.categoryGrid button span { font-size: var(--text-lg); }
 .categoryGrid button[aria-pressed='true'] { border-color: var(--bronze); background: var(--panel-2); color: var(--text-hi); transform: translateY(-2px); }
 .form { display: grid; gap: 14px; padding: 24px; border: 1px solid var(--hairline); border-radius: 12px; background: var(--panel-1); }
-.form > label { display: grid; gap: 6px; color: var(--text-faint); font-family: var(--font-mono); font-size: 10px; letter-spacing: .05em; }
-.form > label > input, .form > label > textarea { padding: 9px 11px; border: 1px solid var(--hairline); border-radius: 7px; outline: 0; background: var(--panel-2); color: var(--text); font: 13px var(--font-sans); font-size: 16px; }
-.form > label:first-child > input { font: 24px var(--font-serif); }
+.form > label { display: grid; gap: 6px; color: var(--text-faint); font-family: var(--font-mono); font-size: var(--text-xs); letter-spacing: .05em; }
+.form > label > input, .form > label > textarea { padding: 9px 11px; border: 1px solid var(--hairline); border-radius: 7px; outline: 0; background: var(--panel-2); color: var(--text); font: var(--text-base) var(--font-sans); font-size: var(--text-md); }
+.form > label:first-child > input { font: var(--text-xl) var(--font-serif); }
 .form > .field { display: grid; gap: 6px; }
-.fieldLabel { color: var(--text-faint); font-family: var(--font-mono); font-size: 10px; letter-spacing: .05em; }
+.fieldLabel { color: var(--text-faint); font-family: var(--font-mono); font-size: var(--text-xs); letter-spacing: .05em; }
 .form textarea { min-height: 76px; resize: vertical; }
 .create { justify-self: end; padding: 9px 16px; border: 1px solid var(--bronze); border-radius: 8px; background: color-mix(in oklab, var(--bronze) 18%, var(--panel-2)); color: var(--bronze-light); cursor: pointer; transition: transform calc(var(--mo, 1) * 120ms) var(--ease-house); }
 .create:active:not(:disabled) { transform: scale(0.96); }
@@ -21,5 +21,5 @@
 /* #70: Summary/Tags/Cover default to 16px so focusing them never zooms the
    viewport; step back to 13px once a pointer is likely. (Title keeps its own
    24px via the :first-child override above, unaffected either way.) */
-@media (min-width: 640px) { .form > label > input, .form > label > textarea { font-size: 13px; } }
+@media (min-width: 640px) { .form > label > input, .form > label > textarea { font-size: var(--text-base); } }
 @media (prefers-reduced-motion: reduce) { .screen { animation-duration: .01ms; } .categoryGrid button { transition-duration: .01ms; } }
