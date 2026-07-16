@@ -60,7 +60,7 @@ button.navItem { appearance: none; border: 0; background: none; font-family: inh
 .tags { margin: 18px 10px; }
 .tags h2 { margin: 0 0 9px; color: var(--text-faint); font-family: var(--font-mono); font-size: 9px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; }
 .tags div { display: flex; flex-wrap: wrap; gap: 5px; width: 220px; }
-.tags a { padding: 4px 7px; border: 1px solid var(--hairline-soft); border-radius: 999px; color: var(--text-dim); font-size: 10px; text-decoration: none; }
+.tags a { padding: 4px 7px; border: 1px solid var(--hairline-soft); border-radius: 999px; color: var(--text-dim); font-size: 10px; text-decoration: none; overflow-wrap: break-word; }
 .tags small { margin-left: 4px; color: var(--text-faint); }
 .bottomNav { margin-top: auto; border-top: 1px solid var(--hairline-soft); padding-top: 10px; }
 
