@@ -39,7 +39,7 @@
 
 /* No independent cap: sits inside .header, which now shares the 40rem/#71
    reading measure — so the summary lines up with the body below it. */
-.summary { margin: 4px 0; color: var(--text-dim); font-size: 17px; line-height: 1.5; }
+.summary { margin: 4px 0; color: var(--text-dim); font-size: 17px; line-height: 1.5; text-wrap: pretty; overflow-wrap: break-word; }
 
 /* Page actions — See on map · Connections · See on timeline, one aligned row. */
 .actions {
@@ -96,6 +96,8 @@
   line-height: 1.15;
   color: var(--text-hi);
   margin: 0;
+  text-wrap: balance;
+  overflow-wrap: break-word;
 }
 
 .saveState {
@@ -201,6 +203,7 @@
   font-family: var(--font-sans);
   font-size: 13px;
   font-weight: 500;
+  overflow-wrap: break-word;
 }
 
 .backlinkRow span,
@@ -210,6 +213,7 @@
   font-family: var(--font-serif);
   font-size: 12px;
   line-height: 1.4;
+  overflow-wrap: break-word;
 }
 
 @keyframes backlinks-in {

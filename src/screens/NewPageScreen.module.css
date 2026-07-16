@@ -1,6 +1,6 @@
 .screen { width: min(760px, calc(100% - 40px)); margin: 0 auto; padding: 54px 0 96px; animation: new-page-in calc(var(--mo, 1) * 300ms) var(--ease-house) both; }
 .screen header > span { color: var(--bronze); font-family: var(--font-mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; }
-.screen h1 { margin: 7px 0; color: var(--text-hi); font-family: var(--font-serif); font-size: var(--text-display); font-weight: 400; }
+.screen h1 { margin: 7px 0; color: var(--text-hi); font-family: var(--font-serif); font-size: var(--text-display); font-weight: 400; line-height: 1.1; letter-spacing: -.02em; text-wrap: balance; }
 .screen header p, .screen > p { color: var(--text-faint); font-size: 12px; }
 .categoryGrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 7px; margin: 28px 0; }
 .categoryGrid button { display: grid; min-width: 0; min-height: 90px; place-items: center; gap: 6px; padding: 10px 4px; border: 1px solid var(--hairline); border-radius: 9px; background: var(--panel-1); color: var(--text-dim); cursor: pointer; font-size: 10px; transition: transform calc(var(--mo, 1) * 160ms), border-color calc(var(--mo, 1) * 160ms); }
