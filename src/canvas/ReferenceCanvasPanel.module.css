@@ -8,7 +8,7 @@
      11px dot. 180px = 160px palette content + 2*9px toolbar padding + 2px
      rounding slack. */
   grid-template-columns: 180px minmax(0, 1fr);
-  background: #0d0d0f;
+  background: oklch(0.16 0.004 285.918);
 }
 
 .toolbar {
@@ -119,7 +119,7 @@
 .palette .dot {
   width: 11px;
   height: 11px;
-  border: 1px solid rgba(255, 255, 255, .15);
+  border: 1px solid oklch(1 0 0 / 0.15);
   border-radius: 50%;
   transition: transform calc(var(--mo, 1) * 120ms) var(--ease-house);
 }
@@ -168,8 +168,8 @@
   min-width: 0;
   overflow: hidden;
   touch-action: none;
-  background-color: #111114;
-  background-image: radial-gradient(circle, rgba(226, 208, 167, .22) 1px, transparent 1.3px);
+  background-color: oklch(0.179 0.006 285.767);
+  background-image: radial-gradient(circle, oklch(0.862 0.058 87.092 / 0.22) 1px, transparent 1.3px);
   background-position: var(--grid-x) var(--grid-y);
   background-size: var(--grid-size) var(--grid-size);
   cursor: crosshair;
@@ -187,12 +187,14 @@
 .item {
   position: absolute;
   box-sizing: border-box;
-  color: #161412;
+  /* ΔL ≈ 0.009 from --panel-3 (issue #80) — references the token instead of
+     duplicating a near-identical warm neutral. */
+  color: var(--panel-3);
   transition: left calc(var(--mo, 1) * 260ms) var(--ease-house), top calc(var(--mo, 1) * 260ms) var(--ease-house), width calc(var(--mo, 1) * 260ms) var(--ease-house), height calc(var(--mo, 1) * 260ms) var(--ease-house), box-shadow calc(var(--mo, 1) * 200ms) ease;
   user-select: none;
 }
 .stage[data-live-item='true'] .item { transition: none; }
-.item[data-selected='true'] { box-shadow: 0 0 0 2px #121214, 0 0 0 4px var(--bronze-hi, var(--bronze-light)); }
+.item[data-selected='true'] { box-shadow: 0 0 0 2px oklch(0.183 0.004 285.994), 0 0 0 4px var(--bronze-hi, var(--bronze-light)); }
 .item svg { display: block; width: 100%; height: 100%; overflow: visible; }
 .item svg path,
 .item svg line { fill: none; stroke: var(--item-color); stroke-width: 3; vector-effect: non-scaling-stroke; }
@@ -211,9 +213,9 @@
 .text { padding: 6px 9px; color: var(--item-color); font: var(--text-lg)/1.35 var(--font-serif); }
 .sticky textarea,
 .text textarea { width: 100%; height: 100%; resize: none; border: 0; outline: 0; background: transparent; color: inherit; font: inherit; }
-.image { overflow: hidden; border: 3px solid color-mix(in oklab, var(--item-color) 80%, #fff); background: #19191c; box-shadow: 0 8px 30px rgba(0,0,0,.42); }
+.image { overflow: hidden; border: 3px solid color-mix(in oklab, var(--item-color) 80%, white); background: oklch(0.215 0.006 285.899); box-shadow: 0 8px 30px rgba(0,0,0,.42); }
 .image img { display: block; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
-.link { display: grid; place-items: center; border: 1px solid color-mix(in oklab, var(--item-color) 70%, transparent); border-radius: 10px; background: color-mix(in oklab, var(--item-color) 20%, #18181b); }
+.link { display: grid; place-items: center; border: 1px solid color-mix(in oklab, var(--item-color) 70%, transparent); border-radius: 10px; background: color-mix(in oklab, var(--item-color) 20%, oklch(0.21 0.006 285.885)); }
 .link a { padding: 10px; color: var(--item-color); font: 600 var(--text-base) var(--font-serif); text-decoration: none; }
 
 .itemResize {
@@ -223,14 +225,14 @@
   width: 14px;
   height: 14px;
   padding: 0;
-  border: 2px solid #111;
+  border: 2px solid oklch(0.178 0 0);
   border-radius: 3px;
   background: var(--bronze-hi, var(--bronze-light));
   cursor: nwse-resize;
 }
 
 .marquee,
-.shapePreview { position: absolute; box-sizing: border-box; border: 1px solid var(--bronze-hi, var(--bronze-light)); background: rgba(200, 159, 88, .1); pointer-events: none; }
+.shapePreview { position: absolute; box-sizing: border-box; border: 1px solid var(--bronze-hi, var(--bronze-light)); background: oklch(0.725 0.102 79.787 / 0.1); pointer-events: none; }
 .previewSvg,
 .laser { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
 .previewSvg path,
