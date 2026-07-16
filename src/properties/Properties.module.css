@@ -74,6 +74,10 @@
 }
 .labelInput:hover { border-color: var(--hairline); }
 .labelInput:focus { border-color: var(--bronze); color: var(--text); }
+/* #70: mobile-first 16px so focusing a text-bearing input/textarea never
+   zooms the viewport; steps back down to the compact desktop size at the
+   wide-viewport (pointer-likely) breakpoint. */
+.labelInput { font-size: 16px; }
 
 /* Hit-area normalization (#59): the settings-gear and remove icon buttons
    (both 26px .iconButtons — 14px icon + 5px padding + 1px border on each
@@ -177,7 +181,7 @@
   background: var(--panel-3);
   box-shadow: 0 16px 40px rgba(0, 0, 0, .5);
 }
-.dropdown input { width: 100%; min-height: 31px; padding: 6px 8px; border: 1px solid var(--hairline); border-radius: 6px; outline: 0; background: var(--panel-2); color: var(--text); font: inherit; }
+.dropdown input { width: 100%; min-height: 31px; padding: 6px 8px; border: 1px solid var(--hairline); border-radius: 6px; outline: 0; background: var(--panel-2); color: var(--text); font: inherit; font-size: 16px; }
 .dropdown input:focus { border-color: var(--bronze); }
 .dropdown button {
   display: inline-flex;
@@ -211,6 +215,7 @@
   background: transparent;
   color: var(--text);
   font: inherit;
+  font-size: 16px;
   transition: var(--tint-transition);
 }
 .input:hover, .textarea:hover, .input:focus, .textarea:focus { border-color: var(--hairline); background: var(--panel-1); }
@@ -247,6 +252,7 @@
   background: transparent;
   color: var(--text);
   font: inherit;
+  font-size: 16px;
   text-align: center;
   -moz-appearance: textfield;
   appearance: textfield;
@@ -382,7 +388,7 @@
   background: var(--panel-3);
   box-shadow: 0 16px 40px rgba(0, 0, 0, .5);
 }
-.imageMenu .input { font-size: 12px; }
+.imageMenu .input { font-size: 16px; }
 .imageMenuActions { display: flex; justify-content: flex-end; gap: 6px; }
 
 /* Cover banner: full-width tile above the page title. */
@@ -593,7 +599,7 @@
 
 /* --- Property definition editor (inside popover + template dialog) ---- */
 .definitionEditor { display: grid; gap: 5px; margin: 0; padding: 0; border: 0; color: var(--text-faint); font-family: var(--font-mono); font-size: 9px; }
-.definitionEditor > input { width: 100%; padding: 6px 8px; border: 1px solid var(--hairline); border-radius: 6px; background: var(--panel-2); color: var(--text-dim); outline: 0; transition: var(--tint-transition); }
+.definitionEditor > input { width: 100%; padding: 6px 8px; border: 1px solid var(--hairline); border-radius: 6px; background: var(--panel-2); color: var(--text-dim); outline: 0; font-size: 16px; transition: var(--tint-transition); }
 .definitionEditor > input:focus { border-color: var(--bronze); }
 .definitionEditor legend { padding: 0; }
 .definitionEditor small { margin-left: 6px; color: var(--bronze); }
@@ -620,6 +626,8 @@
 .dialogFields > .checkbox { display: flex; flex-direction: row; align-items: center; gap: 8px; }
 .checkbox input { width: auto; }
 .dialog input, .dialog select, .templateRow input { width: 100%; min-height: 31px; padding: 6px 8px; border: 1px solid var(--hairline); border-radius: 6px; outline: 0; background: var(--panel-2); color: var(--text); font: inherit; transition: var(--tint-transition); }
+/* #70: input/textarea only — .dialog select stays as-is (not a zoom-risk control). */
+.dialog input, .templateRow input { font-size: 16px; }
 .dialog input:focus, .dialog select:focus, .templateRow input:focus { border-color: var(--bronze); }
 .dialogActions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
 .dialogActions .danger { margin-right: auto; }
@@ -634,3 +642,16 @@
   .typePicker { left: 0; }
 }
 @media (prefers-reduced-motion: reduce) { .dialogScrim { animation-duration: .01ms; } }
+
+/* #70: mobile inputs default to 16px (never zooms on focus); step back down
+   to each field's original compact size once the viewport is wide enough
+   that touch-zoom isn't a concern. */
+@media (min-width: 640px) {
+  .labelInput { font-size: 10px; }
+  .dropdown input { font-size: inherit; }
+  .input, .textarea { font-size: inherit; }
+  .numberInput { font-size: inherit; }
+  .imageMenu .input { font-size: 12px; }
+  .definitionEditor > input { font-size: inherit; }
+  .dialog input, .templateRow input { font-size: inherit; }
+}

@@ -17,6 +17,11 @@
 .cardBody label:has(select),.cardBody > p,.actions { grid-column: 1/-1; }
 .cardBody label > span { color: var(--text-faint); font: 8px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
 .cardBody input,.cardBody select { width: 100%; min-width: 0; padding: 8px 9px; border: 1px solid var(--hairline); border-radius: 6px; outline: 0; background: var(--panel-3); color: var(--text); font-size: 11px; }
+/* #70: input only — .cardBody select isn't a zoom-risk control. 16px by
+   default so focusing "Map name" never zooms; steps back to 11px once a
+   pointer is likely. */
+.cardBody input { font-size: 16px; }
+@media (min-width: 640px) { .cardBody input { font-size: 11px; } }
 .cardBody > button,.actions button,.confirm button { padding: 8px 10px; border: 1px solid var(--hairline); border-radius: 6px; background: var(--panel-3); color: var(--text); font-size: 10px; cursor: pointer; }
 .cardBody > p { margin: 3px 0; color: var(--text-faint); font: 9px var(--font-mono); }
 .actions { display: flex; justify-content: space-between; gap: 8px; padding-top: 5px; border-top: 1px solid var(--hairline); }
