@@ -42,7 +42,7 @@
    can't drift apart (previously 8px outer vs. a 5px button — mismatched). */
 .scopeToggle { --toggle-pad: 2px; display: flex; padding: var(--toggle-pad); border: 1px solid var(--hairline); border-radius: var(--radius-sm); }
 .scopeToggle button { padding: 4px 9px; border: 0; border-radius: calc(var(--radius-sm) - var(--toggle-pad)); font-size: var(--text-xs); cursor: pointer; }
-.scopeToggle button[aria-pressed='true'] { background: color-mix(in oklab, var(--bronze) 16%, var(--panel-2)); color: var(--bronze-hi); }
+.scopeToggle button[aria-pressed='true'] { background: color-mix(in oklab, var(--bronze) 16%, var(--panel-2)); color: var(--bronze-hi, var(--bronze-light)); }
 /* Hit-area normalization (#59): 32px buttons | gap 8px | pitch 32+8=40 |
    ::after inset -4px (=-(40-32)/2) | target 32+8=40. 40 <= 40 — safe
    whether this stack reads as a row or a column. */
