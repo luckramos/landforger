@@ -23,6 +23,12 @@
   --bronze: #b0824a;
   --bronze-light: #e6c79a;
   --on-bronze: #1a1408;
+  /* Canvas/Graph active-state accent (selection ring, shape-preview outline,
+     scope toggle). Was referenced 5x with no definition (issue #78) — those
+     declarations were invalid at computed-value time. Aliased to
+     --bronze-light so it reads as the same "active accent" already used
+     for selected/active states elsewhere (MapScreen, Properties, Button). */
+  --bronze-hi: var(--bronze-light);
   --danger: oklch(0.72 0.16 25);
   --danger-subtle: color-mix(in oklab, var(--danger) 50%, transparent);
   --danger-bg: oklch(0.5 0.12 25 / 0.16);

@@ -149,4 +149,12 @@ describe('design tokens match the measured design values', () => {
       expect(contrastRatio(onBronze, bronzeLight)).toBeGreaterThanOrEqual(WCAG_AA_TEXT)
     })
   })
+
+  it('defines --bronze-hi as a real value, guarding against the invisible-variable bug (issue #78)', () => {
+    // --bronze-hi was referenced 5x (Canvas selection ring/shape-preview, Graph
+    // scope toggle) but never defined, so those declarations were invalid at
+    // computed-value time. Assert an actual definition — not just any mention
+    // of the substring "--bronze-hi" (a var() call site would also match).
+    expect(tokens).toMatch(/--bronze-hi:\s*\S+/)
+  })
 })
