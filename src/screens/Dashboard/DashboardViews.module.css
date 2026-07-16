@@ -11,7 +11,7 @@
 .categoryCard { composes: ink from '../../styles/cardHover.module.css'; --card-ink: var(--category-color); display: grid; min-height: 132px; padding: 17px; border-radius: 10px; background: linear-gradient(145deg, color-mix(in oklab, var(--category-color) 8%, var(--panel-2)), var(--panel-1)); color: var(--text); text-decoration: none; animation: card-in calc(var(--mo, 1) * 360ms) var(--ease-house) backwards; }
 .categoryCard > span { color: var(--category-color); font-size: 20px; }
 .categoryCard h2 { margin: auto 0 4px; color: var(--text-hi); font-family: var(--font-serif); font-size: 17px; font-weight: 500; }
-.categoryCard b { position: absolute; top: 15px; right: 14px; color: var(--text-dim); font-family: var(--font-mono); font-size: 12px; }
+.categoryCard b { position: absolute; top: 15px; right: 14px; color: var(--text-dim); font-family: var(--font-mono); font-size: 12px; font-variant-numeric: tabular-nums; }
 .categoryCard small { color: var(--text-faint); font-size: 10px; }
 
 .recent { margin-top: 56px; }
@@ -27,7 +27,7 @@
 
 .listHeader { display: flex; align-items: center; gap: 16px; padding-bottom: 28px; border-bottom: 1px solid var(--hairline); }
 .listHeader h1 { margin: 2px 0; font-size: 48px; }
-.listHeader p { margin: 0; color: var(--text-faint); font-size: 12px; }
+.listHeader p { margin: 0; color: var(--text-faint); font-size: 12px; font-variant-numeric: tabular-nums; }
 .listIcon { display: grid; place-items: center; font-family: var(--font-serif); font-size: 34px; line-height: 1; }
 
 .pageGrid { columns: 2; column-gap: 14px; margin-top: 28px; }

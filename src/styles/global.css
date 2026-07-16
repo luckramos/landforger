@@ -42,6 +42,15 @@ a {
   color: var(--text-hi);
 }
 
+/* Non-selectable app chrome (issue #75): control labels (button text) and
+   keyboard-hint `kbd` chips shouldn't get swept up when a pointer drags
+   across this app-like UI. Page/prose content lives in the tiptap editor,
+   never inside a <button>, so it stays selectable. */
+button,
+kbd {
+  user-select: none;
+}
+
 /* Route transitions (View Transitions API) — replaces the expanding burst disc
    that used to cover Auth→Worlds, Worlds→Dashboard and Map→Page. The outgoing
    view fades while the incoming one rises in, reusing the same vocabulary as

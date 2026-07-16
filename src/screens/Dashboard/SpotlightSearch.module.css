@@ -43,7 +43,7 @@
 .resultCopy strong, .resultCopy small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .resultCopy strong { color: var(--text-hi); font-family: var(--font-serif); font-size: 15px; font-weight: 500; }
 .resultCopy small { margin-top: 3px; color: var(--text-faint); font-size: 10px; }
-.resultCopy mark { padding: 0; background: transparent; color: var(--bronze-light); text-decoration: underline; text-decoration-color: color-mix(in oklab, var(--bronze) 60%, transparent); text-underline-offset: 2px; }
+.resultCopy mark { padding: 0; background: transparent; color: var(--bronze-light); text-decoration: underline; text-decoration-color: color-mix(in oklab, var(--bronze) 60%, transparent); text-decoration-thickness: from-font; text-decoration-skip-ink: auto; text-underline-offset: 2px; }
 .resultKind { color: var(--text-faint); font: 9px var(--font-mono); }
 .empty { margin: 30px 16px; color: var(--text-faint); font-size: 12px; text-align: center; }
 .footer { display: flex; gap: 18px; padding: 9px 16px; border-top: 1px solid var(--hairline); color: var(--text-faint); font: 9px var(--font-mono); }
