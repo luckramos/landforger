@@ -5,36 +5,49 @@
 .chip {
   display: inline-flex;
   align-items: center;
-  padding: 1px 8px;
-  border: 1px solid var(--hairline);
-  border-radius: var(--radius-pill);
-  background: var(--panel-3);
+  gap: 3px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: var(--radius-xs);
+  /* Rest: a whisper of the target's Category color. Transparent for ghosts
+     (no --chip-cat set). Mirrors the Relation-chip color-mix recipe. */
+  background: color-mix(in oklab, var(--chip-cat, transparent) 8%, transparent);
   color: var(--text-hi);
-  font-size: 0.92em;
+  font-size: 0.94em;
   line-height: 1.4;
   white-space: nowrap;
   cursor: pointer;
   transition:
     background calc(var(--mo, 1) * 160ms),
-    border-color calc(var(--mo, 1) * 160ms),
+    color calc(var(--mo, 1) * 160ms),
     box-shadow calc(var(--mo, 1) * 160ms),
     transform calc(var(--mo, 1) * 120ms) var(--ease-house);
 }
 
+/* Hover/focus reveal: the tint intensifies and the text lifts to the
+   Category color, signaling the chip is navigable. */
 .chip:hover {
-  border-color: color-mix(in oklab, var(--bronze) 55%, transparent);
-  background: color-mix(in oklab, var(--bronze) 10%, var(--panel-3));
+  background: color-mix(in oklab, var(--chip-cat, var(--bronze)) 16%, transparent);
+  color: var(--chip-cat, var(--bronze-light));
+}
+
+.chip:focus-visible {
+  background: color-mix(in oklab, var(--chip-cat, var(--bronze)) 16%, transparent);
+  color: var(--chip-cat, var(--bronze-light));
+  outline: 2px solid color-mix(in oklab, var(--chip-cat, var(--bronze)) 60%, transparent);
+  outline-offset: 1px;
 }
 
 .chip:active {
   transform: scale(0.96);
 }
 
+/* The duotone category icon. Both its outline (currentColor) and its wash
+   (--icon-secondary-color, which falls back to currentColor) take the
+   Category color — matching the dashboard's `color: var(--cat-*)` pattern. */
 .categoryIcon {
-  margin-right: 5px;
-  color: var(--bronze-light);
-  font-family: var(--font-mono);
-  font-size: 0.82em;
+  display: inline-flex;
+  color: var(--chip-cat, var(--bronze-light));
 }
 
 .preview {
@@ -57,11 +70,18 @@
 }
 
 .previewCategory {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   color: var(--bronze);
   font-family: var(--font-mono);
   font-size: var(--text-xs);
   letter-spacing: 0.12em;
   text-transform: uppercase;
+}
+
+.previewCategory svg {
+  color: var(--chip-cat, var(--bronze-light));
 }
 
 .previewTitle {
@@ -104,13 +124,21 @@
   }
 }
 
-/* Ghost link — the target Slug no longer resolves (CONTEXT.md — "Ghost link"). */
+/* Ghost link — the target Slug no longer resolves (CONTEXT.md — "Ghost link").
+   No Category is known, so no tint and no icon. */
 .ghost {
-  border-style: dashed;
+  padding: 0 3px;
+  border: 1px dashed var(--hairline);
   background: transparent;
   color: var(--text-faint);
   font-family: var(--font-mono);
   font-size: 0.85em;
+}
+
+.ghost:hover,
+.ghost:focus-visible {
+  background: transparent;
+  color: var(--text-faint);
 }
 
 @media (prefers-reduced-motion: reduce) {
