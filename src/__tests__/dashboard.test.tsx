@@ -85,6 +85,18 @@ describe('Dashboard shell controls', () => {
     expect(screen.getByRole('button', { name: 'Disable read-only' })).toBeTruthy()
   })
 
+  it('carries the full text of truncated Breadcrumb segments in a title attribute', async () => {
+    await renderAt('/w/ninth-vale/p/sera')
+    const breadcrumb = screen.getByLabelText('Breadcrumb')
+
+    const worldSegment = breadcrumb.querySelector('a')
+    expect(worldSegment?.textContent).toBe('The Ninth Vale')
+    expect(worldSegment?.getAttribute('title')).toBe('The Ninth Vale')
+
+    const pageSegment = within(breadcrumb).getByText('Sera Valen')
+    expect(pageSegment.getAttribute('title')).toBe('Sera Valen')
+  })
+
   it('opens Spotlight from the shortcut or topbar trigger and focuses its search box', async () => {
     await renderAt('/w/ninth-vale')
     fireEvent.keyDown(document, { key: 'k', metaKey: true })
@@ -108,6 +120,23 @@ describe('Dashboard shell controls', () => {
 
     fireEvent.change(search, { target: { value: 'char' } })
     expect(screen.getByRole('option', { name: /Characters.*Category/ })).toBeTruthy()
+  })
+
+  it('carries the full text of truncated Spotlight result copy in a title attribute', async () => {
+    await renderAt('/w/ninth-vale')
+    fireEvent.keyDown(document, { key: 'k', metaKey: true })
+    const search = screen.getByRole('combobox', { name: 'Search Pages and Categories' })
+
+    fireEvent.change(search, { target: { value: 'sera' } })
+    const sera = screen.getByRole('option', { name: /Sera Valen.*Characters/ })
+    const summary = "A guild cartographer chasing the ninth map before the tide swallows what's left of the coast."
+    expect(sera.querySelector('strong')?.getAttribute('title')).toBe('Sera Valen')
+    expect(sera.querySelector('small')?.getAttribute('title')).toBe(summary)
+
+    fireEvent.change(search, { target: { value: 'char' } })
+    const characters = screen.getByRole('option', { name: /Characters.*Category/ })
+    expect(characters.querySelector('strong')?.getAttribute('title')).toBe('Characters')
+    expect(characters.querySelector('small')?.getAttribute('title')).toBe('Category')
   })
 
   it('moves the Spotlight selection with arrows and Enter navigates to the selected Page', async () => {
