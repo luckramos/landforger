@@ -252,22 +252,6 @@
   cursor: pointer;
 }
 
-.checkboxBox {
-  width: 20px;
-  height: 20px;
-  border-radius: 5px;
-  border: 1px solid var(--hairline-strong);
-  background: transparent;
-  transition:
-    background calc(var(--mo, 1) * 160ms),
-    border-color calc(var(--mo, 1) * 160ms);
-}
-
-.checkboxBox[data-checked] {
-  background: var(--bronze);
-  border-color: var(--bronze);
-}
-
 .forgotLink {
   font-size: var(--text-base);
   color: var(--text-dim);

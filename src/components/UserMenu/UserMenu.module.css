@@ -4,7 +4,7 @@
   height: 34px;
   border-radius: 50%;
   border: 1px solid var(--hairline-strong);
-  background: linear-gradient(135deg, var(--bronze-light), var(--bronze));
+  background: var(--bronze);
   color: var(--on-bronze);
   font-family: var(--font-sans);
   font-size: var(--text-sm);

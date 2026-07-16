@@ -223,8 +223,10 @@ describe('staggered dialog and gallery entrances (#61)', () => {
     expect(src).toContain('initial="hidden"')
     expect(src).toContain('animate="visible"')
     expect(src).toContain('variants={dialogContainerVariants(motionScale)}')
+    // The gear popover auto-saves, so it has two staggered chunks now (summary +
+    // fields) rather than a third actions row.
     expect(src).toContain('<motion.p className={styles.settingsSummary} variants={DIALOG_CHUNK_VARIANTS} transition={dialogChunkTransition(motionScale)}>')
-    expect(src).toContain('<motion.div className={styles.settingsActions} variants={DIALOG_CHUNK_VARIANTS} transition={dialogChunkTransition(motionScale)}>')
+    expect(src).not.toContain('styles.settingsActions')
   })
 
   it('no longer pops the whole dialog box in as one block via CSS — Motion drives the staggered chunks now', () => {

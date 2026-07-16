@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { type CSSProperties } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { overlayExitTransition } from '../components/motionPrefs'
 import { useUiStore } from '../state/uiStore'
@@ -7,6 +7,8 @@ import { icons } from '../icons'
 import { ImageInput } from './ImageInput'
 import { NumberInput } from './NumberInput'
 import { DateInput } from './DateInput'
+import { SelectInput } from './SelectInput'
+import { RelationPicker } from './RelationPicker'
 import styles from './Properties.module.css'
 
 /** Shared pill enter/exit for chips that can be added and removed. */
@@ -22,12 +24,13 @@ interface PropertyInputProps {
   pages: Page[]
   disabled?: boolean
   onChange: (value: CustomProperty['value']) => void
+  /** When provided, resolved relation chips become navigable links to their target Page. */
+  onOpenPage?: (slug: string) => void
 }
 
 /** Public form seam shared by inline Page Properties and per-Category create forms. */
-export function PropertyInput({ property, pages, disabled = false, onChange }: PropertyInputProps) {
+export function PropertyInput({ property, pages, disabled = false, onChange, onOpenPage }: PropertyInputProps) {
   const motionScale = useUiStore((state) => state.motionScale)
-  const [pickerOpen, setPickerOpen] = useState(false)
   const scalar = Array.isArray(property.value) ? '' : property.value
 
   if (property.type === 'relation') {
@@ -44,9 +47,13 @@ export function PropertyInput({ property, pages, disabled = false, onChange }: P
           <AnimatePresence initial={false}>
             {slugs.map((slug) => {
               const target = pages.find((candidate) => candidate.slug === slug)
+              // Resolved relations carry their target's Category color via --chip-cat.
+              const chipStyle = target ? ({ '--chip-cat': `var(--cat-${target.category})` } as CSSProperties) : undefined
               return (
-                <motion.span key={slug} className={target ? styles.relationChip : styles.ghostChip} {...chipMotion} transition={overlayExitTransition(motionScale)}>
-                  <span className={styles.chipLabel}>{target?.title ?? slug}</span>
+                <motion.span key={slug} className={target ? styles.relationChip : styles.ghostChip} style={chipStyle} {...chipMotion} transition={overlayExitTransition(motionScale)}>
+                  {target && onOpenPage
+                    ? <button type="button" className={styles.chipNav} aria-label={`Go to ${target.title}`} onClick={() => onOpenPage(target.slug)}>{target.title}</button>
+                    : <span className={styles.chipLabel}>{target?.title ?? slug}</span>}
                   {!disabled && (
                     <button type="button" className={styles.chipRemove} aria-label={`Remove ${target?.title ?? slug} from ${property.label}`} onClick={() => onChange(slugs.filter((item) => item !== slug))}><icons.close size={12} /></button>
                   )}
@@ -55,20 +62,12 @@ export function PropertyInput({ property, pages, disabled = false, onChange }: P
             })}
           </AnimatePresence>
           {!disabled && (
-            <span className={styles.chipAnchor}>
-              <button type="button" className={styles.addChip} aria-label={`Add ${property.label}`} aria-expanded={pickerOpen} onClick={() => setPickerOpen((open) => !open)}><icons.add size={14} /></button>
-              <AnimatePresence>
-                {pickerOpen && (
-                  <motion.div className={styles.dropdown} aria-label={`${property.label} choices`} initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={overlayExitTransition(motionScale)}>
-                    {targets.length > 0 ? targets.map((target) => (
-                      <button key={target.slug} type="button" aria-label={target.title} onClick={() => { onChange([...slugs, target.slug]); setPickerOpen(false) }}>
-                        <span style={{ color: `var(--cat-${target.category})` }}><icons.circle size={10} weight="fill" /></span>{target.title}
-                      </button>
-                    )) : <span className={styles.empty}>No matching Pages</span>}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </span>
+            <RelationPicker
+              targets={targets}
+              label={property.label}
+              motionScale={motionScale}
+              onAdd={(slug) => onChange([...slugs, slug])}
+            />
           )}
         </div>
       </div>
@@ -81,10 +80,13 @@ export function PropertyInput({ property, pages, disabled = false, onChange }: P
 
   if (property.type === 'select') {
     return (
-      <select className={styles.input} aria-label={property.label} disabled={disabled} value={String(scalar)} onChange={(event) => onChange(event.target.value)}>
-        <option value="">—</option>
-        {(property.options ?? []).map((option) => <option key={option} value={option}>{option}</option>)}
-      </select>
+      <SelectInput
+        value={String(scalar)}
+        label={property.label}
+        options={property.options ?? []}
+        disabled={disabled}
+        onChange={onChange}
+      />
     )
   }
 

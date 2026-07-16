@@ -1,6 +1,7 @@
 import { useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '../../components/Button/Button'
+import { Checkbox } from '../../components/Checkbox/Checkbox'
 import { prefersReducedMotion } from '../../components/motionPrefs'
 import { useSessionStore } from '../../state/sessionStore'
 import styles from './Auth.module.css'
@@ -156,16 +157,13 @@ export function Auth() {
 
           {mode === 'login' && (
             <div className={styles.rowBetween} data-stagger>
-              <button
-                type="button"
-                role="checkbox"
-                aria-checked={rememberMe}
+              <Checkbox
                 className={styles.checkboxRow}
-                onClick={() => setRememberMe((v) => !v)}
+                checked={rememberMe}
+                onChange={() => setRememberMe((v) => !v)}
               >
-                <span className={styles.checkboxBox} data-checked={rememberMe || undefined} aria-hidden="true" />
-                <span>Remember me</span>
-              </button>
+                Remember me
+              </Checkbox>
               <a href="#forgot" className={styles.forgotLink} onClick={(e) => e.preventDefault()}>
                 Forgot?
               </a>

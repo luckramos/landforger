@@ -288,9 +288,11 @@ describe('PageScreen — Properties', () => {
 
   it('filters a Relation picker by target Category and immediately updates backlinks', async () => {
     const { repo } = await mountScreen('alaric')
+    // Picker groups by Category and starts collapsed; expand Organizations to reach The Watch.
     fireEvent.click(screen.getByRole('button', { name: 'Add Allies' }))
-    expect(screen.getByRole('button', { name: 'The Watch' })).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'The Gate of Ash' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Organizations' }))
+    expect(screen.getByRole('button', { name: 'The Watch' })).toBeTruthy()
 
     fireEvent.click(screen.getByRole('button', { name: 'The Watch' }))
     await act(async () => {})
@@ -324,9 +326,11 @@ describe('PageScreen — Properties', () => {
   it('configures options and Relation target Categories from the settings popover', async () => {
     const { repo } = await mountScreen('alaric')
     // Select options now live behind the property's settings gear and commit on Save.
+    // Options are added as pills by typing and pressing Enter (Rank starts with Guard, Captain).
     fireEvent.click(screen.getByRole('button', { name: 'Configure Rank' }))
-    fireEvent.change(screen.getByLabelText('Options for Rank'), { target: { value: 'Guard, Captain, Marshal' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Save Rank settings' }))
+    const rankOptions = screen.getByLabelText('Options for Rank')
+    fireEvent.change(rankOptions, { target: { value: 'Marshal' } })
+    fireEvent.keyDown(rankOptions, { key: 'Enter' })
     await act(async () => {})
 
     fireEvent.click(screen.getByRole('button', { name: 'Add property' }))
@@ -334,16 +338,29 @@ describe('PageScreen — Properties', () => {
     await act(async () => {})
     fireEvent.click(screen.getByRole('button', { name: 'Configure Relation property' }))
     fireEvent.click(screen.getByLabelText('Target locations for Relation property'))
-    fireEvent.click(screen.getByRole('button', { name: 'Save Relation property settings' }))
     await act(async () => {})
 
     fireEvent.click(screen.getByRole('button', { name: 'Add Relation property' }))
-    expect(screen.getByRole('button', { name: 'The Gate of Ash' })).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'The Watch' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Locations' }))
+    expect(screen.getByRole('button', { name: 'The Gate of Ash' })).toBeTruthy()
 
     const saved = (await repo.getPage('testland', 'alaric'))!
     expect(saved.customProperties.find((property) => property.key === 'rank')?.options).toEqual(['Guard', 'Captain', 'Marshal'])
     expect(saved.customProperties.find((property) => property.key === 'relationProperty')?.targetCategories).toEqual(['locations'])
+  })
+
+  it('renders a Relation value as a Category-colored, navigable chip', async () => {
+    // the-watch (organizations) → members relation → alaric (characters).
+    await mountScreen('the-watch')
+    const link = screen.getByRole('button', { name: 'Go to Alaric' })
+    // The chip carries its target's Category color via the --chip-cat custom prop.
+    const chip = link.closest('span')!
+    expect(chip.style.getPropertyValue('--chip-cat')).toContain('--cat-characters')
+    // …and navigates to that Page.
+    fireEvent.click(link)
+    await act(async () => {})
+    expect(screen.getByRole('heading', { name: 'Alaric' })).toBeTruthy()
   })
 
   it('edits tags and Eras inline', async () => {
@@ -419,7 +436,11 @@ describe('PageScreen — lifecycle and templates', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Page actions' }))
     fireEvent.click(screen.getByRole('button', { name: 'Edit characters template' }))
     fireEvent.click(screen.getByRole('button', { name: 'Add select to template' }))
-    fireEvent.change(screen.getByLabelText('Options for Select property'), { target: { value: 'Known, Unknown' } })
+    const templateOptions = screen.getByLabelText('Options for Select property')
+    fireEvent.change(templateOptions, { target: { value: 'Known' } })
+    fireEvent.keyDown(templateOptions, { key: 'Enter' })
+    fireEvent.change(templateOptions, { target: { value: 'Unknown' } })
+    fireEvent.keyDown(templateOptions, { key: 'Enter' })
     fireEvent.click(screen.getByRole('button', { name: 'Add relation to template' }))
     fireEvent.click(screen.getByLabelText('Target organizations for Relation property'))
     fireEvent.click(screen.getByRole('button', { name: 'Save Category Template' }))
@@ -477,15 +498,16 @@ describe('PageScreen — staggered dialog entrances (#61)', () => {
     expect(within(actions).getByRole('button', { name: 'Save Category Template' })).toBeTruthy()
   })
 
-  it('renders a Property settings dialog as three ordered chunks: heading, fields, actions', async () => {
+  it('renders the auto-saving Property settings dialog as two ordered chunks: heading, fields', async () => {
     await mountScreen('alaric')
     fireEvent.click(screen.getByRole('button', { name: 'Configure Rank' }))
     const dialog = screen.getByRole('dialog', { name: 'Rank settings' })
-    const [heading, fields, actions] = [...dialog.children] as HTMLElement[]
+    const [heading, fields] = [...dialog.children] as HTMLElement[]
 
     expect(heading.textContent).toContain('Select options')
     expect(within(fields).getByLabelText('Options for Rank')).toBeTruthy()
-    expect(within(actions).getByRole('button', { name: 'Save Rank settings' })).toBeTruthy()
+    // Auto-save: no Save/Cancel actions row.
+    expect(screen.queryByRole('button', { name: 'Save Rank settings' })).toBeNull()
   })
 })
 

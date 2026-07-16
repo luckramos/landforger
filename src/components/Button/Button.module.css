@@ -25,7 +25,7 @@
 .primary {
   padding: 13px 16px;
   border-radius: var(--radius-sm);
-  background: linear-gradient(180deg, var(--bronze-light), var(--bronze));
+  background: var(--bronze);
   color: var(--on-bronze);
 }
 

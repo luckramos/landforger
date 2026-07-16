@@ -20,6 +20,7 @@ import {
   type MapCollectionState,
 } from './mapDomain'
 import { persistMapCollection } from './mapPersistence'
+import { Checkbox } from '../components/Checkbox/Checkbox'
 import { overlayExitTransition, prefersReducedMotion } from '../components/motionPrefs'
 import { useUiStore } from '../state/uiStore'
 import styles from './MapScreen.module.css'
@@ -562,17 +563,17 @@ export function MapScreen() {
       {settingsOpen && (
         <motion.section className={styles.settings} role="dialog" aria-label="Map settings" initial={{ opacity: 1 }} exit={{ opacity: 0, y: 7, scale: 0.98 }} transition={overlayExitTransition(motionScale)}>
           <header><h2>Map settings</h2><button type="button" aria-label="Close Map settings" onClick={() => setSettingsOpen(false)}><icons.close /></button></header>
-          <label className={styles.toggle}>
-            <input
-              type="checkbox"
+          <div className={styles.toggle}>
+            <Checkbox
               checked={currentMap.eraLinked}
               onChange={() => {
                 const maps = world.maps.map((map) => map.id === currentMap.id ? { ...map, eraLinked: !map.eraLinked } : map)
                 void persistMapState({ ...world, maps })
               }}
-            />
-            Era-linked · one image per Era
-          </label>
+            >
+              Era-linked · one image per Era
+            </Checkbox>
+          </div>
           <div className={styles.imageSlots}>
             {(currentMap.eraLinked ? eraPages.map((era) => ({ key: era.slug, label: era.title })) : [{ key: 'all', label: 'All Eras' }]).map((slot) => (
               <label key={slot.key}>

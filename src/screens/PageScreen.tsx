@@ -2,7 +2,7 @@
 // derived, grouped "Mentioned in" panel.
 
 import type { Editor } from '@tiptap/core'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type ElementType, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { Link, useNavigate, useOutletContext, useParams } from 'react-router-dom'
 import { Button } from '../components/Button/Button'
 import type { Backlink } from '../domain/backlinks'
@@ -10,6 +10,7 @@ import type { Category, CustomProperty, Page, PropertyDef, World } from '../doma
 import { PageEditor } from '../editor/PageEditor'
 import { icons } from '../icons'
 import { ImageInput } from '../properties/ImageInput'
+import { PageMeta } from '../properties/PageMeta'
 import { PageProperties } from '../properties/PageProperties'
 import type { WorldRepository } from '../repository/WorldRepository'
 import { getRepository } from '../state/repository'
@@ -226,17 +227,51 @@ export function PageScreen({ repository, onEditorReady }: PageScreenProps) {
     )
   }
 
+  const readOnly = dashboard?.readOnly ?? false
+
   return (
     <main className={styles.screen}>
       <header className={styles.header}>
-        {(!dashboard?.readOnly || page.cover) && (
+        {(!readOnly || page.cover) && (
           <div className={styles.cover}>
-            <ImageInput value={page.cover} label="Cover" variant="banner" disabled={dashboard?.readOnly} onChange={(cover) => persistPagePatch(() => ({ cover }))} />
+            <ImageInput value={page.cover} label="Cover" variant="banner" disabled={readOnly} onChange={(cover) => persistPagePatch(() => ({ cover }))} />
           </div>
         )}
         <span className={styles.eyebrow}>{page.category}</span>
-        <h1 className={styles.title}>{page.title}</h1>
-        <p className={styles.summary}>{page.summary}</p>
+        {readOnly ? (
+          <h1 className={styles.title}>{page.title}</h1>
+        ) : (
+          <EditableField
+            as="h1"
+            className={styles.titleInput}
+            value={page.title}
+            placeholder="Untitled"
+            singleLine
+            onCommit={(title) => { if (title) persistPagePatch(() => ({ title })) }}
+          />
+        )}
+        {readOnly ? (
+          page.summary && <p className={styles.summary}>{page.summary}</p>
+        ) : (
+          <EditableField
+            as="p"
+            className={styles.summaryInput}
+            ariaLabel="Page summary"
+            value={page.summary}
+            placeholder="Add a summary…"
+            onCommit={(summary) => persistPagePatch(() => ({ summary }))}
+          />
+        )}
+        <PageMeta
+          page={page}
+          pages={pages}
+          world={worldData}
+          readOnly={readOnly}
+          onTagsChange={(change) => persistPagePatch((current) => ({ tags: change(current.tags) }))}
+          onErasChange={(change) => persistPagePatch((current) => ({ eras: change(current.eras) }))}
+          onOpenTag={(tag) => navigate(`/w/${world}/t/${encodeURIComponent(tag)}`)}
+          onOpenEra={(slug) => navigate(`/w/${world}/p/${slug}`)}
+        />
         <div className={styles.actions}>
           {worldData.pins.some((pin) => pin.pageSlug === page.slug) && (
             <Link aria-label="See on map" className={`${styles.pageAction} ${styles.actionMap}`} to={`/w/${world}/map?page=${encodeURIComponent(page.slug)}`}><icons.map size={14} /> See on map</Link>
@@ -269,15 +304,12 @@ export function PageScreen({ repository, onEditorReady }: PageScreenProps) {
         page={page}
         pages={pages}
         world={worldData}
-        readOnly={dashboard?.readOnly}
+        readOnly={readOnly}
         onPropertiesChange={(change: (properties: CustomProperty[]) => CustomProperty[]) => persistPagePatch((current) => ({ customProperties: change(current.customProperties) }))}
-        onTagsChange={(change) => persistPagePatch((current) => ({ tags: change(current.tags) }))}
-        onErasChange={(change) => persistPagePatch((current) => ({ eras: change(current.eras) }))}
         onLifecycleChange={handleLifecycleChange}
         onDelete={handleDelete}
         onTemplateChange={handleTemplateChange}
-        onOpenTag={(tag) => navigate(`/w/${world}/t/${encodeURIComponent(tag)}`)}
-        onOpenEra={(slug) => navigate(`/w/${world}/p/${slug}`)}
+        onOpenPage={(slug) => navigate(`/w/${world}/p/${slug}`)}
       />
       <PageEditor
         key={page.slug}
@@ -286,7 +318,7 @@ export function PageScreen({ repository, onEditorReady }: PageScreenProps) {
         pages={pages}
         onNavigate={(targetSlug) => navigate(`/w/${world}/p/${targetSlug}`)}
         onBodyChange={handleBodyChange}
-        readOnly={dashboard?.readOnly}
+        readOnly={readOnly}
         onEditorReady={onEditorReady}
       />
       <BacklinksPanel
@@ -294,6 +326,54 @@ export function PageScreen({ repository, onEditorReady }: PageScreenProps) {
         onNavigate={(sourceSlug) => navigate(`/w/${world}/p/${sourceSlug}`)}
       />
     </main>
+  )
+}
+
+interface EditableFieldProps {
+  value: string
+  onCommit: (value: string) => void
+  /** Rendered element — `h1` keeps the title a real heading, `p` the summary a paragraph. */
+  as: 'h1' | 'p'
+  className: string
+  ariaLabel?: string
+  placeholder?: string
+  /** Title commits on Enter and never breaks into a new line. */
+  singleLine?: boolean
+}
+
+/**
+ * Click-to-edit text rendered as the same element it replaces (heading /
+ * paragraph), so it reads as static display type until focused and keeps its
+ * semantics. Uncontrolled contentEditable — DOM text is the source of truth
+ * while editing; commits the trimmed value on blur, and the page's own
+ * debounced save persists it.
+ */
+function EditableField({ value, onCommit, as, className, ariaLabel, placeholder, singleLine = false }: EditableFieldProps) {
+  const ref = useRef<HTMLElement | null>(null)
+  const Tag: ElementType = as
+
+  // Seed on mount and adopt external edits (e.g. recategorize) while not editing.
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (el && document.activeElement !== el && el.textContent !== value) el.textContent = value
+  }, [value])
+
+  const commit = () => {
+    const next = (ref.current?.textContent ?? '').trim()
+    if (next !== value.trim()) onCommit(next)
+  }
+
+  return (
+    <Tag
+      ref={(el: HTMLElement | null) => { ref.current = el }}
+      className={className}
+      contentEditable
+      suppressContentEditableWarning
+      aria-label={ariaLabel}
+      data-placeholder={placeholder}
+      onBlur={commit}
+      onKeyDown={singleLine ? (event: ReactKeyboardEvent<HTMLElement>) => { if (event.key === 'Enter') { event.preventDefault(); event.currentTarget.blur() } } : undefined}
+    />
   )
 }
 

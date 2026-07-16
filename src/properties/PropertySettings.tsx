@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { DIALOG_CHUNK_VARIANTS, dialogChunkTransition, dialogContainerVariants, overlayExitTransition } from '../components/motionPrefs'
 import { useUiStore } from '../state/uiStore'
@@ -41,29 +41,43 @@ interface PropertySettingsProps {
 
 /**
  * Gear button + anchored popover holding a Property's type-specific settings
- * (a select's options, a relation's target Categories). Edits are held in a
- * draft and only committed on Save, so the popover can be dismissed without
- * changing the Property.
+ * (a select's options, a relation's target Categories). Edits auto-save: every
+ * change commits straight to the Property, so there's no Save/Cancel — the
+ * popover just closes on click-outside, Escape, or toggling the gear.
  */
 export function PropertySettings({ definition, onSave }: PropertySettingsProps) {
   const motionScale = useUiStore((state) => state.motionScale)
   const [open, setOpen] = useState(false)
-  const [draft, setDraft] = useState<PropertyDef>(definition)
+  const anchorRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
 
-  const toggle = () => {
-    if (open) { setOpen(false); return }
-    setDraft(definition)
-    setOpen(true)
-  }
+  const toggle = () => setOpen((current) => !current)
 
-  const save = () => {
-    onSave(draft)
-    setOpen(false)
-  }
+  // Dismiss on outside pointer or Escape (edits are already saved), returning
+  // focus to the gear.
+  useEffect(() => {
+    if (!open) return
+    const onPointerDown = (event: MouseEvent) => {
+      if (anchorRef.current && !anchorRef.current.contains(event.target as Node)) setOpen(false)
+    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setOpen(false)
+        triggerRef.current?.focus()
+      }
+    }
+    document.addEventListener('mousedown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [open])
 
   return (
-    <div className={styles.settingsAnchor}>
+    <div className={styles.settingsAnchor} ref={anchorRef}>
       <button
+        ref={triggerRef}
         type="button"
         className={styles.iconButton}
         aria-label={`Configure ${definition.label}`}
@@ -85,14 +99,10 @@ export function PropertySettings({ definition, onSave }: PropertySettingsProps) 
           >
             <motion.p className={styles.settingsSummary} variants={DIALOG_CHUNK_VARIANTS} transition={dialogChunkTransition(motionScale)}>
               {settingsTitle(definition.type)}
-              <span>{summarize(draft)}</span>
+              <span>{summarize(definition)}</span>
             </motion.p>
             <motion.div variants={DIALOG_CHUNK_VARIANTS} transition={dialogChunkTransition(motionScale)}>
-              <PropertyDefinitionEditor definition={draft} onChange={setDraft} />
-            </motion.div>
-            <motion.div className={styles.settingsActions} variants={DIALOG_CHUNK_VARIANTS} transition={dialogChunkTransition(motionScale)}>
-              <button type="button" className={styles.tintButton} aria-label="Cancel settings" onClick={() => setOpen(false)}>Cancel</button>
-              <button type="button" className={styles.tintPrimary} aria-label={`Save ${definition.label} settings`} onClick={save}>Save</button>
+              <PropertyDefinitionEditor definition={definition} onChange={onSave} />
             </motion.div>
           </motion.div>
         )}

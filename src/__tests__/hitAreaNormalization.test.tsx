@@ -211,7 +211,10 @@ describe('hit-area normalization (#59): isolated / already-safe controls keep a 
 
   it('Page action pills use a padding bump, not ::after, and never overlap in the packed row', () => {
     const css = readFileSync('src/screens/PageScreen.module.css', 'utf8')
-    expect(css).toContain('padding: 14px 11px;')
+    // Skinny-row exception (ADR 0002): these pills deliberately sit below the
+    // 40px desktop floor. The padding bump (not ::after) is kept so the packed
+    // 8px-gap row still can't overlap — a smaller box only makes that safer.
+    expect(css).toContain('padding: 5px 11px;')
     expect(css).not.toContain('.pageAction::after')
     expect(css).toContain('gap: 8px;')
   })

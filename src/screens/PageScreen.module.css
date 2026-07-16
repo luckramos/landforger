@@ -28,7 +28,7 @@
 
 .cover {
   width: 100%;
-  margin-bottom: 16px;
+  margin-bottom: 4px;
   animation: cover-fade calc(var(--mo, 1) * 380ms) var(--ease-house) both;
 }
 
@@ -40,6 +40,31 @@
 /* No independent cap: sits inside .header, which now shares the 40rem/#71
    reading measure — so the summary lines up with the body below it. */
 .summary { margin: 4px 0; color: var(--text-dim); font-size: 17px; line-height: 1.5; text-wrap: pretty; overflow-wrap: break-word; }
+
+/* Inline click-to-edit summary — reads as the static .summary until focused
+   (borderless contentEditable paragraph, no layout shift). */
+.summaryInput {
+  display: block;
+  margin: 4px 0;
+  padding: 0;
+  outline: 0;
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: 17px;
+  line-height: 1.5;
+  text-wrap: pretty;
+  overflow-wrap: break-word;
+}
+.summaryInput:empty::before {
+  content: attr(data-placeholder);
+  color: var(--text-faint);
+  pointer-events: none;
+}
+.summaryInput:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--bronze) 50%, transparent);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
 
 /* Page actions — See on map · Connections · See on timeline, one aligned row. */
 .actions {
@@ -59,7 +84,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 14px 11px;
+  padding: 5px 11px;
   border: 1px solid var(--hairline);
   border-radius: var(--radius-pill);
   background: transparent;
@@ -98,6 +123,33 @@
   margin: 0;
   text-wrap: balance;
   overflow-wrap: break-word;
+}
+
+/* Inline click-to-edit title — visually identical to the .title heading; a
+   contentEditable h1 so the editor types straight into the display type while
+   the element stays a real heading. */
+.titleInput {
+  display: block;
+  margin: 0;
+  padding: 0;
+  outline: 0;
+  font-family: var(--font-serif);
+  font-size: var(--text-display);
+  font-weight: 400;
+  line-height: 1.15;
+  color: var(--text-hi);
+  text-wrap: balance;
+  overflow-wrap: break-word;
+}
+.titleInput:empty::before {
+  content: attr(data-placeholder);
+  color: var(--text-faint);
+  pointer-events: none;
+}
+.titleInput:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--bronze) 50%, transparent);
+  outline-offset: 4px;
+  border-radius: 4px;
 }
 
 .saveState {

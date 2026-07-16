@@ -82,7 +82,7 @@ export function ImageInput({ value, label, disabled = false, variant = 'square',
       >
         {hasImage
           ? <img src={value} alt="" />
-          : <span className={styles.imagePlaceholder}><icons.upload size={isBanner ? 20 : 16} /> {isBanner ? 'Add a cover image' : 'Add image'}</span>}
+          : <span className={styles.imagePlaceholder}>{isBanner ? <icons.add size={14} /> : <icons.upload size={16} />} {isBanner ? 'Add cover' : 'Add image'}</span>}
       </button>
 
       <input

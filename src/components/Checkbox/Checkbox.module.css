@@ -1,0 +1,110 @@
+.root {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  color: var(--text);
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+/* The real checkbox — visually hidden but present for a11y, focus and form value. */
+.input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.box {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--hairline-strong);
+  border-radius: var(--radius-xs);
+  background: var(--panel-3);
+  transition:
+    background calc(var(--mo, 1) * 160ms) var(--ease-house),
+    border-color calc(var(--mo, 1) * 160ms) var(--ease-house),
+    box-shadow calc(var(--mo, 1) * 160ms) var(--ease-house),
+    transform calc(var(--mo, 1) * 160ms) var(--ease-house);
+}
+
+.root:hover .box {
+  border-color: var(--bronze);
+}
+
+/* Press feedback (design rule: scale(0.96)). */
+.root:active .box {
+  transform: scale(0.96);
+}
+
+/* Checked — flat bronze fill + a single overshoot stamp. */
+.input:checked + .box {
+  border-color: var(--bronze);
+  background: var(--bronze);
+  animation: lf-check-stamp calc(var(--mo, 1) * 260ms) var(--ease-overshoot);
+}
+
+/* Forward the global keyboard ring from the hidden input onto the visible box. */
+.input:focus-visible + .box {
+  outline: 2px solid var(--bronze);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--bronze) 18%, transparent);
+}
+
+.check {
+  width: 14px;
+  height: 14px;
+  overflow: visible;
+}
+
+/* The tick draws itself on: the stroke path is hidden by a full dash offset,
+   then wiped to 0 once checked (a beat after the box begins to fill). */
+.check path {
+  stroke: var(--on-bronze);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 24;
+  stroke-dashoffset: 24;
+  transition: stroke-dashoffset calc(var(--mo, 1) * 220ms) var(--ease-house) calc(var(--mo, 1) * 60ms);
+}
+
+.input:checked + .box .check path {
+  stroke-dashoffset: 0;
+}
+
+@keyframes lf-check-stamp {
+  0% { transform: scale(1); }
+  45% { transform: scale(0.84); }
+  100% { transform: scale(1); }
+}
+
+/* Local reduced-motion collapse (the global rule already zeroes durations; this
+   also drops the stamp keyframe so the checked box simply appears filled). */
+@media (prefers-reduced-motion: reduce) {
+  .box,
+  .check path {
+    transition-duration: 0.01ms;
+  }
+  .input:checked + .box {
+    animation: none;
+  }
+}
