@@ -20,7 +20,7 @@
 }
 
 .header {
-  width: var(--page-editor-width, min(760px, calc(100vw - 32px)));
+  width: var(--page-editor-width, min(40rem, calc(100vw - 32px)));
   margin: 0 auto 8px;
   display: grid;
   gap: 6px;
@@ -37,7 +37,9 @@
   to { opacity: 1; transform: scale(1); }
 }
 
-.summary { max-width: 680px; margin: 4px 0; color: var(--text-dim); font-size: 17px; line-height: 1.5; }
+/* No independent cap: sits inside .header, which now shares the 40rem/#71
+   reading measure — so the summary lines up with the body below it. */
+.summary { margin: 4px 0; color: var(--text-dim); font-size: 17px; line-height: 1.5; }
 
 /* Page actions — See on map · Connections · See on timeline, one aligned row. */
 .actions {
@@ -104,7 +106,7 @@
 .saveState[data-save-state='saved'] { color: color-mix(in oklab, var(--cat-locations) 70%, var(--text-faint)); }
 
 .backlinks {
-  width: var(--page-editor-width, min(760px, calc(100vw - 32px)));
+  width: var(--page-editor-width, min(40rem, calc(100vw - 32px)));
   margin: 0 auto 72px;
   padding-top: 18px;
   border-top: 1px solid var(--hairline-soft);

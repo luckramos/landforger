@@ -5,8 +5,11 @@
    top 66px ↔ calc(100vh − 58px), mo×340ms house curve). */
 
 .root {
-  /* Overridable by the caller (the sidebar arrives in #19 and will track it). */
-  --page-editor-width: min(760px, calc(100vw - var(--dashboard-sidebar-width, 0px) - 32px));
+  /* Overridable by the caller (the sidebar arrives in #19 and will track it).
+     Reading measure ~65-70ch (#71): capped near 40rem/640px, matching the
+     Page summary and header above so the reader view and the editor sheet
+     share one width. */
+  --page-editor-width: min(40rem, calc(100vw - var(--dashboard-sidebar-width, 0px) - 32px));
 }
 
 .content {
