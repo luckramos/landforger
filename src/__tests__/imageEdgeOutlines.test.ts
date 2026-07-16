@@ -43,7 +43,7 @@ describe('image edge outlines on the dark surface (#60)', () => {
 
   it('leaves the Reference Canvas colored 3px image frame untouched', () => {
     const css = readFileSync('src/canvas/ReferenceCanvasPanel.module.css', 'utf8')
-    expect(css).toContain('.image { overflow: hidden; border: 3px solid color-mix(in oklab, var(--item-color) 80%, #fff); background: #19191c; box-shadow: 0 8px 30px rgba(0,0,0,.42); }')
+    expect(css).toContain('.image { overflow: hidden; border: 3px solid color-mix(in oklab, var(--item-color) 80%, white); background: oklch(0.215 0.006 285.899); box-shadow: 0 8px 30px rgba(0,0,0,.42); }')
     expect(css).not.toContain(EDGE_OUTLINE)
     expect(css).not.toContain(EDGE_INSET_SHADOW)
   })

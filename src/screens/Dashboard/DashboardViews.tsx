@@ -13,7 +13,7 @@ function PageCard({ page, worldSlug }: { page: Page; worldSlug: string }) {
       style={{ '--category-color': `var(--cat-${page.category})` } as React.CSSProperties}
       aria-label={`${page.title}, ${page.summary}`}
     >
-      {page.cover && <div className={styles.cover} style={{ backgroundImage: `linear-gradient(180deg, transparent, rgba(8,8,7,.72)), url(${page.cover})` }} />}
+      {page.cover && <div className={styles.cover} style={{ backgroundImage: `linear-gradient(180deg, transparent, color-mix(in oklab, var(--bg) 72%, transparent)), url(${page.cover})` }} />}
       <div className={styles.cardBody}>
         <span className={styles.eyebrow} style={{ color: 'var(--category-color)' }}>{meta?.label}</span>
         <h2>{page.title}</h2>

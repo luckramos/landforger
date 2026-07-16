@@ -45,7 +45,7 @@
 .hatch {
   position: absolute;
   inset: 0;
-  background-image: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.04) 0 2px, transparent 2px 12px);
+  background-image: repeating-linear-gradient(45deg, oklch(1 0 0 / 0.04) 0 2px, transparent 2px 12px);
 }
 
 .initial {
@@ -64,7 +64,7 @@
   padding: 3px 10px;
   border-radius: var(--radius-pill);
   border: 1px solid color-mix(in oklch, var(--card-color) 45%, transparent);
-  background: color-mix(in oklch, var(--card-color) 16%, rgba(8, 8, 7, 0.6));
+  background: color-mix(in oklch, var(--card-color) 16%, color-mix(in oklab, var(--bg) 60%, transparent));
   color: color-mix(in oklch, var(--card-color) 80%, white);
   font-family: var(--font-mono);
   font-size: var(--text-xs);

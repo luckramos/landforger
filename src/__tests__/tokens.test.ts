@@ -12,7 +12,39 @@ function readToken(name: string): string {
   return match[1].trim()
 }
 
-/** Parses a hex or rgb(a) color literal — the notation tokens.css uses today. */
+/** Clamps a linear-light channel into [0, 1] before gamma encoding (guards float overshoot at the sRGB gamut edge). */
+function clamp01(n: number): number {
+  return Math.min(1, Math.max(0, n))
+}
+
+/** Linear-light sRGB channel (0–1) -> gamma-encoded 8-bit channel (0–255). */
+function linearToSrgb8(c: number): number {
+  const clamped = clamp01(c)
+  const encoded = clamped <= 0.0031308 ? 12.92 * clamped : 1.055 * clamped ** (1 / 2.4) - 0.055
+  return encoded * 255
+}
+
+/**
+ * OKLab -> linear sRGB, per Björn Ottosson's reference matrices
+ * (https://bottosson.github.io/posts/oklab/#converting-from-linear-srgb-to-oklab).
+ */
+function oklabToLinearSrgb(L: number, a: number, b: number): { r: number; g: number; b: number } {
+  const l_ = L + 0.3963377774 * a + 0.2158037573 * b
+  const m_ = L - 0.1055613458 * a - 0.0638541728 * b
+  const s_ = L - 0.0894841775 * a - 1.2914855480 * b
+
+  const l = l_ ** 3
+  const m = m_ ** 3
+  const s = s_ ** 3
+
+  return {
+    r: 4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+    g: -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+    b: -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s,
+  }
+}
+
+/** Parses a hex, rgb(a), or oklch() color literal — tokens.css's notation as of the OKLCH migration (#80). */
 function parseColor(value: string): Rgba {
   const hex = value.match(/^#([0-9a-f]{6})$/i)
   if (hex) {
@@ -28,6 +60,24 @@ function parseColor(value: string): Rgba {
       g: Number(rgb[2]),
       b: Number(rgb[3]),
       a: rgb[4] !== undefined ? Number(rgb[4]) : 1,
+    }
+  }
+  // oklch(L C H) or oklch(L C H / A) — L in [0,1], C a positive chroma, H a hue angle in degrees.
+  const oklch = value.match(
+    /^oklch\(\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*(?:\/\s*([\d.]+)\s*)?\)$/,
+  )
+  if (oklch) {
+    const L = Number(oklch[1])
+    const C = Number(oklch[2])
+    const H = (Number(oklch[3]) * Math.PI) / 180
+    const a = C * Math.cos(H)
+    const b = C * Math.sin(H)
+    const { r, g, b: bl } = oklabToLinearSrgb(L, a, b)
+    return {
+      r: linearToSrgb8(r),
+      g: linearToSrgb8(g),
+      b: linearToSrgb8(bl),
+      a: oklch[4] !== undefined ? Number(oklch[4]) : 1,
     }
   }
   throw new Error(`unsupported color notation: ${value}`)

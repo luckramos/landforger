@@ -5,24 +5,24 @@
  */
 :root {
   /* Surfaces */
-  --bg: #080807;
-  --panel-1: #100e0c;
-  --panel-2: #0e0d0c;
-  --panel-3: #181614;
+  --bg: oklch(0.134 0.003 107);
+  --panel-1: oklch(0.165 0.005 67);
+  --panel-2: oklch(0.16 0.003 68);
+  --panel-3: oklch(0.202 0.005 68);
 
-  /* Text — rgba(245,241,234,α) ladder */
-  --text-hi: rgba(245, 241, 234, 0.95);
-  --text: rgba(245, 241, 234, 0.78);
-  --text-dim: rgba(245, 241, 234, 0.55);
+  /* Text — oklch(0.959 0.01 81.795, α) ladder: one base color, alpha varies per step */
+  --text-hi: oklch(0.959 0.01 81.795 / 0.95);
+  --text: oklch(0.959 0.01 81.795 / 0.78);
+  --text-dim: oklch(0.959 0.01 81.795 / 0.55);
   /* 0.5 computes to ~4.84:1 against --bg, clearing the WCAG floor with margin (was 0.35, ~2.9:1). */
-  --text-faint: rgba(245, 241, 234, 0.5);
+  --text-faint: oklch(0.959 0.01 81.795 / 0.5);
   /* Decorative-only: legend swatches, graph edge strokes, resize-handle grips. Never for informative text. */
-  --ornament-faint: rgba(245, 241, 234, 0.35);
+  --ornament-faint: oklch(0.959 0.01 81.795 / 0.35);
 
   /* Accent */
-  --bronze: #b0824a;
-  --bronze-light: #e6c79a;
-  --on-bronze: #1a1408;
+  --bronze: oklch(0.64 0.093 70.303);
+  --bronze-light: oklch(0.845 0.069 76.833);
+  --on-bronze: oklch(0.195 0.024 84);
   /* Canvas/Graph active-state accent (selection ring, shape-preview outline,
      scope toggle). Was referenced 5x with no definition (issue #78) — those
      declarations were invalid at computed-value time. Aliased to
@@ -43,10 +43,10 @@
      purpose (e.g. the timeline create form's blur) stays local. */
   --scrim: oklch(0.13 0.003 107 / 0.7);
 
-  /* Hairlines — rgba(255,255,255, 0.05–0.12) */
-  --hairline-soft: rgba(255, 255, 255, 0.05);
-  --hairline: rgba(255, 255, 255, 0.08);
-  --hairline-strong: rgba(255, 255, 255, 0.12);
+  /* Hairlines — oklch(1 0 0, 0.05–0.12) */
+  --hairline-soft: oklch(1 0 0 / 0.05);
+  --hairline: oklch(1 0 0 / 0.08);
+  --hairline-strong: oklch(1 0 0 / 0.12);
 
   /* Category colors — oklch(0.80 0.085 H); items L 0.83, organizations L 0.79 */
   --cat-stories: oklch(0.8 0.085 215);

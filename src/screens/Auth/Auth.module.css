@@ -23,7 +23,7 @@
 .drift {
   position: absolute;
   inset: -12%;
-  background-image: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.035) 0 2px, transparent 2px 14px);
+  background-image: repeating-linear-gradient(45deg, oklch(1 0 0 / 0.035) 0 2px, transparent 2px 14px);
   animation: auth-drift calc(var(--mo, 1) * 18000ms) ease-in-out infinite alternate;
 }
 
@@ -191,7 +191,7 @@
   outline: none;
   border-color: var(--bronze);
   background: var(--panel-2);
-  box-shadow: 0 0 0 3px rgba(176, 130, 74, 0.14);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--bronze) 14%, transparent);
 }
 
 .passwordRow {

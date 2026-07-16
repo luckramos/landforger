@@ -8,7 +8,7 @@
 .node { cursor: pointer; opacity: 0; pointer-events: none; transition: opacity calc(var(--mo, 1) * 300ms) var(--ease-house); outline: none; }
 .node[data-revealed='true'] { opacity: 1; pointer-events: auto; }
 .node[data-dimmed='true'] { opacity: .2; }
-.nodeCore { fill: color-mix(in oklab, var(--node-color) 82%, #101014); stroke: color-mix(in oklab, var(--node-color) 70%, white); stroke-width: 1.4; filter: drop-shadow(0 0 9px color-mix(in oklab, var(--node-color) 38%, transparent)); transform: scale(var(--node-scale, .1)); transform-box: fill-box; transform-origin: center; transition: transform calc(var(--mo, 1) * 400ms) var(--ease-overshoot-soft); }
+.nodeCore { fill: color-mix(in oklab, var(--node-color) 82%, oklch(0.175 0.008 285.52)); stroke: color-mix(in oklab, var(--node-color) 70%, white); stroke-width: 1.4; filter: drop-shadow(0 0 9px color-mix(in oklab, var(--node-color) 38%, transparent)); transform: scale(var(--node-scale, .1)); transform-box: fill-box; transform-origin: center; transition: transform calc(var(--mo, 1) * 400ms) var(--ease-overshoot-soft); }
 .nodeHalo { fill: transparent; stroke: transparent; stroke-width: 2; }
 .node:hover .nodeHalo, .node:focus-visible .nodeHalo, .node[data-focal='true'] .nodeHalo { stroke: color-mix(in oklab, var(--node-color, var(--bronze)) 60%, transparent); }
 .node text { fill: var(--text-dim); font-family: var(--font-sans); font-size: var(--text-sm); paint-order: stroke; stroke: var(--bg); stroke-width: 3px; stroke-linejoin: round; }

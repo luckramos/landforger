@@ -13,7 +13,7 @@
   align-items: center;
   gap: 20px;
   padding: 14px 32px;
-  background: rgba(8, 8, 7, 0.72);
+  background: color-mix(in oklab, var(--bg) 72%, transparent);
   backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--hairline-soft);
 }
@@ -51,7 +51,7 @@
 .search:focus {
   outline: none;
   border-color: var(--bronze);
-  box-shadow: 0 0 0 3px rgba(176, 130, 74, 0.14);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--bronze) 14%, transparent);
 }
 
 .search::placeholder {
