@@ -31,7 +31,7 @@ Make chips integrate more seamlessly into the running text while giving each one
 
 `WikiLinkChip` stops rendering the `CATEGORY_ICON` Unicode glyph and instead renders the Phosphor duotone icon for `page.category`, obtained through `categoryMeta(page.category).icon` (from `src/screens/Dashboard/categoryMeta.ts`, backed by `categoryIcons` in `src/icons/index.tsx`).
 
-The chip's wrapper element sets `--icon-secondary-color: var(--cat-<category>)` (inline style, driven by `page.category`) so the duotone icon's wash path picks up the category color automatically — the mechanism already wired in `src/icons/index.module.css`. It also carries a `data-category={page.category}` attribute so CSS can key the tint off the category without inline color plumbing for the background.
+The chip's wrapper element sets the **`--chip-cat: var(--cat-<category>)`** inline custom property, driven by `page.category` — the same convention the Relation chips already use (`src/properties/PropertyInput.tsx:51`, styled in `src/properties/Properties.module.css` via `color-mix(in oklab, var(--chip-cat, …) N%, …)`). The CSS keys both the tint and the icon color off `--chip-cat`. The icon span sets `color: var(--chip-cat)`, so the duotone outline runs on the category color and its wash falls back to `currentColor` (the same color) — matching the dashboard's `color: var(--cat-<x>)` icon pattern; no separate `--icon-secondary-color` plumbing is needed.
 
 The **hover preview card** makes the same swap: the `.previewCategory` eyebrow renders the duotone icon (colored by category) in place of the glyph. The card already exposes `data-preview-category`; its icon/eyebrow now align with the chip.
 
@@ -41,7 +41,7 @@ The **hover preview card** makes the same swap: the `.previewCategory` eyebrow r
 
 The `.chip` base is rewritten to read as a text highlight rather than a button:
 
-- **Background:** a whisper of category tint, e.g. `color-mix(in oklab, var(--cat-<cat>) ~8%, transparent)`, selected per category via the `data-category` attribute (one rule per category, mirroring the existing bronze `color-mix` recipe). Falls back to transparent when no category is set.
+- **Background:** a whisper of category tint via `color-mix(in oklab, var(--chip-cat, transparent) ~8%, transparent)`, mirroring the Relation chip's `color-mix` recipe. Falls back to transparent when `--chip-cat` is unset (ghost).
 - **Border:** removed (no hard `--hairline` outline). If a hairline edge proves necessary for legibility, it may be a very faint category-tinted `--hairline-soft`, but the default is borderless.
 - **Radius:** `--radius-xs` (6px) instead of `--radius-pill` — inline-highlight feel, not a pill.
 - **Icon:** colored by category (§1). **Text** inherits the paragraph color (`--text-hi`), so reading flow is preserved.
