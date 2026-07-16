@@ -82,6 +82,19 @@ describe('PageEditor — 13 blocks render from a fixture body', () => {
     expect(sera.className).not.toContain('ghost')
   })
 
+  it('resolved chips render the category icon and carry --chip-cat; ghosts carry neither', async () => {
+    const { container } = await mountEditor()
+    const sera = container.querySelector('[data-wikilink="sera"]') as HTMLElement
+    // Duotone category icon renders as an <svg> inside the chip.
+    expect(sera.querySelector('svg')).toBeTruthy()
+    // Category color is carried via the --chip-cat convention (same as Relation chips).
+    expect(sera.style.getPropertyValue('--chip-cat')).toContain('--cat-characters')
+
+    const ghost = container.querySelector('[data-wikilink="ember-cycle"]') as HTMLElement
+    expect(ghost.querySelector('svg')).toBeNull()
+    expect(ghost.style.getPropertyValue('--chip-cat')).toBe('')
+  })
+
   it('refreshes rename, Ghost and recreation states without rewriting the Markdown', async () => {
     const before = pageBodyCodec.serialize(pageBodyCodec.parse(all13))
     const { container, rerender } = await mountEditor()

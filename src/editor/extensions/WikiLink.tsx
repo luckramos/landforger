@@ -14,8 +14,10 @@ import { PluginKey } from '@tiptap/pm/state'
 import { NodeViewWrapper, ReactNodeViewRenderer, type NodeViewProps } from '@tiptap/react'
 import { useCallback, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
+import type { CSSProperties } from 'react'
 import { CATEGORY_ICON, WikiLinkRegistry, type WikiLinkPage } from '../WikiLinkRegistry'
 import { canonicalWikilinkRegex, wikilinkMarkdown } from '../../domain/wikilink'
+import { categoryMeta } from '../../screens/Dashboard/categoryMeta'
 import { suggestionMenuRenderer, type SuggestionMenuItem } from './SuggestionMenu'
 import styles from './WikiLink.module.css'
 
@@ -53,6 +55,10 @@ function WikiLinkChip({ node, extension }: NodeViewProps) {
   )
   void revision
   const page = options.registry.get(slug)
+  const meta = page ? categoryMeta(page.category) : undefined
+  const chipCatStyle: CSSProperties | undefined = page
+    ? ({ '--chip-cat': `var(--cat-${page.category})` } as CSSProperties)
+    : undefined
   const title = page?.title ?? options.resolveTitle(slug)
   const ghost = title === undefined
   const chipRef = useRef<HTMLElement | null>(null)
@@ -96,6 +102,7 @@ function WikiLinkChip({ node, extension }: NodeViewProps) {
       as="span"
       ref={chipRef}
       className={ghost ? `${styles.chip} ${styles.ghost}` : styles.chip}
+      style={chipCatStyle}
       data-wikilink={slug}
       title={wikilinkMarkdown(slug)}
       role="link"
@@ -111,7 +118,11 @@ function WikiLinkChip({ node, extension }: NodeViewProps) {
         if (event.key === 'Enter') navigate()
       }}
     >
-      {page && <span className={styles.categoryIcon} aria-hidden="true">{CATEGORY_ICON[page.category]}</span>}
+      {meta && (
+        <span className={styles.categoryIcon} aria-hidden="true">
+          <meta.icon size={14} />
+        </span>
+      )}
       {ghost ? wikilinkMarkdown(slug) : title}
       {/* Portaled to <body>: the card is `position: fixed`, and the Page/route
           entrance animations transform its ancestors — a transformed ancestor
@@ -127,10 +138,13 @@ function WikiLinkChip({ node, extension }: NodeViewProps) {
             left: preview.left,
             top: preview.top,
             visibility: preview.positioned ? 'visible' : 'hidden',
-          }}
+            '--chip-cat': `var(--cat-${page.category})`,
+          } as CSSProperties}
           data-preview-category={page.category}
         >
-          <span className={styles.previewCategory}>{CATEGORY_ICON[page.category]} {page.category}</span>
+          <span className={styles.previewCategory}>
+            {meta && <meta.icon size={13} />} {page.category}
+          </span>
           <strong className={styles.previewTitle}>{page.title}</strong>
           {page.summary && <span className={styles.previewSummary}>{page.summary}</span>}
           {page.tags.length > 0 && (
