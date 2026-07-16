@@ -29,7 +29,7 @@
   border: 1px solid var(--hairline-soft);
   border-radius: var(--radius-md);
   font-family: var(--page-body-font, var(--font-serif));
-  font-size: var(--text-md);
+  font-size: 17px;
   line-height: 1.65;
   color: var(--text);
   transition: border-color calc(var(--mo, 1) * 200ms) ease;

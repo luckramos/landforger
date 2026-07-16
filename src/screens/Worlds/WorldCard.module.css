@@ -51,7 +51,7 @@
 .initial {
   position: relative;
   font-family: var(--font-serif);
-  font-size: var(--text-display);
+  font-size: 64px;
   line-height: 1;
   color: color-mix(in oklch, var(--card-color) 85%, white);
   opacity: 0.9;

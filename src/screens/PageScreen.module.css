@@ -39,7 +39,7 @@
 
 /* No independent cap: sits inside .header, which now shares the 40rem/#71
    reading measure — so the summary lines up with the body below it. */
-.summary { margin: 4px 0; color: var(--text-dim); font-size: var(--text-md); line-height: 1.5; text-wrap: pretty; overflow-wrap: break-word; }
+.summary { margin: 4px 0; color: var(--text-dim); font-size: 17px; line-height: 1.5; text-wrap: pretty; overflow-wrap: break-word; }
 
 /* Page actions — See on map · Connections · See on timeline, one aligned row. */
 .actions {

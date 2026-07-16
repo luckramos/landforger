@@ -67,7 +67,7 @@
 .closeInspector { float: right; border: 0; background: transparent; color: var(--text-dim); font-size: var(--text-lg); cursor: pointer; }
 .inspector > img,.coverFallback { width: calc(100% + 32px); height: 132px; margin: -16px -16px 18px; border-radius: 12px 12px 0 0; }
 .inspector > img { object-fit: cover; opacity: .72; box-shadow: inset 0 0 0 1px oklch(1 0 0 / 0.1); }
-.coverFallback { display: grid; place-items: center; background: radial-gradient(circle,color-mix(in oklab,currentColor 22%,var(--panel-3)),var(--panel-1) 72%); font-size: var(--text-display); }
+.coverFallback { display: grid; place-items: center; background: radial-gradient(circle,color-mix(in oklab,currentColor 22%,var(--panel-3)),var(--panel-1) 72%); font-size: 34px; }
 .inspector h2,.reader h2 { margin: 5px 0 8px; color: var(--text-hi); font: 400 var(--text-2xl) var(--font-serif); }
 .inspector > p,.reader p { color: var(--text-dim); font: var(--text-base)/1.55 var(--font-serif); }
 .pinCount { color: var(--text-faint); font: var(--text-xs) var(--font-mono); }
@@ -132,5 +132,5 @@
 .imageSlots input { max-width: 150px; color: var(--text-faint); font-size: var(--text-md); }
 /* #70: 16px by default so focusing this field never zooms the viewport;
    steps back down to its original 8px once a pointer is likely. */
-@media (min-width: 640px) { .imageSlots input { font-size: var(--text-xs); } }
+@media (min-width: 640px) { .imageSlots input { font-size: 8px; } }
 @media (prefers-reduced-motion:reduce) { .stage,.mapImage,.previousMapImage,.pin,.pin > i,.pin > span,.inspector,.reader,.placingBanner,.scrim,.modal,.settings,.eraRail button > i,.eraRail button > span,.eraRail strong,.eraRail small { animation-duration: .01ms; transition-duration: .01ms; } }
