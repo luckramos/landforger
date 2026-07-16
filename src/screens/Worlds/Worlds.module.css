@@ -23,7 +23,7 @@
   align-items: center;
   gap: 8px;
   font-family: var(--font-serif);
-  font-size: 17px;
+  font-size: var(--text-md);
   color: var(--text-hi);
   white-space: nowrap;
 }
@@ -42,7 +42,7 @@
   padding: 8px 16px;
   color: var(--text-hi);
   font-family: var(--font-sans);
-  font-size: 13px;
+  font-size: var(--text-base);
   transition:
     border-color calc(var(--mo, 1) * 160ms),
     box-shadow calc(var(--mo, 1) * 160ms);
@@ -82,7 +82,7 @@
 
 .dateline {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--text-sm);
   letter-spacing: 0.14em;
   color: var(--bronze);
 }
@@ -100,7 +100,7 @@
 
 .subtext {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--text-base);
   color: var(--text-dim);
 }
 
@@ -150,24 +150,24 @@
   height: 44px;
   border-radius: 50%;
   border: 1px solid var(--hairline-strong);
-  font-size: 22px;
+  font-size: var(--text-xl);
   color: var(--bronze-light);
 }
 
 .createLabel {
   font-family: var(--font-serif);
-  font-size: 19px;
+  font-size: var(--text-lg);
   color: var(--text);
 }
 
 .createHint {
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--text-faint);
 }
 
 .empty {
   grid-column: 1 / -1;
   margin: 12px 0;
-  font-size: 14px;
+  font-size: var(--text-base);
   color: var(--text-dim);
 }

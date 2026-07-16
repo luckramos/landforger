@@ -9,7 +9,7 @@
 
 .eyebrow {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--text-sm);
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--bronze);
@@ -17,7 +17,7 @@
 
 .title {
   font-family: var(--font-serif);
-  font-size: 34px;
+  font-size: var(--text-display);
   font-weight: 400;
   line-height: 1.1;
   letter-spacing: -.015em;
@@ -27,7 +27,7 @@
 }
 
 .detail {
-  font-size: 13px;
+  font-size: var(--text-base);
   color: var(--text-dim);
 }
 
@@ -49,6 +49,6 @@
   border: 1px solid var(--hairline-strong);
   border-radius: 999px;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--text-sm);
   color: var(--bronze-light);
 }

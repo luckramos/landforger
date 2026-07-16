@@ -66,7 +66,7 @@
 .tagline {
   font-family: var(--font-serif);
   font-style: italic;
-  font-size: 22px;
+  font-size: var(--text-xl);
   color: var(--text);
   max-width: 26ch;
   margin: 0;
@@ -135,7 +135,7 @@
 
 .eyebrow {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--text-sm);
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--bronze);
@@ -153,7 +153,7 @@
 }
 
 .subtext {
-  font-size: 14px;
+  font-size: var(--text-base);
   color: var(--text-dim);
   margin: 0 0 8px;
 }
@@ -166,7 +166,7 @@
 
 .field label {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--text-sm);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-dim);
@@ -180,7 +180,7 @@
   padding: 11px 12px;
   color: var(--text-hi);
   font-family: var(--font-sans);
-  font-size: 14px;
+  font-size: var(--text-base);
   transition:
     border-color calc(var(--mo, 1) * 160ms),
     background calc(var(--mo, 1) * 160ms),
@@ -248,7 +248,7 @@
   border: none;
   padding: 0;
   color: var(--text-dim);
-  font-size: 13px;
+  font-size: var(--text-base);
   cursor: pointer;
 }
 
@@ -269,7 +269,7 @@
 }
 
 .forgotLink {
-  font-size: 13px;
+  font-size: var(--text-base);
   color: var(--text-dim);
   text-decoration: none;
   transition: color calc(var(--mo, 1) * 140ms);
@@ -280,7 +280,7 @@
 }
 
 .terms {
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--text-faint);
   margin: 0;
   line-height: 1.5;
@@ -299,7 +299,7 @@
   border: 1px solid rgba(200, 90, 70, 0.35);
   background: rgba(200, 90, 70, 0.1);
   color: rgba(255, 210, 200, 0.92);
-  font-size: 13px;
+  font-size: var(--text-base);
 }
 
 .submitButton {
@@ -312,12 +312,12 @@
   border-radius: var(--radius-pill);
   border: 1px solid var(--hairline-strong);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--text-sm);
   color: var(--bronze-light);
 }
 
 .footer {
-  font-size: 13px;
+  font-size: var(--text-base);
   color: var(--text-dim);
   text-align: center;
   margin-top: 4px;
@@ -328,7 +328,7 @@
   border: none;
   padding: 0;
   color: var(--bronze-light);
-  font-size: 13px;
+  font-size: var(--text-base);
   cursor: pointer;
   transition: color calc(var(--mo, 1) * 140ms);
 }

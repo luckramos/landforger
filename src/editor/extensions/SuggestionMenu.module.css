@@ -54,14 +54,14 @@
 .label {
   color: var(--text-hi);
   font-family: var(--font-sans);
-  font-size: 13px;
+  font-size: var(--text-base);
 }
 
 .description {
   margin-top: 2px;
   color: var(--text-faint);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--text-xs);
 }
 
 .empty {
@@ -69,6 +69,6 @@
   padding: 12px;
   color: var(--text-faint);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--text-sm);
 }
 

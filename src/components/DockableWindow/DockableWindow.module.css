@@ -44,14 +44,14 @@
 }
 
 .heading { min-width: 0; }
-.heading h2 { margin: 0; color: var(--text-hi); font-family: var(--font-serif); font-size: 17px; font-weight: 500; }
-.heading p { margin: 1px 0 0; color: var(--text-faint); font-family: var(--font-mono); font-size: 9px; letter-spacing: .06em; text-transform: uppercase; }
+.heading h2 { margin: 0; color: var(--text-hi); font-family: var(--font-serif); font-size: var(--text-md); font-weight: 500; }
+.heading p { margin: 1px 0 0; color: var(--text-faint); font-family: var(--font-mono); font-size: var(--text-xs); letter-spacing: .06em; text-transform: uppercase; }
 /* Hit-area normalization (#59): 30px buttons | gap 10px | pitch 30+10=40 |
    ::after inset -5px (=-(40-30)/2) | target 30+10=40. 40 <= 40 —
    float/minimize/close/restore never overlap each other even when all four
    controls are present. */
 .controls { display: flex; align-items: center; gap: 10px; margin-left: auto; }
-.controls button { position: relative; display: grid; width: 30px; height: 30px; place-items: center; border: 0; border-radius: 7px; background: transparent; color: var(--text-dim); font-size: 16px; transition: background calc(var(--mo, 1) * 130ms), color calc(var(--mo, 1) * 130ms); }
+.controls button { position: relative; display: grid; width: 30px; height: 30px; place-items: center; border: 0; border-radius: 7px; background: transparent; color: var(--text-dim); font-size: var(--text-md); transition: background calc(var(--mo, 1) * 130ms), color calc(var(--mo, 1) * 130ms); }
 .controls button::after { content: ''; position: absolute; inset: -5px; }
 .controls button:hover { background: var(--hairline-soft); color: var(--text-hi); }
 

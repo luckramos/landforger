@@ -59,7 +59,7 @@
 .previewCategory {
   color: var(--bronze);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--text-xs);
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -67,14 +67,14 @@
 .previewTitle {
   color: var(--text-hi);
   font-family: var(--font-serif);
-  font-size: 18px;
+  font-size: var(--text-lg);
   font-weight: 500;
 }
 
 .previewSummary {
   color: var(--text-dim);
   font-family: var(--font-sans);
-  font-size: 12px;
+  font-size: var(--text-sm);
   line-height: 1.45;
 }
 
@@ -90,7 +90,7 @@
   border-radius: 999px;
   color: var(--text-faint);
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--text-xs);
 }
 
 @keyframes preview-in {
