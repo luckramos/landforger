@@ -144,16 +144,24 @@ export function NewPageScreen({ repository }: NewPageScreenProps) {
             </label>
           </div>
 
-          {properties.map((property, index) => (
-            <div className={styles.field} key={property.key}>
-              <span className={styles.fieldLabel}>{property.label}</span>
+          {properties.map((property, index) => {
+            const control = (
               <PropertyInput
                 property={property}
                 pages={pages}
                 onChange={(value) => setProperties((current) => current.map((candidate, candidateIndex) => candidateIndex === index ? { ...candidate, value } : candidate))}
               />
-            </div>
-          ))}
+            )
+            // Relation (chips) and image (dropzone) carry their own surface;
+            // the scalar/trigger controls get the filled field box.
+            const boxed = property.type !== 'relation' && property.type !== 'image'
+            return (
+              <div className={styles.field} key={property.key}>
+                <span className={styles.fieldLabel}>{property.label}</span>
+                {boxed ? <div className={styles.control}>{control}</div> : control}
+              </div>
+            )
+          })}
 
           <div className={styles.actions}>
             <Button type="submit" className={styles.createButton} disabled={!title.trim()}>

@@ -2,7 +2,7 @@
    (composes the house `ink` hover-lift); the chosen card holds that lift as its
    selected state. The form below adopts the CreateWorldModal field patterns. */
 
-.screen { width: min(940px, calc(100% - 48px)); margin: 0 auto; padding: 54px 0 96px; }
+.screen { width: min(1100px, calc(100% - 48px)); margin: 0 auto; padding: 54px 0 96px; }
 
 /* Hero — the shell's route transition slides the whole screen in, so nothing
    here re-animates on entry; the motion is spent on the cards and the form. */
@@ -16,7 +16,9 @@
 .step { display: block; color: var(--text-faint); font-family: var(--font-mono); font-size: var(--text-xs); letter-spacing: .14em; text-transform: uppercase; }
 
 .pick { margin-top: 44px; }
-.grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 9px; margin-top: 14px; }
+/* Same track sizing as the dashboard "All pages" grid, so the cards read at an
+   identical width (~149px at the 1100px cap). */
+.grid { display: grid; grid-template-columns: repeat(7, minmax(105px, 1fr)); gap: 9px; margin-top: 14px; }
 
 /* Dashboard category card, verbatim: `ink` gives the lift + tinted ring bleed,
    `--card-ink` the category colour. Reset the button chrome the card sits on. */
@@ -88,6 +90,29 @@
 .titleInput { font-family: var(--font-serif); font-size: var(--text-xl); }
 .textarea { min-height: 88px; line-height: 1.5; resize: vertical; }
 
+/* Template-property controls (PropertyInput) are the app's inline
+   "transparent-until-hover" fields — right for the Page panel, but here they
+   must read as filled fields like the inputs above. Each control's own wrapper
+   is transparent at rest, so this box supplies the resting surface while the
+   control's hover/focus feedback still layers on top. Relation and image types
+   bring their own visible chrome (chips, dropzone) and stay unboxed. */
+.control {
+  display: flex;
+  align-items: stretch;
+  min-height: 40px;
+  padding: 0 4px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+  transition: border-color calc(var(--mo, 1) * 140ms) var(--ease-house), box-shadow calc(var(--mo, 1) * 140ms) var(--ease-house);
+}
+.control:hover { border-color: var(--hairline-strong); }
+.control:focus-within {
+  border-color: var(--focus-border, color-mix(in oklab, var(--bronze) 70%, transparent));
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--bronze) 9%, transparent);
+}
+.control > * { flex: 1; min-width: 0; }
+
 .actions { display: flex; justify-content: flex-end; margin-top: 6px; }
 .createButton { display: inline-flex; align-items: center; gap: 8px; }
 
@@ -97,8 +122,10 @@
 @keyframes card-in { from { opacity: 0; transform: translateY(12px); } }
 @keyframes form-reveal { from { opacity: 0; transform: translateY(12px); } }
 
-@media (max-width: 860px) { .grid { grid-template-columns: repeat(4, 1fr); } }
-@media (max-width: 560px) { .grid { grid-template-columns: repeat(2, 1fr); } .pair { grid-template-columns: 1fr; } }
+/* Card grid reflow mirrors the dashboard's breakpoints. */
+@media (max-width: 1050px) { .grid { grid-template-columns: repeat(4, 1fr); } }
+@media (max-width: 720px) { .screen { width: calc(100% - 28px); padding-top: 36px; } .grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) { .pair { grid-template-columns: 1fr; } }
 
 /* Step the plain inputs down to 14px on pointer-likely widths; the serif title
    keeps its own larger size. */
@@ -108,5 +135,5 @@
   /* The card's lift/ring transitions are collapsed by cardHover itself. */
   .card { animation-duration: .01ms; animation-delay: 0ms; }
   .form { animation-duration: .01ms; }
-  .input { transition-duration: .01ms; }
+  .input, .control { transition-duration: .01ms; }
 }
