@@ -30,6 +30,81 @@
 .listHeader p { margin: 0; color: var(--text-faint); font-size: var(--text-sm); font-variant-numeric: tabular-nums; }
 .listIcon { display: grid; place-items: center; font-family: var(--font-serif); font-size: 34px; line-height: 1; }
 
+/* Category-header actions, pinned to the trailing edge: a loud primary [+]
+   (create a Page pre-set to this Category) beside the quiet edit-template
+   pencil. Both hidden on Tag views and in read-only. */
+.headerActions { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; align-self: center; }
+
+/* Primary create action — the house bronze button (Button.module.css .primary):
+   flat fill, a band of light gliding across on hover, lift + glow, press scale.
+   ≥40px hit target (ADR 0002), squared to sit level with the pencil. */
+.addPage {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  background: var(--bronze);
+  color: var(--on-bronze);
+  text-decoration: none;
+  transition:
+    box-shadow calc(var(--mo, 1) * 220ms) var(--ease-house),
+    transform calc(var(--mo, 1) * 160ms) var(--ease-house);
+}
+.addPage::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -85%;
+  z-index: -1;
+  width: 70%;
+  background: linear-gradient(100deg, transparent, color-mix(in oklab, white 46%, transparent), transparent);
+  transform: skewX(-16deg) translateX(0);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform calc(var(--mo, 1) * 620ms) var(--ease-house),
+    opacity calc(var(--mo, 1) * 200ms) ease;
+}
+.addPage:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 22px -10px color-mix(in oklab, var(--bronze) 72%, transparent);
+}
+.addPage:hover::before { transform: skewX(-16deg) translateX(280%); opacity: 1; }
+.addPage:active { transform: translateY(0) scale(0.96); box-shadow: none; }
+.addPage:focus-visible { outline: 2px solid var(--bronze); outline-offset: 2px; }
+
+/* Edit-template affordance — a quiet pencil at the end of a Category header
+   (hidden on Tag views and in read-only). ≥40px hit target (ADR 0002). */
+.templateEdit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+  transition: border-color calc(var(--mo, 1) * 140ms) ease, background calc(var(--mo, 1) * 140ms) ease, color calc(var(--mo, 1) * 140ms) ease, transform calc(var(--mo, 1) * 120ms) var(--ease-house);
+}
+.templateEdit:hover {
+  border-color: color-mix(in oklab, var(--bronze) 50%, transparent);
+  background: color-mix(in oklab, var(--bronze) 12%, transparent);
+  color: var(--bronze-light);
+}
+.templateEdit:active { transform: scale(0.96); }
+.templateEdit:focus-visible { outline: 2px solid var(--bronze); outline-offset: 2px; }
+
 .pageGrid { columns: 2; column-gap: 14px; margin-top: 28px; }
 .pageCard { composes: ink from '../../styles/cardHover.module.css'; --card-ink: var(--category-color); display: block; margin-bottom: 14px; overflow: hidden; break-inside: avoid; border-radius: 11px; background: var(--panel-1); color: var(--text); text-decoration: none; }
 .cover { aspect-ratio: 16 / 9; background-position: center; background-size: cover; }
@@ -48,4 +123,7 @@
   /* The hover itself is collapsed by cardHover.module.css. */
   .categoryCard { animation-duration: .01ms; animation-delay: 0ms; }
   .recent a { transition-duration: .01ms; }
+  .addPage, .templateEdit { transition-duration: .01ms; }
+  /* No brass glide when motion is reduced (parity with Button.primary). */
+  .addPage::before { display: none; }
 }

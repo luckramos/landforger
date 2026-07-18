@@ -1,23 +1,16 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { AnimatePresence } from 'motion/react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { UserMenu } from '../../components/UserMenu/UserMenu'
 import type { World } from '../../domain/types'
 import type { CreateWorldInput } from '../../repository/WorldRepository'
 import { getRepository } from '../../state/repository'
 import { useSessionStore } from '../../state/sessionStore'
+import { icons } from '../../icons'
 import { CreateWorldModal } from './CreateWorldModal'
 import { WorldCard } from './WorldCard'
+import { WorldsSpotlight } from './WorldsSpotlight'
 import styles from './Worlds.module.css'
-
-function Wordmark() {
-  return (
-    <span className={styles.wordmark}>
-      <img src="/landforger-icon.svg" alt="" aria-hidden="true" width="22" height="22" />
-      LandForger
-    </span>
-  )
-}
 
 function dateline(now = new Date()): string {
   return now
@@ -33,8 +26,8 @@ export function Worlds() {
 
   const [worlds, setWorlds] = useState<World[] | null>(null)
   const [entryCounts, setEntryCounts] = useState<Record<string, number>>({})
-  const [query, setQuery] = useState('')
   const [creating, setCreating] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -57,13 +50,18 @@ export function Worlds() {
     }
   }, [])
 
-  const filtered = useMemo(() => {
-    const needle = query.trim().toLowerCase()
-    if (needle === '') return worlds ?? []
-    return (worlds ?? []).filter(
-      (world) => world.name.toLowerCase().includes(needle) || world.logline.toLowerCase().includes(needle),
-    )
-  }, [worlds, query])
+  useEffect(() => {
+    const handleSearchShortcut = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault()
+        setSearchOpen(true)
+      } else if (event.key === 'Escape') {
+        setSearchOpen(false)
+      }
+    }
+    document.addEventListener('keydown', handleSearchShortcut)
+    return () => document.removeEventListener('keydown', handleSearchShortcut)
+  }, [])
 
   async function handleCreate(input: CreateWorldInput) {
     const world = await getRepository().createWorld(input)
@@ -78,16 +76,18 @@ export function Worlds() {
   return (
     <main className={styles.screen}>
       <header className={styles.header}>
-        <Wordmark />
-        <input
-          type="search"
-          className={styles.search}
-          placeholder="Search worlds…"
-          aria-label="Search worlds"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-        <UserMenu />
+        <Link to="/worlds" className={styles.brand} aria-label="LandForger home">
+          <img className={styles.brandFull} src="/landforger.svg" alt="LandForger" />
+          <img className={styles.brandIcon} src="/landforger-icon.svg" alt="" aria-hidden="true" />
+        </Link>
+
+        <button type="button" className={styles.searchTrigger} onClick={() => setSearchOpen(true)}>
+          <icons.search size={16} /> <span>Search worlds…</span><kbd>⌘K</kbd>
+        </button>
+
+        <div className={styles.rightChrome}>
+          <UserMenu />
+        </div>
       </header>
 
       <section className={styles.greeting}>
@@ -105,7 +105,7 @@ export function Worlds() {
           <span className={styles.createHint}>A blank cosmos or a starter structure</span>
         </button>
 
-        {filtered.map((world, index) => (
+        {(worlds ?? []).map((world, index) => (
           <WorldCard
             key={world.slug}
             world={world}
@@ -114,16 +114,17 @@ export function Worlds() {
             onClick={() => selectWorld(world)}
           />
         ))}
-
-        {worlds !== null && filtered.length === 0 && query.trim() !== '' && (
-          <p className={styles.empty}>No worlds match &ldquo;{query.trim()}&rdquo;.</p>
-        )}
       </section>
 
       <AnimatePresence>
         {creating && <CreateWorldModal onCancel={() => setCreating(false)} onCreate={handleCreate} />}
       </AnimatePresence>
 
+      <AnimatePresence>
+        {searchOpen && worlds && (
+          <WorldsSpotlight worlds={worlds} entryCounts={entryCounts} onClose={() => setSearchOpen(false)} />
+        )}
+      </AnimatePresence>
     </main>
   )
 }

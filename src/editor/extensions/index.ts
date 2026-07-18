@@ -15,10 +15,16 @@ import { Placeholder } from '@tiptap/extensions'
 import { Details, DetailsContent, DetailsSummary } from '@tiptap/extension-details'
 import Highlight from '@tiptap/extension-highlight'
 import Image from '@tiptap/extension-image'
-import { TaskItem, TaskList } from '@tiptap/extension-list'
+import { TaskList } from '@tiptap/extension-list'
+import { TableCell, TableHeader, TableRow } from '@tiptap/extension-table'
 import StarterKit from '@tiptap/starter-kit'
 import { Callout } from './Callout'
+import { TableWithTools } from './TableView'
+import { CheckboxTaskItem } from './TaskItemView'
 import { CodeFenceAsText } from './CodeFenceAsText'
+import { MarkdownAutoConvert } from './MarkdownAutoConvert'
+import { MarkdownLinkRule } from './MarkdownLinkRule'
+import { TabIndent } from './TabIndent'
 import { buildWikiLinkSuggestions, WikiLink } from './WikiLink'
 import { SlashCommands } from './SlashCommands'
 import type { WikiLinkRegistry } from '../WikiLinkRegistry'
@@ -48,12 +54,19 @@ export function buildBlockExtensions(opts: BlockExtensionOptions = {}): AnyExten
       link: { openOnClick: false },
     }),
     TaskList,
-    TaskItem.configure({ nested: true }),
+    CheckboxTaskItem.configure({ nested: true }),
     Image,
-    Details,
+    // persist: true registers the `open` attribute — without it the extension
+    // returns no attributes and `open` can't be set, so a toggle can't be
+    // inserted (or saved) in an expanded state.
+    Details.configure({ persist: true }),
     DetailsSummary,
     DetailsContent,
     Callout,
+    TableWithTools,
+    TableRow,
+    TableHeader,
+    TableCell,
     Highlight,
     resolveTitle || wikiLinkRegistry || onWikiLinkNavigate
       ? WikiLink.configure({
@@ -64,6 +77,9 @@ export function buildBlockExtensions(opts: BlockExtensionOptions = {}): AnyExten
         })
       : WikiLink,
     SlashCommands,
+    TabIndent,
+    MarkdownLinkRule,
+    MarkdownAutoConvert,
     ...(codeFenceGuard ? [CodeFenceAsText] : []),
   ]
 }

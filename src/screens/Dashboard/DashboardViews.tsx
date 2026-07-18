@@ -1,5 +1,11 @@
+import { useState } from 'react'
+import { AnimatePresence } from 'motion/react'
 import { Link, useOutletContext, useParams } from 'react-router-dom'
-import type { Page } from '../../domain/types'
+import type { Category, Page, PropertyDef } from '../../domain/types'
+import { upsertCategoryTemplate } from '../../domain/properties'
+import { CategoryTemplateDialog } from '../../properties/CategoryTemplateDialog'
+import { useUiStore } from '../../state/uiStore'
+import { icons } from '../../icons'
 import type { DashboardOutletContext } from './DashboardShell'
 import { CATEGORY_META, categoryMeta } from './categoryMeta'
 import styles from './DashboardViews.module.css'
@@ -77,21 +83,62 @@ export function DashboardHome() {
 
 export function DashboardList() {
   const { category = '', tag = '' } = useParams()
-  const { world, pages } = useOutletContext<DashboardOutletContext>()
+  const { world, pages, repository, readOnly } = useOutletContext<DashboardOutletContext>()
+  const motionScale = useUiStore((state) => state.motionScale)
+  const [templateOpen, setTemplateOpen] = useState(false)
   const meta = categoryMeta(category)
   const filtered = pages.filter((page) => (meta ? page.category === meta.category : page.tags.includes(tag)))
   const heading = meta?.label ?? `#${tag}`
+
+  const saveTemplate = (target: Category, properties: PropertyDef[]) => {
+    const categoryTemplates = upsertCategoryTemplate(world.categoryTemplates, target, properties)
+    repository.updateWorld(world.slug, { categoryTemplates }).catch(() => {})
+    setTemplateOpen(false)
+  }
 
   return (
     <main className={styles.list}>
       <header className={styles.listHeader}>
         <span className={styles.listIcon} style={{ color: meta ? `var(--cat-${meta.category})` : 'var(--bronze-light)' }}>{meta ? <meta.icon size={28} /> : '#'}</span>
         <div><span className={styles.eyebrow}>{meta ? 'Category' : 'Tag collection'}</span><h1>{heading}</h1><p>{filtered.length} {filtered.length === 1 ? 'Page' : 'Pages'} charted here</p></div>
+        {meta && !readOnly && (
+          <div className={styles.headerActions}>
+            <Link
+              className={styles.addPage}
+              to={`/w/${world.slug}/new?category=${meta.category}`}
+              aria-label={`New ${meta.label} page`}
+              title={`New ${meta.label} page`}
+            >
+              <icons.add size={18} />
+            </Link>
+            <button
+              type="button"
+              className={styles.templateEdit}
+              aria-label={`Edit ${meta.label} template`}
+              title={`Edit ${meta.label} template`}
+              onClick={() => setTemplateOpen(true)}
+            >
+              <icons.edit size={17} />
+            </button>
+          </div>
+        )}
       </header>
       <section className={styles.pageGrid} aria-label={`${heading} Pages`}>
         {filtered.map((page) => <PageCard key={page.slug} page={page} worldSlug={world.slug} />)}
       </section>
       {filtered.length === 0 && <p className={styles.empty}>Nothing has been charted here yet.</p>}
+
+      <AnimatePresence>
+        {meta && templateOpen && (
+          <CategoryTemplateDialog
+            world={world}
+            category={meta.category}
+            motionScale={motionScale}
+            onClose={() => setTemplateOpen(false)}
+            onSave={saveTemplate}
+          />
+        )}
+      </AnimatePresence>
     </main>
   )
 }

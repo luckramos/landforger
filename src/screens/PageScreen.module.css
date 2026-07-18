@@ -2,7 +2,7 @@
 
 .screen {
   min-height: 100%;
-  padding: 48px 16px 0;
+  padding: 48px 16px 48px;
   animation: view-in calc(var(--mo, 1) * 300ms) var(--ease-house) both;
 }
 

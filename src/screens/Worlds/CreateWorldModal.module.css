@@ -16,21 +16,18 @@
   from {
     opacity: 0;
   }
-  to {
-    opacity: 1;
-  }
 }
 
 .panel {
-  width: min(840px, 100%);
+  width: min(860px, 100%);
   max-height: calc(100vh - 48px);
   overflow-y: auto;
   display: grid;
-  grid-template-columns: 1fr 320px;
-  gap: 28px;
-  padding: 28px;
+  grid-template-columns: 1fr 300px;
+  gap: 32px;
+  padding: 30px;
   border: 1px solid var(--hairline);
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   background: var(--panel-1);
   animation: cw-modalIn calc(var(--mo, 1) * 320ms) var(--ease-house) backwards;
 }
@@ -39,10 +36,6 @@
   from {
     opacity: 0;
     transform: translateY(14px) scale(0.97);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
   }
 }
 
@@ -65,8 +58,19 @@
   margin: -10px 0 0;
   font-family: var(--font-serif);
   font-size: var(--text-2xl);
-  font-weight: 400;
+  font-weight: 500;
+  letter-spacing: -0.01em;
   color: var(--text-hi);
+  text-wrap: balance;
+}
+
+.lede {
+  margin: -8px 0 2px;
+  font-size: var(--text-base);
+  line-height: 1.5;
+  color: var(--text-dim);
+  text-wrap: pretty;
+  max-width: 46ch;
 }
 
 .field {
@@ -75,7 +79,6 @@
   gap: 8px;
 }
 
-.field label,
 .fieldLabel {
   font-family: var(--font-mono);
   font-size: var(--text-sm);
@@ -84,39 +87,50 @@
   color: var(--text-dim);
 }
 
-.field input[type='text'],
-.field textarea {
+/* One control surface for every text input + textarea. */
+.control {
   width: 100%;
   background: var(--panel-3);
   border: 1px solid var(--hairline);
-  border-radius: 8px;
-  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  padding: 11px 13px;
   color: var(--text-hi);
   font-family: var(--font-sans);
-  /* #70: 16px by default so focusing Premise never zooms the viewport;
-     steps back to 14px once a pointer is likely. (.nameInput's own
-     `!important` 19px above is unaffected either way.) */
+  /* 16px by default so focus never zooms the viewport; steps down once a
+     pointer is likely (ADR 0003). */
   font-size: var(--text-md);
   resize: vertical;
+  transition: border-color calc(var(--mo, 1) * 140ms) var(--ease-house),
+    box-shadow calc(var(--mo, 1) * 140ms) var(--ease-house);
+}
+
+.control::placeholder {
+  color: var(--text-faint);
 }
 
 @media (min-width: 640px) {
-  .field input[type='text'],
-  .field textarea {
+  .control {
     font-size: var(--text-base);
   }
 }
 
 .nameInput {
-  font-family: var(--font-serif) !important;
-  font-size: var(--text-lg) !important;
+  font-family: var(--font-serif);
+  font-size: var(--text-lg);
+  font-weight: 500;
+  letter-spacing: -0.01em;
 }
 
-.field input:focus,
-.field textarea:focus {
+@media (min-width: 640px) {
+  .nameInput {
+    font-size: var(--text-lg);
+  }
+}
+
+.control:focus {
   outline: none;
-  border-color: var(--bronze);
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--bronze) 14%, transparent);
+  border-color: var(--focus-border);
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--bronze) 9%, transparent);
 }
 
 .chipRow {
@@ -125,14 +139,15 @@
   gap: 8px;
 }
 
-/* Hit-area normalization (#59): genre chips sit in a tightly packed, wrapping
-   row (8px gap) where a negative-inset ::after would overlap its neighbour,
-   so the pointer target grows via a padding bump on the chip itself instead
-   — each chip keeps its own box, so the row never overlaps. native height
-   was padding(6*2=12) + text line-box (13px * ~1.15 ≈ 15) ≈ 27; padding-block
-   13px brings it to 13*2+15=41 >= 40. */
+/* Skinny-row exception (ADR 0002, #59): these genre chips are deliberately slim
+   — they sit below the 40px desktop floor. The pointer target grows with the
+   chip's own padding (never a negative-inset ::after that would overlap a
+   neighbour in the packed 8px-gap row); a smaller box only makes that safer. */
 .chip {
-  padding: 13px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
   border-radius: var(--radius-pill);
   border: 1px solid var(--hairline);
   background: transparent;
@@ -140,12 +155,17 @@
   font-family: var(--font-sans);
   font-size: var(--text-base);
   cursor: pointer;
-  transition: border-color calc(var(--mo, 1) * 140ms), background calc(var(--mo, 1) * 140ms), color calc(var(--mo, 1) * 140ms);
+  transition: border-color calc(var(--mo, 1) * 140ms), background calc(var(--mo, 1) * 140ms),
+    color calc(var(--mo, 1) * 140ms), transform calc(var(--mo, 1) * 120ms) var(--ease-house);
 }
 
 .chip:hover {
   border-color: var(--hairline-strong);
   color: var(--text);
+}
+
+.chip:active {
+  transform: scale(0.96);
 }
 
 .chip[data-selected] {
@@ -154,23 +174,48 @@
   color: color-mix(in oklch, var(--chip-color) 80%, white);
 }
 
-.colorRow {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  color: var(--text-dim);
+/* The custom chip carries a live dot of the currently-chosen custom color. */
+.customDot {
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius-circle);
+  background: var(--chip-color);
+  box-shadow: inset 0 0 0 1px oklch(1 0 0 / 0.28);
 }
 
-.colorRow input[type='color'] {
-  width: 36px;
-  height: 28px;
-  padding: 2px;
+/* — custom studio: grid-collapse reveal (0fr→1fr), the house details vocabulary — */
+.studio {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows calc(var(--mo, 1) * 260ms) var(--ease-house);
+}
+
+.studio[data-open] {
+  grid-template-rows: 1fr;
+}
+
+.studioInner {
+  overflow: hidden;
+  min-height: 0;
+  opacity: 0;
+  transition: opacity calc(var(--mo, 1) * 200ms) var(--ease-house);
+}
+
+.studio[data-open] .studioInner {
+  opacity: 1;
+}
+
+.studioGrid {
+  margin-top: 10px;
+  padding: 16px;
   border: 1px solid var(--hairline);
-  border-radius: 6px;
-  background: var(--panel-3);
-  cursor: pointer;
+  border-radius: var(--radius-md);
+  background: var(--panel-2);
+}
+
+/* the genre-name field + color picker stack inside the studio */
+.studioGrid .field {
+  gap: 10px;
 }
 
 .templateRow {
@@ -180,16 +225,19 @@
 }
 
 .templateBox {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 6px;
   padding: 14px;
+  padding-right: 34px;
   text-align: left;
   border: 1px solid var(--hairline);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: transparent;
   cursor: pointer;
-  transition: border-color calc(var(--mo, 1) * 140ms), background calc(var(--mo, 1) * 140ms);
+  transition: border-color calc(var(--mo, 1) * 140ms), background calc(var(--mo, 1) * 140ms),
+    transform calc(var(--mo, 1) * 120ms) var(--ease-house);
 }
 
 .templateBox strong {
@@ -204,8 +252,25 @@
   line-height: 1.45;
 }
 
+/* a small radio-style mark, top-right, that fills when the template is chosen */
+.templateMark {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-circle);
+  border: 1.5px solid var(--hairline-strong);
+  transition: border-color calc(var(--mo, 1) * 140ms), box-shadow calc(var(--mo, 1) * 140ms),
+    background calc(var(--mo, 1) * 140ms);
+}
+
 .templateBox:hover {
   border-color: var(--hairline-strong);
+}
+
+.templateBox:active {
+  transform: scale(0.985);
 }
 
 .templateBox[data-selected] {
@@ -213,25 +278,30 @@
   background: color-mix(in oklch, var(--bronze) 10%, transparent);
 }
 
+.templateBox[data-selected] .templateMark {
+  border-color: var(--bronze);
+  background: var(--bronze);
+  box-shadow: inset 0 0 0 3px var(--panel-1);
+}
+
 .actions {
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: 10px;
-  margin-top: 4px;
+  margin-top: 6px;
 }
 
 .cancelButton {
   padding: 10px 16px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--hairline);
   background: transparent;
   color: var(--text-dim);
   font-size: var(--text-base);
   cursor: pointer;
-  /* Scoped transitions (#67): hover's background/color (below) ease in
-     instead of snapping; transform (#65's press scale) is kept, not
-     dropped, in the same declaration. */
-  transition: transform calc(var(--mo, 1) * 120ms) var(--ease-house), background calc(var(--mo, 1) * 160ms) var(--ease-house), color calc(var(--mo, 1) * 160ms) var(--ease-house);
+  /* Scoped transitions (#67): hover eases; the press scale (#65) is kept. */
+  transition: transform calc(var(--mo, 1) * 120ms) var(--ease-house),
+    background calc(var(--mo, 1) * 160ms) var(--ease-house), color calc(var(--mo, 1) * 160ms) var(--ease-house);
 }
 
 .cancelButton:hover {
@@ -246,7 +316,7 @@
 .previewColumn {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   align-self: start;
   position: sticky;
   top: 0;
@@ -260,8 +330,25 @@
   color: var(--text-faint);
 }
 
+.previewNote {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.45;
+  color: var(--text-faint);
+  text-wrap: pretty;
+}
+
 @media (max-width: 760px) {
   .panel {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .studio {
+    transition: none;
+  }
+  .studioInner {
+    transition: none;
   }
 }

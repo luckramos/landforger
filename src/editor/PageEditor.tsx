@@ -1,17 +1,18 @@
 // The editor core (issue #20): tiptap EditorContent + the design's persistent
-// floating format toolbar (design-inventory.md §2.3 "Format toolbar",
+// format toolbar (design-inventory.md §2.3 "Format toolbar",
 // animation-catalog.md "format toolbar dock"). No selection bubble menu.
 // `/`, `@` and `[[` are independent Suggestion plugins: slash inserts blocks;
 // the other two insert the same canonical-by-Slug Wikilink node.
 
 import type { Editor } from '@tiptap/core'
 import { EditorContent, useEditor, useEditorState } from '@tiptap/react'
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { forwardRef, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 import { pageBodyCodec } from './codec/TiptapMarkdownCodec'
 import { buildBlockExtensions } from './extensions'
 import { WikiLinkRegistry, type WikiLinkPage } from './WikiLinkRegistry'
 import { icons } from '../icons'
+import { useUiStore, type ToolbarAnchor } from '../state/uiStore'
 import styles from './PageEditor.module.css'
 
 export interface PageEditorProps {
@@ -39,8 +40,6 @@ export interface PageEditorProps {
   /** Test seam: receive the editor instance once created. */
   onEditorReady?: (editor: Editor) => void
 }
-
-type ToolbarAnchor = 'top' | 'bottom'
 
 export function PageEditor({
   body,
@@ -95,28 +94,42 @@ export function PageEditor({
 
   const style = width ? ({ '--page-editor-width': width } as CSSProperties) : undefined
 
-  // Measure the content column so the fixed toolbar can be centered on the
-  // document body — independent of the sidebar width or any ancestor that
-  // might otherwise trap `position: fixed`.
+  // Toolbar dock is a remembered user setting (persists across Pages/reloads).
+  const anchor = useUiStore((state) => state.toolbarAnchor)
+  const setToolbarAnchor = useUiStore((state) => state.setToolbarAnchor)
+
+  // Anchor swap: the bar changes flex `order` (top ⇄ bottom of the sheet), which
+  // can't be tweened. FLIP it instead — capture both boxes at the click, let the
+  // layout settle, then animate each from its old spot to its new one so the bar
+  // glides between docks and the text glides the other way (a coordinated morph).
+  const wrapperRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
-  const [metrics, setMetrics] = useState<{ center: number; width: number } | null>(null)
-  useLayoutEffect(() => {
-    const el = contentRef.current
-    if (!el) return
-    const measure = () => {
-      const rect = el.getBoundingClientRect()
-      setMetrics({ center: rect.left + rect.width / 2, width: rect.width })
+  const firstRef = useRef<{ bar?: DOMRect; content?: DOMRect } | null>(null)
+
+  const changeAnchor = (next: ToolbarAnchor) => {
+    if (next === anchor) return
+    firstRef.current = {
+      bar: wrapperRef.current?.getBoundingClientRect(),
+      content: contentRef.current?.getBoundingClientRect(),
     }
-    measure()
-    const observer = new ResizeObserver(measure)
-    observer.observe(el)
-    window.addEventListener('resize', measure)
-    return () => { observer.disconnect(); window.removeEventListener('resize', measure) }
-  }, [editor])
+    setToolbarAnchor(next)
+  }
+
+  useLayoutEffect(() => {
+    const first = firstRef.current
+    firstRef.current = null
+    if (!first) return
+    playFlip(wrapperRef.current, first.bar)
+    playFlip(contentRef.current, first.content)
+  }, [anchor])
 
   return (
     <div className={styles.root} style={style} data-read-only={readOnly || undefined}>
-      {editor && metrics && <Toolbar editor={editor} readOnly={readOnly} metrics={metrics} />}
+      {/* In-flow sticky bar (see Toolbar). Hidden entirely in read-only so it
+          never reserves a row above a Page you can't edit. */}
+      {editor && !readOnly && (
+        <Toolbar editor={editor} anchor={anchor} onAnchor={changeAnchor} wrapperRef={wrapperRef} />
+      )}
       <div ref={contentRef} className={styles.content}>
         <EditorContent editor={editor} />
       </div>
@@ -124,27 +137,67 @@ export function PageEditor({
   )
 }
 
-// ---------------------------------------------------------------------------
-// Format toolbar — floating pill, anchorable top/bottom via the segmented
-// control on the bar itself. Active states via useEditorState selectors
-// (v3: shouldRerenderOnTransaction is false, so the editor component itself
-// never re-renders per keystroke — only this bar does, on selected changes).
-// ---------------------------------------------------------------------------
-
-interface ToolbarMetrics {
-  /** Viewport x of the content column's center — the pill centers on this. */
-  center: number
-  width: number
+// FLIP "Invert + Play": translate `el` from where it was (`first`) to where it
+// now sits, then release to 0 — a slide with no layout thrash. Honors the
+// motion scale (`--mo`) and the house curve; collapses to nothing under
+// reduced-motion (and in tests, where getBoundingClientRect has no geometry).
+function playFlip(el: HTMLElement | null, first: DOMRect | undefined) {
+  if (!el || !first || typeof el.animate !== 'function') return
+  const last = el.getBoundingClientRect()
+  const dx = first.left - last.left
+  const dy = first.top - last.top
+  if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return
+  const cs = getComputedStyle(el)
+  const mo = parseFloat(cs.getPropertyValue('--mo')) || 1
+  const ease = cs.getPropertyValue('--ease-house').trim() || 'ease'
+  const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+  el.animate(
+    [{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'translate(0px, 0px)' }],
+    { duration: reduced ? 0 : 340 * mo, easing: ease },
+  )
 }
 
-function Toolbar({ editor, readOnly, metrics }: { editor: Editor; readOnly: boolean; metrics: ToolbarMetrics }) {
-  const [anchor, setAnchor] = useState<ToolbarAnchor>('top')
+// ---------------------------------------------------------------------------
+// Format toolbar — an in-flow `position: sticky` pill, anchorable top/bottom
+// via the segmented control on the bar itself. `.root` is a flex column, so the
+// anchor just flips the bar's `order` around the content (no remount) while
+// sticky keeps it pinned to the viewport and bounded to the editor sheet. The
+// pill sizes to its content and centers on the column for free — no portal, no
+// measurement. Active states via useEditorState selectors (v3:
+// shouldRerenderOnTransaction is false, so the editor component itself never
+// re-renders per keystroke — only this bar does, on selection changes).
+// ---------------------------------------------------------------------------
+
+function Toolbar({
+  editor,
+  anchor,
+  onAnchor,
+  wrapperRef,
+}: {
+  editor: Editor
+  anchor: ToolbarAnchor
+  onAnchor: (anchor: ToolbarAnchor) => void
+  wrapperRef: RefObject<HTMLDivElement | null>
+}) {
+  // The bar belongs to the act of editing: it stays collapsed away while the
+  // Page reads clean, then eases in when the writing surface takes focus.
+  // Toolbar and anchor buttons preserve focus (mousedown preventDefault), so
+  // using a tool never dismisses the bar mid-edit.
+  const [editing, setEditing] = useState(editor.isFocused)
+  useEffect(() => {
+    const reveal = () => setEditing(true)
+    const hide = () => setEditing(false)
+    editor.on('focus', reveal)
+    editor.on('blur', hide)
+    return () => {
+      editor.off('focus', reveal)
+      editor.off('blur', hide)
+    }
+  }, [editor])
 
   const s = useEditorState({
     editor,
     selector: ({ editor }) => ({
-      canUndo: editor.can().undo(),
-      canRedo: editor.can().redo(),
       paragraph: editor.isActive('paragraph'),
       h1: editor.isActive('heading', { level: 1 }),
       h2: editor.isActive('heading', { level: 2 }),
@@ -174,19 +227,16 @@ function Toolbar({ editor, readOnly, metrics }: { editor: Editor; readOnly: bool
     if (href) chain().setLink({ href }).run()
   }
 
-  return createPortal(
+  return (
     <div
-      className={anchor === 'bottom' ? `${styles.toolbarDock} ${styles.toolbarDockBottom}` : styles.toolbarDock}
-      style={{ left: `${metrics.center}px`, maxWidth: `${metrics.width}px` }}
-      aria-hidden={readOnly || undefined}
+      ref={wrapperRef}
+      className={anchor === 'bottom' ? `${styles.toolbarSticky} ${styles.toolbarStickyBottom}` : styles.toolbarSticky}
+      data-visible={editing}
     >
       <div role="toolbar" aria-label="Format" className={styles.toolbar}>
-        <ToolbarButton label="Undo" disabled={!s.canUndo} onRun={() => chain().undo().run()}>
-          <icons.editorUndo size={17} />
-        </ToolbarButton>
-        <ToolbarButton label="Redo" disabled={!s.canRedo} onRun={() => chain().redo().run()}>
-          <icons.editorRedo size={17} />
-        </ToolbarButton>
+        {/* Undo/redo live on the global ⌘Z / ⌘⇧Z; the freed space now holds the
+            table tool with its Word-style row × column picker. */}
+        <TableButton editor={editor} anchor={anchor} />
 
         <span className={styles.divider} />
 
@@ -253,7 +303,9 @@ function Toolbar({ editor, readOnly, metrics }: { editor: Editor; readOnly: bool
             className={anchor === 'top' ? styles.segmentActive : styles.segment}
             aria-label="Anchor toolbar to top"
             aria-pressed={anchor === 'top'}
-            onClick={() => setAnchor('top')}
+            // Keep editing focus so re-anchoring never collapses the bar.
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => onAnchor('top')}
           >
             <icons.anchorTop size={13} />
           </button>
@@ -262,16 +314,116 @@ function Toolbar({ editor, readOnly, metrics }: { editor: Editor; readOnly: bool
             className={anchor === 'bottom' ? styles.segmentActive : styles.segment}
             aria-label="Anchor toolbar to bottom"
             aria-pressed={anchor === 'bottom'}
-            onClick={() => setAnchor('bottom')}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => onAnchor('bottom')}
           >
             <icons.anchorBottom size={13} />
           </button>
         </div>
       </div>
+    </div>
+  )
+}
+
+// Table tool — a toolbar button opening a Word-style grid: sweep the pointer
+// across the cells to size the table, click to insert. The picker is portaled
+// to <body> (fixed-positioned from the button) so the toolbar's `overflow:
+// hidden` reveal-clip never hides it. Keyboard users insert a table via `/table`.
+function TableButton({ editor, anchor }: { editor: Editor; anchor: ToolbarAnchor }) {
+  const [rect, setRect] = useState<DOMRect | null>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
+  const pickerRef = useRef<HTMLDivElement>(null)
+  const open = rect !== null
+
+  useEffect(() => {
+    if (!open) return
+    const onDown = (event: MouseEvent) => {
+      const target = event.target as Node
+      if (buttonRef.current?.contains(target) || pickerRef.current?.contains(target)) return
+      setRect(null)
+    }
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') setRect(null) }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
+  const insert = (rows: number, cols: number) => {
+    editor.chain().focus().insertTable({ rows, cols, withHeaderRow: true }).run()
+    setRect(null)
+  }
+
+  return (
+    <>
+      <button
+        ref={buttonRef}
+        type="button"
+        className={open ? `${styles.button} ${styles.buttonActive}` : styles.button}
+        aria-label="Insert table"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        title="Insert table"
+        onMouseDown={(event) => event.preventDefault()}
+        onClick={() => setRect(open ? null : (buttonRef.current?.getBoundingClientRect() ?? null))}
+      >
+        <icons.editorTable size={17} />
+      </button>
+      {rect && (
+        <TableGridPicker
+          ref={pickerRef}
+          rect={rect}
+          direction={anchor === 'bottom' ? 'up' : 'down'}
+          onPick={insert}
+        />
+      )}
+    </>
+  )
+}
+
+const GRID_MAX = 8
+
+const TableGridPicker = forwardRef<
+  HTMLDivElement,
+  { rect: DOMRect; direction: 'up' | 'down'; onPick: (rows: number, cols: number) => void }
+>(function TableGridPicker({ rect, direction, onPick }, ref) {
+  // 0-indexed hovered cell; the selection is the top-left (rows × cols) block.
+  const [hover, setHover] = useState({ row: 0, col: 0 })
+  const rows = hover.row + 1
+  const cols = hover.col + 1
+  const style: CSSProperties =
+    direction === 'down'
+      ? { top: rect.bottom + 6, left: rect.left }
+      : { bottom: window.innerHeight - rect.top + 6, left: rect.left }
+
+  return createPortal(
+    <div
+      ref={ref}
+      className={`${styles.tablePicker} ${direction === 'up' ? styles.tablePickerUp : styles.tablePickerDown}`}
+      style={style}
+      role="dialog"
+      aria-label="Table size"
+      onMouseDown={(event) => event.preventDefault()}
+    >
+      <div className={styles.tableGrid} role="presentation">
+        {Array.from({ length: GRID_MAX }).map((_, row) =>
+          Array.from({ length: GRID_MAX }).map((_, col) => (
+            <span
+              key={`${row}-${col}`}
+              className={row <= hover.row && col <= hover.col ? styles.tableGridOn : styles.tableGridOff}
+              onMouseEnter={() => setHover({ row, col })}
+              onClick={() => onPick(row + 1, col + 1)}
+            />
+          )),
+        )}
+      </div>
+      <span className={styles.tableGridLabel}>{cols} × {rows}</span>
     </div>,
     document.body,
   )
-}
+})
 
 interface ToolbarButtonProps {
   label: string

@@ -15,9 +15,10 @@ import { NodeViewWrapper, ReactNodeViewRenderer, type NodeViewProps } from '@tip
 import { useCallback, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
 import type { CSSProperties } from 'react'
-import { CATEGORY_ICON, WikiLinkRegistry, type WikiLinkPage } from '../WikiLinkRegistry'
+import { WikiLinkRegistry, type WikiLinkPage } from '../WikiLinkRegistry'
 import { canonicalWikilinkRegex, wikilinkMarkdown } from '../../domain/wikilink'
 import { categoryMeta } from '../../screens/Dashboard/categoryMeta'
+import { categoryIcons } from '../../icons'
 import { suggestionMenuRenderer, type SuggestionMenuItem } from './SuggestionMenu'
 import styles from './WikiLink.module.css'
 
@@ -178,7 +179,8 @@ function wikiLinkSuggestion(
         id: page.slug,
         label: page.title,
         description: page.category,
-        icon: CATEGORY_ICON[page.category],
+        icon: categoryIcons[page.category],
+        accent: `var(--cat-${page.category})`,
       })),
     render: suggestionMenuRenderer<WikiLinkSuggestionItem>(`Pages (${char})`),
     placement: 'bottom-start' as const,

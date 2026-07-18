@@ -95,7 +95,7 @@ describe('Q3 dialect collisions', () => {
     expect(textContent(reparsed)).toBe('[[not a link]]')
   })
 
-  it('(b) hostile.md parses without throwing; shortcode stays text; table + fence degrade', () => {
+  it('(b) hostile.md parses without throwing; shortcode stays text; pipe table renders; fence degrades', () => {
     const doc = pageBodyCodec.parse(hostile)
     const text = textContent(doc)
 
@@ -105,14 +105,33 @@ describe('Q3 dialect collisions', () => {
     // the [mention id="x"] shortcode dialect is not ours — stays text
     expect(collect(doc, 'mention')).toHaveLength(0)
     expect(text).toContain('[mention id="x"]')
-    // pipe table degrades to text (GFM off, no Table block in v1)
-    expect(collect(doc, 'table')).toHaveLength(0)
-    expect(text).toContain('| Name | Role |')
+    // a standard pipe table now renders into a Table node (its cell text, not
+    // the raw pipes, ends up in the document)
+    expect(collect(doc, 'table')).toHaveLength(1)
+    expect(collect(doc, 'tableHeader')).toHaveLength(2)
+    expect(text).toContain('Captain')
+    expect(text).not.toContain('| Name | Role |')
     // fenced code degrades to text via the CodeFenceAsText guard
     expect(collect(doc, 'codeBlock')).toHaveLength(0)
     expect(text).toContain('[[duskwater]] inside a fence')
     // and the fence text must NOT have materialized a chip either
     expect(collect(doc, 'wikilink').some((n) => n.attrs?.id === 'duskwater')).toBe(false)
+  })
+
+  it('(b4) a standard pipe table round-trips: parse builds the grid, serialize returns pipes', () => {
+    const md = '| Name | Role |\n| --- | --- |\n| Sera | Captain |\n| Bram | Scout |'
+    const doc = pageBodyCodec.parse(md)
+    expect(collect(doc, 'table')).toHaveLength(1)
+    expect(collect(doc, 'tableRow')).toHaveLength(3) // header + 2 body rows
+    expect(collect(doc, 'tableHeader')).toHaveLength(2)
+    expect(collect(doc, 'tableCell')).toHaveLength(4)
+
+    const out = pageBodyCodec.serialize(doc)
+    expect(out).toMatch(/\|.*Name.*\|.*Role.*\|/) // header row
+    expect(out).toMatch(/\|[\s:|-]+-[\s:|-]+\|/) // separator row
+    expect(out).toContain('Captain')
+    // re-parsing the serialized markdown preserves the table intact
+    expect(collect(pageBodyCodec.parse(out), 'tableCell')).toHaveLength(4)
   })
 
   it('(b2) FINDING: without the guard, @tiptap/markdown silently DROPS code fences', () => {

@@ -1,4 +1,4 @@
-import type { Category, Page } from '../domain/types'
+import type { Page } from '../domain/types'
 
 export type WikiLinkPage = Pick<Page, 'slug' | 'title' | 'category' | 'summary' | 'tags'>
 
@@ -39,14 +39,4 @@ export class WikiLinkRegistry {
   }
 
   getRevision = (): number => this.revision
-}
-
-export const CATEGORY_ICON: Record<Category, string> = {
-  stories: '✎',
-  eras: '◷',
-  characters: '♙',
-  locations: '⌖',
-  items: '◇',
-  organizations: '⌂',
-  events: '✦',
 }

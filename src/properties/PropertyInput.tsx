@@ -1,4 +1,4 @@
-import { type CSSProperties } from 'react'
+import { type CSSProperties, type ReactNode } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { overlayExitTransition } from '../components/motionPrefs'
 import { useUiStore } from '../state/uiStore'
@@ -26,12 +26,23 @@ interface PropertyInputProps {
   onChange: (value: CustomProperty['value']) => void
   /** When provided, resolved relation chips become navigable links to their target Page. */
   onOpenPage?: (slug: string) => void
+  /**
+   * Give the scalar/trigger controls a solid resting surface instead of the
+   * inline "transparent-until-hover" panel style. Used by create forms, where
+   * a control must read as a filled field. Relation/image keep their own chrome.
+   */
+  filled?: boolean
 }
 
 /** Public form seam shared by inline Page Properties and per-Category create forms. */
-export function PropertyInput({ property, pages, disabled = false, onChange, onOpenPage }: PropertyInputProps) {
+export function PropertyInput({ property, pages, disabled = false, onChange, onOpenPage, filled = false }: PropertyInputProps) {
   const motionScale = useUiStore((state) => state.motionScale)
   const scalar = Array.isArray(property.value) ? '' : property.value
+
+  // Layout-invisible wrapper (display: contents) — its only job is to scope the
+  // filled surface onto the control inside, so nothing renders larger than the
+  // control itself.
+  const fill = (node: ReactNode) => (filled ? <div className={styles.filledField}>{node}</div> : node)
 
   if (property.type === 'relation') {
     const slugs = Array.isArray(property.value) ? property.value : []
@@ -75,18 +86,18 @@ export function PropertyInput({ property, pages, disabled = false, onChange, onO
   }
 
   if (property.type === 'textarea') {
-    return <textarea className={styles.textarea} aria-label={property.label} disabled={disabled} value={String(scalar)} onChange={(event) => onChange(event.target.value)} />
+    return fill(<textarea className={styles.textarea} aria-label={property.label} disabled={disabled} value={String(scalar)} onChange={(event) => onChange(event.target.value)} />)
   }
 
   if (property.type === 'select') {
-    return (
+    return fill(
       <SelectInput
         value={String(scalar)}
         label={property.label}
         options={property.options ?? []}
         disabled={disabled}
         onChange={onChange}
-      />
+      />,
     )
   }
 
@@ -104,14 +115,14 @@ export function PropertyInput({ property, pages, disabled = false, onChange, onO
   }
 
   if (property.type === 'number') {
-    return <NumberInput value={typeof scalar === 'number' ? scalar : Number(scalar) || 0} label={property.label} disabled={disabled} onChange={onChange} />
+    return fill(<NumberInput value={typeof scalar === 'number' ? scalar : Number(scalar) || 0} label={property.label} disabled={disabled} onChange={onChange} />)
   }
 
   if (property.type === 'date') {
-    return <DateInput value={String(scalar)} label={property.label} disabled={disabled} onChange={onChange} />
+    return fill(<DateInput value={String(scalar)} label={property.label} disabled={disabled} onChange={onChange} />)
   }
 
-  return (
+  return fill(
     <input
       className={styles.input}
       aria-label={property.label}
@@ -119,6 +130,6 @@ export function PropertyInput({ property, pages, disabled = false, onChange, onO
       type="text"
       value={String(scalar)}
       onChange={(event) => onChange(event.target.value)}
-    />
+    />,
   )
 }

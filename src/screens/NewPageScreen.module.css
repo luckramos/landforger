@@ -66,7 +66,26 @@
 }
 .field { display: grid; gap: 8px; }
 .fieldLabel { color: var(--text-dim); font-family: var(--font-mono); font-size: var(--text-sm); letter-spacing: .08em; text-transform: uppercase; }
-.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+/* Step label + the affordance to edit this Category's template inline. */
+.formHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.templateEdit {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 11px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-dim);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: border-color calc(var(--mo, 1) * 140ms) var(--ease-house), background calc(var(--mo, 1) * 140ms) var(--ease-house), color calc(var(--mo, 1) * 140ms) var(--ease-house), transform calc(var(--mo, 1) * 120ms) var(--ease-house);
+}
+.templateEdit:hover { border-color: color-mix(in oklab, var(--bronze) 50%, transparent); background: color-mix(in oklab, var(--bronze) 12%, transparent); color: var(--bronze-light); }
+.templateEdit:active { transform: scale(0.96); }
+.templateEdit:focus-visible { outline: 2px solid var(--bronze); outline-offset: 2px; }
 
 .input {
   width: 100%;
@@ -90,29 +109,6 @@
 .titleInput { font-family: var(--font-serif); font-size: var(--text-xl); }
 .textarea { min-height: 88px; line-height: 1.5; resize: vertical; }
 
-/* Template-property controls (PropertyInput) are the app's inline
-   "transparent-until-hover" fields — right for the Page panel, but here they
-   must read as filled fields like the inputs above. Each control's own wrapper
-   is transparent at rest, so this box supplies the resting surface while the
-   control's hover/focus feedback still layers on top. Relation and image types
-   bring their own visible chrome (chips, dropzone) and stay unboxed. */
-.control {
-  display: flex;
-  align-items: stretch;
-  min-height: 40px;
-  padding: 0 4px;
-  border: 1px solid var(--hairline);
-  border-radius: var(--radius-sm);
-  background: var(--panel-2);
-  transition: border-color calc(var(--mo, 1) * 140ms) var(--ease-house), box-shadow calc(var(--mo, 1) * 140ms) var(--ease-house);
-}
-.control:hover { border-color: var(--hairline-strong); }
-.control:focus-within {
-  border-color: var(--focus-border, color-mix(in oklab, var(--bronze) 70%, transparent));
-  box-shadow: 0 0 0 2px color-mix(in oklab, var(--bronze) 9%, transparent);
-}
-.control > * { flex: 1; min-width: 0; }
-
 .actions { display: flex; justify-content: flex-end; margin-top: 6px; }
 .createButton { display: inline-flex; align-items: center; gap: 8px; }
 
@@ -125,7 +121,6 @@
 /* Card grid reflow mirrors the dashboard's breakpoints. */
 @media (max-width: 1050px) { .grid { grid-template-columns: repeat(4, 1fr); } }
 @media (max-width: 720px) { .screen { width: calc(100% - 28px); padding-top: 36px; } .grid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 560px) { .pair { grid-template-columns: 1fr; } }
 
 /* Step the plain inputs down to 14px on pointer-likely widths; the serif title
    keeps its own larger size. */
@@ -135,5 +130,5 @@
   /* The card's lift/ring transitions are collapsed by cardHover itself. */
   .card { animation-duration: .01ms; animation-delay: 0ms; }
   .form { animation-duration: .01ms; }
-  .input, .control { transition-duration: .01ms; }
+  .input, .templateEdit { transition-duration: .01ms; }
 }

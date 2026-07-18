@@ -1,0 +1,201 @@
+/* Rendered table: hairline grid on the panel surface, header row lifted onto
+   --panel-2. Right/bottom gutters host the "+" append bars; the kebab and its
+   menu float over the grid (positioned by the node view). */
+
+.host { display: block; }
+
+.wrap {
+  position: relative;
+  margin: 20px 0;
+  padding-right: 22px;
+  padding-bottom: 22px;
+}
+
+.scroll {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+
+.table {
+  border-collapse: collapse;
+  width: max-content;
+  min-width: 100%;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: 1.5;
+}
+
+/* td/th/p are ProseMirror-rendered — no CSS-module class, hence :global. */
+.table :global(td),
+.table :global(th) {
+  position: relative; /* anchors the .selectedCell wash */
+  min-width: 84px;
+  padding: 7px 11px;
+  border: 1px solid var(--hairline);
+  vertical-align: top;
+  text-align: left;
+  transition: background calc(var(--mo, 1) * 120ms) var(--ease-house);
+}
+
+.table :global(th) {
+  background: var(--panel-2);
+  color: var(--text-hi);
+  font-weight: 600;
+}
+
+.table :global(p) { margin: 0; }
+
+.table :global(.selectedCell)::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: color-mix(in oklab, var(--bronze) 16%, transparent);
+  pointer-events: none;
+}
+
+/* Delete preview — overlay rectangles drawn over the cells a pending delete
+   would remove. Painted here (a sibling of the managed table content) rather
+   than by classing the <td>s, because ProseMirror's DOMObserver would treat a
+   foreign class as an edit and redraw the cell, erasing it instantly. */
+.doomLayer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: none;
+}
+.doomCell {
+  position: absolute;
+  background: color-mix(in oklab, var(--danger) 26%, transparent);
+  box-shadow: inset 0 0 0 1px var(--danger-subtle);
+  animation: table-control-in calc(var(--mo, 1) * 90ms) var(--ease-house);
+}
+
+/* Append bars — hidden until the table is hovered or holds focus. */
+.addColumn,
+.addRow {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+  background: var(--panel-3);
+  color: var(--text-faint);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity calc(var(--mo, 1) * 140ms) var(--ease-house),
+    background calc(var(--mo, 1) * 140ms) var(--ease-house),
+    color calc(var(--mo, 1) * 140ms) var(--ease-house),
+    border-color calc(var(--mo, 1) * 140ms) var(--ease-house),
+    transform calc(var(--mo, 1) * 140ms) var(--ease-house);
+}
+.wrap:hover .addColumn,
+.wrap:hover .addRow,
+.wrap:focus-within .addColumn,
+.wrap:focus-within .addRow,
+.addColumn:focus-visible,
+.addRow:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+.addColumn { top: 0; bottom: 22px; right: 0; width: 18px; }
+.addRow { left: 0; right: 22px; bottom: 0; height: 18px; }
+/* Inline SVGs carry a baseline gap that skews the grid centering — block them so
+   the "+" sits dead-center in the bar. */
+.addColumn svg,
+.addRow svg { display: block; }
+.addColumn:hover,
+.addRow:hover {
+  border-color: color-mix(in oklab, var(--bronze) 50%, transparent);
+  background: color-mix(in oklab, var(--bronze) 14%, transparent);
+  color: var(--bronze-light);
+}
+.addColumn[data-pressed],
+.addRow[data-pressed] { transform: scale(0.96); }
+
+/* Per-cell kebab — floats in the hovered cell's top-right corner. */
+.kebab {
+  position: absolute;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  line-height: 0;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-xs);
+  background: var(--panel-3);
+  color: var(--text-dim);
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  animation: table-control-in calc(var(--mo, 1) * 120ms) var(--ease-house);
+  transition: background calc(var(--mo, 1) * 120ms) var(--ease-house), color calc(var(--mo, 1) * 120ms) var(--ease-house), border-color calc(var(--mo, 1) * 120ms) var(--ease-house), transform calc(var(--mo, 1) * 120ms) var(--ease-house);
+}
+.kebab svg { display: block; }
+.kebab:hover,
+.kebab[aria-expanded='true'] {
+  border-color: color-mix(in oklab, var(--bronze) 50%, transparent);
+  color: var(--bronze-light);
+}
+.kebab[data-pressed] { transform: scale(0.96); }
+.kebab:focus-visible { outline: 2px solid var(--bronze); outline-offset: 1px; }
+
+/* Cell actions popover. */
+.menu {
+  position: absolute;
+  z-index: 3;
+  display: flex;
+  min-width: 168px;
+  flex-direction: column;
+  gap: 1px;
+  padding: 5px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-md);
+  background: var(--panel-3);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+  animation: table-control-in calc(var(--mo, 1) * 120ms) var(--ease-house);
+}
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+  transition: background calc(var(--mo, 1) * 120ms) var(--ease-house), color calc(var(--mo, 1) * 120ms) var(--ease-house), transform calc(var(--mo, 1) * 120ms) var(--ease-house);
+}
+.menuItem svg { flex: none; color: var(--text-faint); }
+.menuItem:hover { background: var(--hairline-soft); }
+.menuDanger:hover { background: var(--danger-bg); color: var(--danger); }
+.menuDanger:hover svg { color: var(--danger); }
+.menuItem[data-pressed] { transform: scale(0.96); }
+.menuItem:focus-visible { outline: 2px solid var(--bronze); outline-offset: -2px; }
+.menuDivider {
+  height: 1px;
+  margin: 4px 2px;
+  background: var(--hairline);
+}
+
+@keyframes table-control-in {
+  from { opacity: 0; transform: scale(0.94); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .addColumn,
+  .addRow,
+  .kebab,
+  .menu,
+  .menuItem,
+  .table :global(td),
+  .table :global(th) { transition-duration: .01ms; animation-duration: .01ms; }
+}

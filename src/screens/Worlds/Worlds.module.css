@@ -3,59 +3,85 @@
   background: var(--bg);
 }
 
-/* --- Sticky glass header --- */
+/* --- Sticky glass header ---
+   Mirrors the Dashboard topbar (DashboardShell.module.css .topbar): same 56px
+   glass bar, blur, hairline and right cluster. Where the Dashboard leads with a
+   breadcrumb, the Worlds screen — the atlas root, with no World context yet —
+   leads with the project lockup. */
 
 .header {
   position: sticky;
   top: 0;
-  z-index: 5;
+  z-index: 15;
   display: flex;
   align-items: center;
-  gap: 20px;
-  padding: 14px 32px;
-  background: color-mix(in oklab, var(--bg) 72%, transparent);
-  backdrop-filter: blur(14px);
-  border-bottom: 1px solid var(--hairline-soft);
+  gap: 16px;
+  height: 56px;
+  padding: 0 18px;
+  overflow: hidden;
+  border-bottom: 1px solid var(--hairline);
+  background: color-mix(in oklab, var(--bg) 88%, transparent);
+  backdrop-filter: blur(18px);
 }
 
-.wordmark {
+/* Project lockup in the left corner — the full wordmark on wide viewports,
+   the emblem alone once the bar tightens (parity with the sidebar brand). */
+.brand {
+  position: relative;
   display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  height: 32px;
+  color: var(--text-hi);
+  text-decoration: none;
+  transition: transform calc(var(--mo, 1) * 120ms) var(--ease-house);
+}
+.brand:active { transform: scale(0.97); transform-origin: left center; }
+.brandFull { display: block; height: 28px; width: auto; }
+.brandIcon { display: none; height: 28px; width: 28px; }
+
+.searchTrigger {
+  position: relative;
+  display: flex;
+  min-width: 180px;
+  max-width: 300px;
+  height: 34px;
+  flex: 0 1 300px;
   align-items: center;
   gap: 8px;
-  font-family: var(--font-serif);
-  font-size: var(--text-md);
-  color: var(--text-hi);
-  white-space: nowrap;
-}
-
-.wordmark img {
-  display: block;
-}
-
-.search {
-  flex: 1;
-  max-width: 380px;
   margin-left: auto;
-  background: var(--panel-3);
+  padding: 0 12px;
   border: 1px solid var(--hairline);
-  border-radius: var(--radius-pill);
-  padding: 8px 16px;
-  color: var(--text-hi);
-  font-family: var(--font-sans);
-  font-size: var(--text-base);
-  transition:
-    border-color calc(var(--mo, 1) * 160ms),
-    box-shadow calc(var(--mo, 1) * 160ms);
-}
-
-.search:focus {
-  outline: none;
-  border-color: var(--bronze);
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--bronze) 14%, transparent);
-}
-
-.search::placeholder {
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
   color: var(--text-faint);
+  cursor: pointer;
+  user-select: none;
+  transition:
+    border-color calc(var(--mo, 1) * 140ms),
+    background calc(var(--mo, 1) * 140ms),
+    transform calc(var(--mo, 1) * 120ms) var(--ease-house);
+}
+/* Hit-area normalization (#59): comfortably wide; only the 34px height needs
+   bumping toward the 40px floor. */
+.searchTrigger::after { content: ''; position: absolute; inset: -4px 0; }
+.searchTrigger:hover { border-color: var(--hairline-strong); background: var(--panel-3); color: var(--text-dim); }
+.searchTrigger:active { transform: scale(0.98); }
+.searchTrigger span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.searchTrigger kbd { margin-left: auto; padding: 1px 5px; border: 1px solid var(--hairline); border-radius: var(--radius-xs); color: var(--text-faint); font-family: var(--font-mono); font-size: var(--text-xs); }
+
+.rightChrome { display: flex; flex: 0 0 auto; align-items: center; gap: 14px; }
+
+.brand:focus-visible, .searchTrigger:focus-visible { outline: 2px solid var(--bronze); outline-offset: 2px; }
+
+@media (max-width: 640px) {
+  /* Tighten to the emblem + a glyph-only search, matching the Dashboard's own
+     narrow-viewport collapse. */
+  .header { gap: 10px; padding: 0 12px; }
+  .brandFull { display: none; }
+  .brandIcon { display: block; }
+  .searchTrigger { min-width: 0; max-width: none; flex: 0 0 auto; padding: 0 9px; }
+  .searchTrigger span, .searchTrigger kbd { display: none; }
 }
 
 /* --- Greeting --- */

@@ -1,12 +1,15 @@
 .shell {
   --dashboard-sidebar-width: 264px;
+  /* Exposed so in-flow sticky chrome (the editor format toolbar) can pin just
+     below the topbar, and ride up to the viewport edge when it collapses. */
+  --dashboard-topbar-height: 56px;
   min-height: 100vh;
   background: var(--bg);
   color: var(--text);
 }
 
 .shell[data-sidebar='collapsed'] { --dashboard-sidebar-width: 68px; }
-.shell[data-focus='true'] { --dashboard-sidebar-width: 0px; }
+.shell[data-focus='true'] { --dashboard-sidebar-width: 0px; --dashboard-topbar-height: 0px; }
 
 .sidebar {
   position: fixed;
@@ -26,7 +29,6 @@
 }
 
 .shell[data-sidebar='collapsed'] .sidebar { width: 68px; }
-.shell[data-sidebar='collapsed'] .brandRow { flex-direction: column; }
 .shell[data-focus='true'] .sidebar { width: 0; padding-inline: 0; border-width: 0; opacity: 0; pointer-events: none; }
 
 .expandedOnly {
@@ -36,23 +38,104 @@
 
 .shell[data-sidebar='collapsed'] .expandedOnly { opacity: 0; pointer-events: none; }
 
-.brandRow, .brand, .navItem, .topbar, .crumbs, .saveIndicator { display: flex; align-items: center; }
-.brandRow { justify-content: space-between; gap: 8px; margin-bottom: 16px; }
-.brand { min-width: 0; gap: 9px; color: var(--text-hi); text-decoration: none; }
-.brandMark { display: grid; width: 34px; height: 34px; flex: 0 0 34px; place-items: center; border: 1px solid var(--bronze); border-radius: 9px; }
-.brandMark img { width: 26px; height: 26px; display: block; }
-.brand strong, .brand small { display: block; white-space: nowrap; }
-.brand strong { font-family: var(--font-serif); font-size: var(--text-md); font-weight: 500; }
-.brand small { color: var(--text-faint); font-family: var(--font-mono); font-size: var(--text-xs); letter-spacing: .08em; }
+.navItem, .topbar, .crumbs, .saveIndicator { display: flex; align-items: center; }
+/* The brand row holds only the logo — the collapse toggle floats on the shell
+   edge (see .collapseEdge), so nothing here reserves space for it and the
+   New-page button below never shifts on collapse. */
+.brandRow { height: 60px; margin-bottom: 16px; }
+.brand { position: relative; display: block; height: 60px; min-width: 0; color: var(--text-hi); text-decoration: none; transition: transform calc(var(--mo, 1) * 120ms) var(--ease-house); }
+.brand:active { transform: scale(0.97); transform-origin: left center; }
+/* Full lockup (60px) in the expanded rail, compact emblem (34px) in the
+   collapsed one — both left-anchored and vertically centred, cross-fading on
+   collapse while the sidebar's overflow trims the wordmark. */
+.brandFull, .brandIcon { position: absolute; left: 0; top: 50%; display: block; transform: translateY(-50%); transition: opacity calc(var(--mo, 1) * 200ms) var(--ease-house); }
+.brandFull { height: 60px; width: auto; }
+.brandIcon { height: 34px; width: 34px; opacity: 0; }
+.shell[data-sidebar='collapsed'] .brandFull { opacity: 0; }
+.shell[data-sidebar='collapsed'] .brandIcon { opacity: 1; }
 
-.iconButton, .topbarButton, .bottomNav button { position: relative; border: 0; background: transparent; color: var(--text-dim); cursor: pointer; }
-.iconButton { width: 26px; height: 26px; flex: 0 0 26px; border: 1px solid var(--hairline); border-radius: var(--radius-sm); }
-/* Hit-area normalization (#59): the sidebar collapse toggle is the only
-   interactive control in its row (its sibling is the .brand <Link>, not
-   another ::after-enlarged button) — isolated, so a plain -8px inset is
-   safe as-is. */
-.iconButton::after { content: ''; position: absolute; inset: -8px; }
-.newPage { display: flex; height: 38px; align-items: center; gap: 11px; padding: 0 11px; border: 1px solid color-mix(in oklab, var(--bronze) 45%, transparent); border-radius: 8px; color: var(--bronze-light); text-decoration: none; white-space: nowrap; }
+.topbarButton, .bottomNav button { position: relative; border: 0; background: transparent; color: var(--text-dim); cursor: pointer; }
+/* Collapse toggle — a disc straddling the sidebar's right edge, vertically
+   centred on the shell (outside the sidebar's clipped box). `left` tracks the
+   animating edge width, so the disc rides the collapse smoothly and never
+   re-enters the brand row. */
+.collapseEdge {
+  position: fixed;
+  top: 50%;
+  left: calc(var(--dashboard-sidebar-width) - 13px);
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-circle);
+  background: var(--panel-3);
+  color: var(--text-dim);
+  cursor: pointer;
+  transform: translateY(-50%);
+  box-shadow: 0 2px 10px -4px color-mix(in oklab, black 55%, transparent);
+  transition:
+    left calc(var(--mo, 1) * 280ms) var(--ease-house),
+    background calc(var(--mo, 1) * 140ms),
+    border-color calc(var(--mo, 1) * 140ms),
+    color calc(var(--mo, 1) * 140ms),
+    transform calc(var(--mo, 1) * 120ms) var(--ease-house);
+}
+/* ≥40px hit target (ADR 0002) around the 26px disc. */
+.collapseEdge::after { content: ''; position: absolute; inset: -9px; }
+.collapseEdge:hover { background: color-mix(in oklab, var(--bronze) 14%, var(--panel-3)); border-color: var(--bronze); color: var(--text-hi); }
+.collapseEdge:active { transform: translateY(-50%) scale(0.92); }
+.collapseEdge:focus-visible { outline: 2px solid var(--bronze); outline-offset: 2px; }
+.shell[data-focus='true'] .collapseEdge { opacity: 0; pointer-events: none; }
+/* Primary create action — the sidebar's one loud element. Adopts the house
+   primary button (Button.module.css .primary): flat bronze fill, a band of
+   light that glides across the brass on hover, lift + glow, press scale. */
+.newPage {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: flex;
+  height: 38px;
+  align-items: center;
+  gap: 11px;
+  padding: 0 11px;
+  border-radius: var(--radius-sm);
+  background: var(--bronze);
+  color: var(--on-bronze);
+  font-size: var(--text-base);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    box-shadow calc(var(--mo, 1) * 220ms) var(--ease-house),
+    transform calc(var(--mo, 1) * 160ms) var(--ease-house);
+}
+/* Icon cell width matches .navItem's so glyphs line up in the collapsed rail. */
+.newPage > span:first-child { display: grid; width: 20px; flex: 0 0 20px; place-items: center; }
+.newPage::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -75%;
+  z-index: -1;
+  width: 55%;
+  background: linear-gradient(100deg, transparent, color-mix(in oklab, white 46%, transparent), transparent);
+  transform: skewX(-16deg) translateX(0);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform calc(var(--mo, 1) * 620ms) var(--ease-house),
+    opacity calc(var(--mo, 1) * 200ms) ease;
+}
+.newPage:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 22px -10px color-mix(in oklab, var(--bronze) 72%, transparent);
+}
+.newPage:hover::before { transform: skewX(-16deg) translateX(340%); opacity: 1; }
+/* Press wins over the hover lift, and drops the shadow as it settles. */
+.newPage:active { transform: translateY(0) scale(0.96); box-shadow: none; }
 /* Hit-area normalization (#59): nav items are already full sidebar width, so
    only the 36px row height needs bumping toward the 40px floor — but they
    stack vertically with (previously) 0 declared gap, so a -2px vertical
@@ -62,48 +145,86 @@
    instead of overlapping. */
 .primaryNav, .bottomNav { display: flex; flex-direction: column; gap: 4px; }
 .primaryNav { margin-top: 14px; }
-.navItem { position: relative; width: 100%; height: 36px; gap: 12px; padding: 0 11px; border-radius: 7px; color: var(--text-dim); font-size: var(--text-base); text-decoration: none; white-space: nowrap; transition: background calc(var(--mo, 1) * 140ms), color calc(var(--mo, 1) * 140ms); }
+.navItem { position: relative; width: 100%; height: 36px; gap: 12px; padding: 0 11px; border-radius: 7px; color: var(--text-dim); font-size: var(--text-base); text-decoration: none; white-space: nowrap; transition: background calc(var(--mo, 1) * 140ms), color calc(var(--mo, 1) * 140ms), transform calc(var(--mo, 1) * 120ms) var(--ease-house); }
 .navItem::after { content: ''; position: absolute; inset: -2px 0; }
 /* Some nav items open dockable windows and are <button>s; strip the browser
    chrome so they read identically to the <a> nav items beside them. */
 button.navItem { appearance: none; border: 0; background: none; font-family: inherit; text-align: left; cursor: pointer; }
 .navItem > :first-child { width: 20px; flex: 0 0 20px; text-align: center; }
 .navItem:hover { background: var(--hairline-soft); color: var(--text-hi); }
+.navItem:active { transform: scale(0.96); }
 .navItem b { margin-left: auto; color: var(--text-faint); font-family: var(--font-mono); font-size: var(--text-xs); font-weight: 400; }
 
 .tags { margin: 18px 10px; }
 .tags h2 { margin: 0 0 9px; color: var(--text-faint); font-family: var(--font-mono); font-size: var(--text-xs); font-weight: 500; letter-spacing: .14em; text-transform: uppercase; }
 .tags div { display: flex; flex-wrap: wrap; gap: 5px; width: 220px; }
-.tags a { padding: 4px 7px; border: 1px solid var(--hairline-soft); border-radius: 999px; color: var(--text-dim); font-size: var(--text-xs); text-decoration: none; overflow-wrap: break-word; }
-.tags small { margin-left: 4px; color: var(--text-faint); }
+.tags a { display: inline-flex; align-items: center; padding: 4px 7px; border: 1px solid var(--hairline-soft); border-radius: 999px; color: var(--text-dim); font-size: var(--text-xs); text-decoration: none; overflow-wrap: break-word; transition: background calc(var(--mo, 1) * 140ms), border-color calc(var(--mo, 1) * 140ms), color calc(var(--mo, 1) * 140ms), transform calc(var(--mo, 1) * 120ms) var(--ease-house); }
+.tags a:hover { background: var(--hairline-soft); border-color: color-mix(in oklab, var(--bronze) 40%, transparent); color: var(--text-hi); }
+.tags a:hover small { color: var(--bronze-light); }
+.tags a:active { transform: scale(0.96); }
+.tags small { margin-left: 4px; color: var(--text-faint); transition: color calc(var(--mo, 1) * 140ms); }
 .bottomNav { margin-top: auto; border-top: 1px solid var(--hairline-soft); padding-top: 10px; }
 
 .mainColumn { min-height: 100vh; margin-left: 264px; transition: margin-left calc(var(--mo, 1) * 280ms) var(--ease-house); }
 .shell[data-sidebar='collapsed'] .mainColumn { margin-left: 68px; }
 .shell[data-focus='true'] .mainColumn { margin-left: 0; }
 
-.topbar { position: sticky; top: 0; z-index: 15; height: 56px; gap: 14px; padding: 0 20px; overflow: hidden; border-bottom: 1px solid var(--hairline); background: color-mix(in oklab, var(--bg) 88%, transparent); backdrop-filter: blur(18px); opacity: 1; transition: height calc(var(--mo, 1) * 260ms) var(--ease-house), opacity calc(var(--mo, 1) * 180ms), border-color calc(var(--mo, 1) * 180ms); }
+.topbar { position: sticky; top: 0; z-index: 15; height: 56px; gap: 16px; padding: 0 18px; overflow: hidden; border-bottom: 1px solid var(--hairline); background: color-mix(in oklab, var(--bg) 88%, transparent); backdrop-filter: blur(18px); opacity: 1; transition: height calc(var(--mo, 1) * 260ms) var(--ease-house), opacity calc(var(--mo, 1) * 180ms), border-color calc(var(--mo, 1) * 180ms); }
 .shell[data-focus='true'] .topbar { height: 0; border-color: transparent; opacity: 0; pointer-events: none; }
-.worldsBack { flex: 0 0 auto; color: var(--text-faint); font-size: var(--text-sm); text-decoration: none; }
-.crumbs { min-width: 0; gap: 8px; font-size: var(--text-sm); }
-.crumbs a { color: var(--text); text-decoration: none; }
-.crumbs span { color: var(--text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.searchTrigger { position: relative; display: flex; min-width: 190px; max-width: 320px; height: 32px; flex: 1; align-items: center; gap: 8px; margin-left: auto; padding: 0 10px; border: 1px solid var(--hairline); border-radius: 8px; background: var(--panel-2); color: var(--text-faint); cursor: pointer; }
+
+/* Breadcrumb — a wayfinding trail: All Worlds ›  World  ›  current context.
+   The trailing segment carries the open Page's (or Category's) identity color.
+   Separators live on each segment's ::before, so hiding a segment (narrow
+   viewports) removes its separator with it. `user-select: none` per ADR 0003
+   — the trail is control chrome, not selectable copy. */
+.crumbs { min-width: 0; gap: 2px; font-size: var(--text-sm); user-select: none; }
+/* The trail's leading segment is a back-action to the Worlds list, so it reads
+   as one — a globe glyph + "Back to Worlds" label — not a bare home glyph. */
+.crumbRoot { position: relative; display: inline-flex; align-items: center; gap: 6px; height: 28px; flex: 0 0 auto; padding: 0 9px 0 8px; border-radius: var(--radius-sm); color: var(--text-faint); font-size: var(--text-sm); text-decoration: none; white-space: nowrap; transition: background calc(var(--mo, 1) * 140ms), color calc(var(--mo, 1) * 140ms), transform calc(var(--mo, 1) * 120ms) var(--ease-house); }
+.crumbRoot svg { flex: 0 0 auto; }
+.crumbRoot::after { content: ''; position: absolute; inset: -6px; }
+.crumbWorld { min-width: 0; max-width: 30ch; overflow: hidden; padding: 3px 7px; border-radius: var(--radius-xs); color: var(--text-dim); font-size: var(--text-sm); text-decoration: none; text-overflow: ellipsis; white-space: nowrap; transition: background calc(var(--mo, 1) * 140ms), color calc(var(--mo, 1) * 140ms), transform calc(var(--mo, 1) * 120ms) var(--ease-house); }
+.crumbRoot:hover, .crumbWorld:hover { background: var(--hairline-soft); color: var(--text-hi); }
+.crumbRoot:active, .crumbWorld:active { transform: scale(0.96); }
+.crumbWorld::before, .crumbCurrent::before { content: '\203A'; margin: 0 6px 0 4px; color: var(--text-faint); font-size: var(--text-base); }
+.crumbCurrent { display: inline-flex; min-width: 0; align-items: center; gap: 6px; color: var(--text-hi); }
+.crumbIcon { display: grid; flex: 0 0 auto; place-items: center; color: var(--text-dim); }
+.crumbLabel { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+
+.searchTrigger { position: relative; display: flex; min-width: 180px; max-width: 300px; height: 34px; flex: 0 1 300px; align-items: center; gap: 8px; margin-left: auto; padding: 0 12px; border: 1px solid var(--hairline); border-radius: var(--radius-sm); background: var(--panel-2); color: var(--text-faint); cursor: pointer; user-select: none; transition: border-color calc(var(--mo, 1) * 140ms), background calc(var(--mo, 1) * 140ms), transform calc(var(--mo, 1) * 120ms) var(--ease-house); }
 /* Hit-area normalization (#59): already comfortably wide (its only neighbour,
    the save indicator, isn't interactive); only the 32px height needs
    bumping toward the 40px floor. */
 .searchTrigger::after { content: ''; position: absolute; inset: -4px 0; }
-.searchTrigger kbd { margin-left: auto; font-family: var(--font-mono); font-size: var(--text-xs); }
-.saveIndicator { width: 58px; gap: 6px; color: var(--text-faint); font-family: var(--font-mono); font-size: var(--text-xs); }
+.searchTrigger:hover { border-color: var(--hairline-strong); background: var(--panel-3); color: var(--text-dim); }
+.searchTrigger:active { transform: scale(0.98); }
+.searchTrigger kbd { margin-left: auto; padding: 1px 5px; border: 1px solid var(--hairline); border-radius: var(--radius-xs); color: var(--text-faint); font-family: var(--font-mono); font-size: var(--text-xs); }
+
+/* Persistent right cluster (search sits just before it, avatar always shows);
+   the Page-scoped tools slot in only while a Page is open. */
+.rightChrome { display: flex; flex: 0 0 auto; align-items: center; gap: 14px; }
+/* Page-scoped tools: save state · read-only · focus mode. Fenced off from the
+   persistent chrome by a leading hairline so the transient group reads as one
+   unit and its absence (off a Page) is visually clean. */
+.pageTools { display: inline-flex; align-items: center; gap: 8px; padding-left: 14px; border-left: 1px solid var(--hairline); }
+/* min-width holds the row steady so the read-only/focus buttons don't nudge
+   when the label swaps between "Saving" and "Saved". */
+.saveIndicator { display: inline-flex; min-width: 52px; align-items: center; gap: 6px; color: var(--text-faint); font-family: var(--font-mono); font-size: var(--text-xs); font-variant-numeric: tabular-nums; }
 .saveIndicator i { width: 6px; height: 6px; border-radius: 50%; background: oklch(.7 .1 145); }
 .saveIndicator[data-saving] i { background: var(--bronze); animation: saving-pulse calc(var(--mo, 1) * 1s) linear infinite; }
-.topbarButton { display: grid; width: 30px; height: 30px; place-items: center; border-radius: var(--radius-sm); }
+.topbarButton { display: grid; width: 30px; height: 30px; place-items: center; border-radius: var(--radius-sm); border: 0; background: transparent; color: var(--text-dim); cursor: pointer; transition: background calc(var(--mo, 1) * 140ms), color calc(var(--mo, 1) * 140ms), transform calc(var(--mo, 1) * 120ms) var(--ease-house); }
 /* Hit-area normalization (#59): 30px buttons | topbar gap 14px | pitch
    30+14=44 | inset -6px | target 30+12=42. 42 <= 44 — the two topbar
    buttons (and the User Menu avatar beside them) never overlap; the
    topbar's 14px gap is already generous enough without any change. */
 .topbarButton::after { content: ''; position: absolute; inset: -6px; }
 .topbarButton:hover { background: var(--hairline-soft); color: var(--text-hi); }
+.topbarButton[aria-pressed='true'] { background: var(--hairline-soft); color: var(--bronze-light); }
+.topbarButton:active { transform: scale(0.96); }
+
+.crumbRoot:focus-visible, .crumbWorld:focus-visible, .searchTrigger:focus-visible, .topbarButton:focus-visible,
+.brand:focus-visible, .newPage:focus-visible, .navItem:focus-visible, .tags a:focus-visible { outline: 2px solid var(--bronze); outline-offset: 2px; }
+
 .exitFocus { position: fixed; top: 14px; right: 18px; z-index: 50; padding: 7px 12px; border: 1px solid var(--hairline); border-radius: 999px; background: var(--panel-3); color: var(--text-dim); cursor: pointer; }
 
 .view { min-height: calc(100vh - 56px); overscroll-behavior: contain; animation: lw-view-in calc(var(--mo, 1) * 300ms) var(--ease-house) both; }
@@ -113,14 +234,33 @@ button.navItem { appearance: none; border: 0; background: none; font-family: inh
 @keyframes saving-pulse { 50% { opacity: .3; transform: scale(.7); } }
 
 @media (max-width: 760px) {
+  /* The rail is locked to its mini width: keep the exposed var in sync so any
+     edge-anchored chrome lands right, show the compact emblem, and drop the
+     collapse disc (toggling is a no-op at this width). */
+  .shell { --dashboard-sidebar-width: 68px; }
   .sidebar { width: 68px; }
   .sidebar .expandedOnly { opacity: 0; pointer-events: none; }
+  .brandFull { opacity: 0; }
+  .brandIcon { opacity: 1; }
+  .collapseEdge { display: none; }
   .mainColumn { margin-left: 68px; }
-  .searchTrigger span, .worldsBack { display: none; }
-  .topbar { gap: 7px; padding: 0 10px; }
+  /* Collapse the trail to World › current, and the search to its glyph. */
+  .searchTrigger span { display: none; }
+  .searchTrigger kbd { display: none; }
+  .searchTrigger { min-width: 0; max-width: none; flex: 0 0 auto; padding: 0 9px; }
+  .crumbRoot { display: none; }
+  .crumbWorld { max-width: 16ch; }
+  .crumbWorld::before { display: none; }
+  .rightChrome, .pageTools { gap: 8px; }
+  .pageTools { padding-left: 10px; }
+  .topbar { gap: 10px; padding: 0 12px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .view, .saveIndicator[data-saving] i { animation-duration: .01ms; animation-iteration-count: 1; }
-  .sidebar, .expandedOnly, .mainColumn, .topbar, .navItem, .topbarButton { transition-duration: .01ms; }
+  .sidebar, .expandedOnly, .mainColumn, .topbar, .navItem, .topbarButton, .crumbRoot, .crumbWorld, .searchTrigger,
+  .brand, .brandFull, .brandIcon, .collapseEdge, .newPage, .tags a, .tags small { transition-duration: .01ms; }
+  /* No brass glide when motion is reduced — an instant white flash would be
+     worse than none (parity with Button.primary). Hover keeps its lift + glow. */
+  .newPage::before { display: none; }
 }

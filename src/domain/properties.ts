@@ -1,4 +1,4 @@
-import type { Category, CustomProperty, CustomPropertyValue, PropertyDef, World } from './types'
+import type { Category, CategoryTemplate, CustomProperty, CustomPropertyValue, PropertyDef, World } from './types'
 
 const EMPTY_VALUE: Record<PropertyDef['type'], CustomPropertyValue> = {
   text: '',
@@ -17,6 +17,17 @@ export function emptyPropertyValue(definition: PropertyDef): CustomPropertyValue
 
 export function templatePropertiesFor(world: World, category: Category): PropertyDef[] {
   return world.categoryTemplates.find((template) => template.category === category)?.properties ?? []
+}
+
+/** Replaces a Category's template in place, or appends one if the World has none yet. */
+export function upsertCategoryTemplate(
+  templates: CategoryTemplate[],
+  category: Category,
+  properties: PropertyDef[],
+): CategoryTemplate[] {
+  return templates.some((template) => template.category === category)
+    ? templates.map((template) => (template.category === category ? { category, properties } : template))
+    : [...templates, { category, properties }]
 }
 
 /** Materializes a template definition as a Page-owned, independently mutable Property. */

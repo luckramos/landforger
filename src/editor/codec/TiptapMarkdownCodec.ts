@@ -2,11 +2,11 @@
 // (no Editor, no DOM). Ported from the validated spike
 // (landforger-spike/prototype-tiptap-spike/src/codec.ts).
 //
-// GFM is OFF (markedOptions.gfm = false): no v1 Table block, so pipe tables
-// degrade to plain paragraphs on parse. Task-list syntax does NOT need
-// marked's GFM — @tiptap/markdown detects `- [ ]` items itself via its
-// isTaskItem helper on the raw list item, so To-do round-trips with gfm off
-// (asserted in src/editor/__tests__/codec.test.ts).
+// GFM is ON so standard pipe tables tokenize and round-trip through the Table
+// extension (its own tokenizer only supplements tables that contain code-span
+// pipes; plain tables rely on marked's GFM table block). Task-list syntax does
+// not need GFM — @tiptap/markdown detects `- [ ]` items itself — but strike
+// (`~~…~~`) does, so this also makes strikethrough round-trip on parse.
 //
 // The registered extension set always includes the CodeFenceAsText guard
 // (unless explicitly disabled for the regression test): unknown/disabled
@@ -28,7 +28,7 @@ export class TiptapMarkdownCodec implements PageBodyCodec {
   constructor(opts: TiptapMarkdownCodecOptions = {}) {
     this.manager = new MarkdownManager({
       extensions: buildBlockExtensions(opts),
-      markedOptions: { gfm: false },
+      markedOptions: { gfm: true },
     })
   }
 

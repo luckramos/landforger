@@ -170,10 +170,12 @@ describe('hit-area normalization (#59): packed-row targets never overlap a neigh
 })
 
 describe('hit-area normalization (#59): isolated / already-safe controls keep a plain negative-inset ::after', () => {
-  it('Dashboard shell: icon button, topbar buttons, search trigger', () => {
+  it('Dashboard shell: collapse toggle, topbar buttons, search trigger', () => {
     const css = readFileSync('src/screens/Dashboard/DashboardShell.module.css', 'utf8')
-    expect(css).toContain(".iconButton { width: 26px; height: 26px;")
-    expect(css).toContain('.iconButton::after { content: \'\'; position: absolute; inset: -8px; }')
+    // Collapse toggle: a 26px disc floating on the shell edge — isolated, so a
+    // plain -9px inset (26 + 18 = 44px target ≥ 40) is safe.
+    expect(css).toMatch(/\.collapseEdge \{[^}]*width: 26px;[^}]*height: 26px;/)
+    expect(css).toContain('.collapseEdge::after { content: \'\'; position: absolute; inset: -9px; }')
     expect(css).toContain(".topbarButton { display: grid; width: 30px; height: 30px;")
     expect(css).toContain('.topbarButton::after { content: \'\'; position: absolute; inset: -6px; }')
     expect(css).toContain(".searchTrigger { position: relative;")
@@ -219,9 +221,12 @@ describe('hit-area normalization (#59): isolated / already-safe controls keep a 
     expect(css).toContain('gap: 8px;')
   })
 
-  it('Create World genre chips use a padding bump, not ::after, and never overlap in the packed row', () => {
+  it('Create World genre chips are slim (skinny-row exception) with a padding bump, not ::after, and never overlap in the packed row', () => {
     const css = readFileSync('src/screens/Worlds/CreateWorldModal.module.css', 'utf8')
-    expect(css).toContain('padding: 13px 12px;')
+    // Skinny-row exception (ADR 0002): the chips are deliberately slim and sit
+    // below the 40px desktop floor. The padding bump (not ::after) keeps the
+    // packed 8px-gap row from overlapping — a smaller box only makes that safer.
+    expect(css).toContain('padding: 6px 12px;')
     expect(css).not.toContain('.chip::after')
     expect(css).toContain('gap: 8px;')
   })

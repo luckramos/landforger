@@ -1,6 +1,9 @@
 import { joinFrontmatter, splitFrontmatter } from './frontmatter'
-import { CATEGORIES, type Category, type CustomProperty, type CustomPropertyType, type Page } from './types'
+import { CATEGORIES, type Category, type CustomProperty, type CustomPropertyType, type ImageOrientation, type ImageSize, type Page } from './types'
 import type { YamlValue } from './yaml'
+
+const IMAGE_SIZES: readonly ImageSize[] = ['small', 'medium', 'large']
+const IMAGE_ORIENTATIONS: readonly ImageOrientation[] = ['landscape', 'portrait']
 
 function asString(value: YamlValue | undefined, fallback = ''): string {
   return typeof value === 'string' ? value : fallback
@@ -8,6 +11,14 @@ function asString(value: YamlValue | undefined, fallback = ''): string {
 
 function asStringArray(value: YamlValue | undefined): string[] {
   return Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : []
+}
+
+function asImageSize(value: YamlValue | undefined): ImageSize | undefined {
+  return typeof value === 'string' && (IMAGE_SIZES as readonly string[]).includes(value) ? (value as ImageSize) : undefined
+}
+
+function asImageOrientation(value: YamlValue | undefined): ImageOrientation | undefined {
+  return typeof value === 'string' && (IMAGE_ORIENTATIONS as readonly string[]).includes(value) ? (value as ImageOrientation) : undefined
 }
 
 function asCategory(value: YamlValue | undefined): Category {
@@ -23,6 +34,8 @@ function propertyToRecord(prop: CustomProperty): { [key: string]: YamlValue } {
   const record: { [key: string]: YamlValue } = { key: prop.key, label: prop.label, type: prop.type }
   if (prop.options) record.options = prop.options
   if (prop.targetCategories) record.targetCategories = prop.targetCategories
+  if (prop.size) record.size = prop.size
+  if (prop.orientation) record.orientation = prop.orientation
   record.value = prop.value
   return record
 }
@@ -39,6 +52,10 @@ function propertyFromRecord(raw: YamlValue): CustomProperty {
   }
   if (Array.isArray(raw.options)) property.options = asStringArray(raw.options)
   if (Array.isArray(raw.targetCategories)) property.targetCategories = asStringArray(raw.targetCategories) as Category[]
+  const size = asImageSize(raw.size)
+  if (size) property.size = size
+  const orientation = asImageOrientation(raw.orientation)
+  if (orientation) property.orientation = orientation
   return property
 }
 

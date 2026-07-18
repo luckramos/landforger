@@ -419,9 +419,11 @@ describe('PageScreen — lifecycle and templates', () => {
     const before = (await repo.getPage('testland', 'alaric'))!.customProperties
     fireEvent.click(screen.getByRole('button', { name: 'Page actions' }))
     fireEvent.click(screen.getByRole('button', { name: 'Edit characters template' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Add number to template' }))
+    const dialog = screen.getByRole('dialog', { name: 'Characters template' })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Add property' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Add number to template' }))
     fireEvent.change(screen.getByLabelText('Template property name for numberProperty'), { target: { value: 'Reputation' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Save Category Template' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save template' }))
     await act(async () => {})
 
     expect((await repo.getPage('testland', 'alaric'))?.customProperties).toEqual(before)
@@ -435,15 +437,18 @@ describe('PageScreen — lifecycle and templates', () => {
     const { repo } = await mountScreen('alaric')
     fireEvent.click(screen.getByRole('button', { name: 'Page actions' }))
     fireEvent.click(screen.getByRole('button', { name: 'Edit characters template' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Add select to template' }))
+    const dialog = screen.getByRole('dialog', { name: 'Characters template' })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Add property' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Add select to template' }))
     const templateOptions = screen.getByLabelText('Options for Select property')
     fireEvent.change(templateOptions, { target: { value: 'Known' } })
     fireEvent.keyDown(templateOptions, { key: 'Enter' })
     fireEvent.change(templateOptions, { target: { value: 'Unknown' } })
     fireEvent.keyDown(templateOptions, { key: 'Enter' })
-    fireEvent.click(screen.getByRole('button', { name: 'Add relation to template' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Add property' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Add relation to template' }))
     fireEvent.click(screen.getByLabelText('Target organizations for Relation property'))
-    fireEvent.click(screen.getByRole('button', { name: 'Save Category Template' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save template' }))
     await act(async () => {})
 
     const future = await repo.createPage('testland', { title: 'Template Child', category: 'characters' })
@@ -490,12 +495,12 @@ describe('PageScreen — staggered dialog entrances (#61)', () => {
     await mountScreen('alaric')
     fireEvent.click(screen.getByRole('button', { name: 'Page actions' }))
     fireEvent.click(screen.getByRole('button', { name: 'Edit characters template' }))
-    const dialog = screen.getByRole('dialog', { name: 'characters Category Template' })
+    const dialog = screen.getByRole('dialog', { name: 'Characters template' })
     const [heading, fields, actions] = [...dialog.children] as HTMLElement[]
 
-    expect(within(heading).getByRole('heading', { name: 'characters template' })).toBeTruthy()
-    expect(within(fields).getByRole('button', { name: 'Add text to template' })).toBeTruthy()
-    expect(within(actions).getByRole('button', { name: 'Save Category Template' })).toBeTruthy()
+    expect(within(heading).getByRole('heading', { name: 'Characters' })).toBeTruthy()
+    expect(within(fields).getByRole('button', { name: 'Add property' })).toBeTruthy()
+    expect(within(actions).getByRole('button', { name: 'Save template' })).toBeTruthy()
   })
 
   it('renders the auto-saving Property settings dialog as two ordered chunks: heading, fields', async () => {

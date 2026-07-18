@@ -206,13 +206,13 @@ describe('staggered dialog and gallery entrances (#61)', () => {
   })
 
   it('wires the Category Template dialog through the shared stagger container and chunk variants', () => {
-    const src = readFileSync('src/properties/PageProperties.tsx', 'utf8')
-    expect(src).toMatch(/aria-label={`\$\{page\.category\} Category Template`}[\s\S]{0,200}variants={dialogContainerVariants\(motionScale\)}/)
-    // Three chunks in document order: heading (h2+p), fields (template rows + type picker), actions.
-    const dialogIndex = src.indexOf('Category Template`}')
-    const headingIndex = src.indexOf('<h2>{page.category} template</h2>', dialogIndex)
-    const fieldsIndex = src.indexOf('templateDraft.map', dialogIndex)
-    const actionsIndex = src.indexOf('Save Category Template', dialogIndex)
+    const src = readFileSync('src/properties/CategoryTemplateDialog.tsx', 'utf8')
+    expect(src).toMatch(/aria-label={`\$\{label\} template`}[\s\S]{0,300}variants={dialogContainerVariants\(motionScale\)}/)
+    // Three chunks in document order: heading (identity + lede), fields (field cards + type picker), actions.
+    const dialogIndex = src.indexOf('template`}')
+    const headingIndex = src.indexOf('className={styles.templateHead}', dialogIndex)
+    const fieldsIndex = src.indexOf('className={styles.dialogFields}', dialogIndex)
+    const actionsIndex = src.indexOf('className={styles.dialogActions}', dialogIndex)
     expect(headingIndex).toBeGreaterThan(dialogIndex)
     expect(fieldsIndex).toBeGreaterThan(headingIndex)
     expect(actionsIndex).toBeGreaterThan(fieldsIndex)
@@ -269,7 +269,6 @@ describe('press feedback normalization (#65)', () => {
     'src/canvas/ReferenceCanvasPanel.module.css',
     'src/editor/PageEditor.module.css',
     'src/editor/extensions/WikiLink.module.css',
-    'src/screens/NewPageScreen.module.css',
     'src/screens/Worlds/CreateWorldModal.module.css',
   ]
 
@@ -305,11 +304,9 @@ describe('press feedback normalization (#65)', () => {
     expect(css).toMatch(/\.chip\s*\{[^}]*transition:[^}]*transform calc\(var\(--mo, 1\) \* 120ms\) var\(--ease-house\)[^}]*\}/)
   })
 
-  it('the New Page "Create" button gained a press reaction with transform in its transition', () => {
-    const css = readFileSync('src/screens/NewPageScreen.module.css', 'utf8')
-    expect(css).toContain('transition: transform calc(var(--mo, 1) * 120ms) var(--ease-house);')
-    expect(css).toContain('.create:active:not(:disabled) { transform: scale(0.96); }')
-  })
+  // The New Page "Create" button is the shared Button component now (its
+  // scale(0.96) press lives in Button.module.css, asserted above); the New Page
+  // category cards press via the house cardHover lift (scale(0.99)), not 0.96.
 
   it('the Create World "Cancel" button gained a press reaction with transform in its transition', () => {
     const css = readFileSync('src/screens/Worlds/CreateWorldModal.module.css', 'utf8')

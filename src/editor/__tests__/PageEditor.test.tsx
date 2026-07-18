@@ -2,13 +2,21 @@
 // tiptap 3.27.4 renders fine there — no jsdom needed).
 
 import type { Editor } from '@tiptap/core'
-import { act, render } from '@testing-library/react'
+import { CellSelection } from '@tiptap/pm/tables'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { pageBodyCodec } from '../codec/TiptapMarkdownCodec'
 import { PageEditor } from '../PageEditor'
+import { useUiStore } from '../../state/uiStore'
+
+// The toolbar dock is a shared store setting; keep tests independent of the
+// anchor a prior test may have left behind.
+beforeEach(() => {
+  useUiStore.setState({ toolbarAnchor: 'top', activeUserId: undefined })
+})
 
 const here = dirname(fileURLToPath(import.meta.url))
 const all13 = readFileSync(join(here, 'fixtures/all13.md'), 'utf8')
@@ -232,6 +240,145 @@ describe('PageEditor — /, @ and [[ suggestion stack', () => {
     expect(editor.getText()).toBe('')
     expect(editor.isActive('heading', { level: 1 })).toBe(false)
   })
+
+  it('applies a picked block on a re-opened menu (no leaked dismiss listener)', async () => {
+    // Regression: the popover renderer must tear down `props.mount`'s outside-
+    // dismiss listener on exit. A leaked listener from a prior open fires on the
+    // next menu's click and closes it before the pick lands — clicking a second
+    // menu silently did nothing.
+    const { editor, baseElement } = await mountEditor({ body: '' })
+    await open(editor, '/head')
+    act(() => editor.commands.setContent('<p></p>')) // close the first menu
+    await act(async () => {})
+    await open(editor, '/quote')
+    const option = baseElement.querySelector('[role="option"][aria-label^="Quote"]') as HTMLElement
+    act(() => {
+      option.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
+      option.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
+    })
+    expect(editor.isActive('blockquote')).toBe(true)
+  })
+
+  it('tints @ suggestion rows with each Page Category color', async () => {
+    const { editor, baseElement } = await mountEditor({ body: '' })
+    await open(editor, '@gate')
+    const option = baseElement.querySelector('[role="option"]') as HTMLElement
+    // The Gate of Ash is a Location — the row carries its category accent so the
+    // duotone icon and selected highlight read in the Category color.
+    expect(option.getAttribute('style')).toContain('--accent: var(--cat-locations)')
+  })
+})
+
+describe('PageEditor — markdown shortcuts while typing', () => {
+  // Input rules fire through ProseMirror's handleTextInput; simulate typing the
+  // last character so the rule sees the completed pattern at the caret.
+  const typeClosing = (editor: Editor, prefix: string, last: string) => {
+    act(() => editor.chain().focus().insertContent(prefix).run())
+    const from = editor.state.selection.from
+    act(() => {
+      editor.view.someProp('handleTextInput', (fn) =>
+        fn(editor.view, from, from, last, () => editor.state.tr),
+      )
+    })
+  }
+
+  it('turns [text](url) into a link', async () => {
+    const { editor } = await mountEditor({ body: '' })
+    typeClosing(editor, '[the gate](https://example.com', ')')
+    expect(pageBodyCodec.serialize(editor.getJSON())).toContain('[the gate](https://example.com)')
+  })
+
+  it('turns ![alt](url) into an image without the link rule hijacking it', async () => {
+    const { editor } = await mountEditor({ body: '' })
+    typeClosing(editor, '![a map](https://example.com/map.png', ')')
+    expect(editor.getJSON().content?.some((node) => node.type === 'image')).toBe(true)
+  })
+})
+
+describe('PageEditor — markdown auto-convert on block exit', () => {
+  // Leaving the block (here: a trailing Enter) converts any complete image/link
+  // markdown — covering the orders the input rule can't: parens typed first,
+  // the URL filled in after, or pasted markdown.
+  const leaveBlock = (editor: Editor) =>
+    act(() => editor.chain().focus('end').insertContent({ type: 'paragraph' }).run())
+
+  it('converts an image whose ) was already there before the URL was filled in', async () => {
+    const { editor } = await mountEditor({ body: '' })
+    act(() => editor.chain().focus().insertContent('![alt]()').run())
+    const openParen = editor.state.doc.textContent.indexOf('(')
+    act(() => editor.commands.setTextSelection(1 + openParen + 1)) // between the parens
+    act(() => editor.chain().insertContent('pic.png').run())
+    leaveBlock(editor)
+    expect(editor.getJSON().content?.some((node) => node.type === 'image')).toBe(true)
+  })
+
+  it('converts a link filled in after its parens, on block exit', async () => {
+    const { editor } = await mountEditor({ body: '' })
+    act(() => editor.chain().focus().insertContent('[the gate]()').run())
+    const afterOpen = editor.state.doc.textContent.indexOf('](') + 2
+    act(() => editor.commands.setTextSelection(1 + afterOpen))
+    act(() => editor.chain().insertContent('https://example.com').run())
+    leaveBlock(editor)
+    let hasLink = false
+    editor.state.doc.descendants((node) => {
+      if (node.marks.some((mark) => mark.type.name === 'link')) hasLink = true
+    })
+    expect(hasLink).toBe(true)
+  })
+
+  it('leaves the untouched ![alt](url) placeholder as editable text', async () => {
+    const { editor } = await mountEditor({ body: '' })
+    act(() => editor.chain().focus().insertContent('![alt](url)').run())
+    leaveBlock(editor)
+    expect(editor.getJSON().content?.some((node) => node.type === 'image')).toBe(false)
+    expect(editor.getText()).toContain('![alt](url)')
+  })
+})
+
+describe('PageEditor — toggle block', () => {
+  it('inserts an expanded, disclosable toggle', async () => {
+    const { editor, container } = await mountEditor({ body: '' })
+    act(() =>
+      editor
+        .chain()
+        .focus()
+        .insertContent({
+          type: 'details',
+          attrs: { open: true },
+          content: [
+            { type: 'detailsSummary', content: [{ type: 'text', text: 'Summary' }] },
+            { type: 'detailsContent', content: [{ type: 'paragraph' }] },
+          ],
+        })
+        .run(),
+    )
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20))
+    })
+    // The `open` attribute only exists because Details is configured persist:true;
+    // the node view mirrors it to the `.is-open` class that drives the caret + body.
+    const details = container.querySelector('[data-type="details"]')!
+    expect(details.className).toContain('is-open')
+  })
+})
+
+describe('PageEditor — slash image', () => {
+  it('drops the ![alt](url) template inline with the url placeholder selected', async () => {
+    // No prompt dialog: the block types the markdown template and pre-selects the
+    // link placeholder so the user replaces it in place.
+    const { editor, baseElement } = await mountEditor({ body: '' })
+    act(() => editor.chain().focus('end').insertContent('/image').run())
+    await act(async () => {})
+    await act(async () => {})
+    const option = baseElement.querySelector('[role="option"][aria-label^="Image"]') as HTMLElement
+    act(() => {
+      option.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
+      option.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
+    })
+    expect(editor.getText()).toBe('![alt](url)')
+    const { from, to } = editor.state.selection
+    expect(editor.state.doc.textBetween(from, to)).toBe('url')
+  })
 })
 
 describe('PageEditor — empty state', () => {
@@ -255,8 +402,8 @@ describe('PageEditor — toolbar', () => {
     const { getByRole } = await mountEditor()
     const toolbar = getByRole('toolbar', { name: 'Format' })
     const labels = [
-      'Undo',
-      'Redo',
+      // Undo/Redo dropped from the bar (global ⌘Z / ⌘⇧Z); the table tool took the space.
+      'Insert table',
       'Text',
       'Heading 1',
       'Heading 2',
@@ -276,9 +423,133 @@ describe('PageEditor — toolbar', () => {
     for (const label of labels) {
       expect(toolbar.querySelector(`button[aria-label="${label}"]`)).toBeTruthy()
     }
+    // Undo/redo are no longer in the bar.
+    expect(toolbar.querySelector('button[aria-label="Undo"]')).toBeNull()
+    expect(toolbar.querySelector('button[aria-label="Redo"]')).toBeNull()
     expect(toolbar.querySelector('button[aria-label="Wikilink"]')?.hasAttribute('disabled')).toBe(false)
     // anchorable top/bottom via the segmented control on the bar
     expect(getByRole('group', { name: 'Toolbar position' })).toBeTruthy()
+  })
+
+  it('inserts a table at the size picked in the toolbar grid', async () => {
+    const { editor, getByRole } = await mountEditor()
+    act(() => { editor.chain().focus().setTextSelection(1).run() })
+
+    fireEvent.click(getByRole('button', { name: 'Insert table' }))
+    // The picker is portaled to <body>, so query it through `screen`.
+    const picker = screen.getByRole('dialog', { name: 'Table size' })
+    const grid = picker.querySelector('[role="presentation"]') as HTMLElement
+    // Cell at row index 1, col index 2 → a 2-row × 3-column table.
+    const target = grid.children[1 * 8 + 2] as HTMLElement
+    fireEvent.mouseEnter(target)
+    fireEvent.click(target)
+    await act(async () => {})
+
+    const nodes = (editor.getJSON().content ?? []) as Array<Record<string, any>>
+    const table = nodes.find((node) => node.type === 'table')
+    expect(table).toBeTruthy()
+    expect(table?.content?.length).toBe(2) // 2 rows
+    expect(table?.content?.[0].content?.length).toBe(3) // 3 columns
+    expect(table?.content?.[0].content?.[0].type).toBe('tableHeader') // header row first
+    expect(screen.queryByRole('dialog', { name: 'Table size' })).toBeNull() // picker closes after a pick
+  })
+
+  it('grows the rendered table with the append-column and append-row controls', async () => {
+    const { editor, getByRole } = await mountEditor()
+    act(() => { editor.chain().focus().setTextSelection(1).insertTable({ rows: 2, cols: 2, withHeaderRow: true }).run() })
+    await act(async () => {})
+
+    const dims = () => {
+      const table = (editor.getJSON().content ?? []).find((node) => node.type === 'table') as Record<string, any> | undefined
+      return { rows: table?.content?.length, cols: table?.content?.[0].content?.length }
+    }
+    expect(dims()).toEqual({ rows: 2, cols: 2 })
+
+    fireEvent.click(getByRole('button', { name: 'Add column' }))
+    await act(async () => {})
+    expect(dims()).toEqual({ rows: 2, cols: 3 })
+
+    fireEvent.click(getByRole('button', { name: 'Add row' }))
+    await act(async () => {})
+    expect(dims()).toEqual({ rows: 3, cols: 3 })
+  })
+
+  it('deletes column, row, then the whole table through the per-cell kebab menu', async () => {
+    const { editor, getByRole, container } = await mountEditor()
+    act(() => { editor.chain().focus().setTextSelection(1).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() })
+    await act(async () => {})
+
+    const dims = () => {
+      const table = (editor.getJSON().content ?? []).find((node) => node.type === 'table') as Record<string, any> | undefined
+      return table ? { rows: table.content.length, cols: table.content[0].content.length } : null
+    }
+    const openKebab = () => {
+      fireEvent.mouseMove(container.querySelector('.tiptap table td, .tiptap table th') as HTMLElement)
+      fireEvent.click(getByRole('button', { name: 'Cell menu' }))
+    }
+    expect(dims()).toEqual({ rows: 3, cols: 3 })
+
+    openKebab()
+    fireEvent.click(getByRole('menuitem', { name: 'Delete column' }))
+    await act(async () => {})
+    expect(dims()).toEqual({ rows: 3, cols: 2 })
+
+    openKebab()
+    fireEvent.click(getByRole('menuitem', { name: 'Delete row' }))
+    await act(async () => {})
+    expect(dims()).toEqual({ rows: 2, cols: 2 })
+
+    openKebab()
+    fireEvent.click(getByRole('menuitem', { name: 'Delete table' }))
+    await act(async () => {})
+    expect(dims()).toBeNull()
+  })
+
+  it('previews the doomed cells on hover and toggles the header row from the kebab menu', async () => {
+    const { editor, getByRole, container } = await mountEditor()
+    act(() => { editor.chain().focus().setTextSelection(1).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() })
+    await act(async () => {})
+
+    fireEvent.mouseMove(container.querySelector('.tiptap table th') as HTMLElement)
+    fireEvent.click(getByRole('button', { name: 'Cell menu' }))
+
+    // Hovering "Delete column" draws a preview overlay over that column's cells
+    // (3 rows). Overlays are drawn outside the ProseMirror-managed content so
+    // its DOMObserver can't wipe them.
+    const delColumn = getByRole('menuitem', { name: 'Delete column' })
+    fireEvent.mouseEnter(delColumn)
+    expect(container.querySelectorAll('[data-doom-cell]')).toHaveLength(3)
+    fireEvent.mouseLeave(delColumn)
+    expect(container.querySelectorAll('[data-doom-cell]')).toHaveLength(0)
+
+    // Toggling the header row turns the first row's header cells into body cells.
+    const firstRowTypes = () => {
+      const table = (editor.getJSON().content ?? []).find((node) => node.type === 'table') as Record<string, any>
+      return (table.content[0].content as Array<Record<string, any>>).map((cell) => cell.type)
+    }
+    expect(firstRowTypes().every((type) => type === 'tableHeader')).toBe(true)
+    fireEvent.click(getByRole('menuitem', { name: 'Toggle header row' }))
+    await act(async () => {})
+    expect(firstRowTypes().every((type) => type === 'tableCell')).toBe(true)
+  })
+
+  it('removes the whole table when every cell is selected and Backspace is pressed', async () => {
+    const { editor } = await mountEditor()
+    act(() => { editor.chain().focus().setTextSelection(1).insertTable({ rows: 2, cols: 2, withHeaderRow: true }).run() })
+    await act(async () => {})
+
+    // Select all cells (what a full drag across the grid produces), then Backspace.
+    act(() => {
+      const cellPositions: number[] = []
+      editor.state.doc.descendants((node, pos) => {
+        if (node.type.name === 'tableHeader' || node.type.name === 'tableCell') cellPositions.push(pos)
+      })
+      const selection = CellSelection.create(editor.state.doc, cellPositions[0], cellPositions[cellPositions.length - 1])
+      editor.view.dispatch(editor.state.tr.setSelection(selection))
+    })
+    act(() => { editor.commands.keyboardShortcut('Backspace') })
+
+    expect((editor.getJSON().content ?? []).some((node) => node.type === 'table')).toBe(false)
   })
 
   it('toggles bold on the current selection and reflects active state', async () => {
@@ -307,41 +578,40 @@ describe('PageEditor — toolbar', () => {
     const toolbar = getByRole('toolbar', { name: 'Format' })
     const dock = toolbar.parentElement!
     const bottom = getByRole('button', { name: 'Anchor toolbar to bottom' })
-    expect(dock.className).not.toContain('toolbarDockBottom')
+    expect(dock.className).not.toContain('toolbarStickyBottom')
 
     act(() => {
       bottom.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     })
-    expect(dock.className).toContain('toolbarDockBottom')
+    // Same element (no remount): the anchor flips its class + flex `order`.
+    expect(dock.className).toContain('toolbarStickyBottom')
   })
 
-  // Regression guard: the bar must escape the editor subtree entirely. Any
-  // ancestor with a transform/filter (the view-in entrance animations) becomes
-  // the containing block for `position: fixed`, which silently re-anchors the
-  // bar to the page and makes it scroll away instead of staying pinned.
-  it('portals the toolbar to <body> so no ancestor can trap its fixed position', async () => {
+  // The bar lives in the editor's own flow now (position: sticky), not a body
+  // portal: it rides the page scroll and stays bounded to the sheet. Guard that
+  // it renders inside `.root` alongside the content, wrapped in the sticky pill.
+  it('renders the toolbar in-flow inside the editor, not portaled to <body>', async () => {
     const { container, getByRole } = await mountEditor()
     const toolbar = getByRole('toolbar', { name: 'Format' })
-    const root = container.querySelector('[data-read-only], div')!
+    const root = container.firstElementChild!
 
-    expect(root.contains(toolbar)).toBe(false)
-    expect(document.body.contains(toolbar)).toBe(true)
-    expect(toolbar.parentElement!.className).toContain('toolbarDock')
+    expect(root.contains(toolbar)).toBe(true)
+    const wrapper = toolbar.parentElement!
+    expect(wrapper.className).toContain('toolbarSticky')
+    expect(wrapper.parentElement).toBe(root)
   })
 
-  it('centers the toolbar on the measured content column, not the viewport', async () => {
-    // Sidebar-offset column: 264px sidebar + a 760px column → center at 644.
-    const rect = { left: 264, width: 760, right: 1024, top: 0, bottom: 0, height: 0, x: 264, y: 0, toJSON: () => ({}) }
-    const spy = vi
-      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
-      .mockReturnValue(rect as DOMRect)
+  it('reveals the bar only while the editor has focus', async () => {
+    const { getByRole, editor } = await mountEditor()
+    const wrapper = getByRole('toolbar', { name: 'Format' }).parentElement!
+    // Reads clean until you start editing.
+    expect(wrapper.getAttribute('data-visible')).toBe('false')
 
-    const { getByRole } = await mountEditor()
-    const dock = getByRole('toolbar', { name: 'Format' }).parentElement as HTMLElement
+    act(() => editor.emit('focus', { editor, event: new FocusEvent('focus'), transaction: editor.state.tr }))
+    expect(wrapper.getAttribute('data-visible')).toBe('true')
 
-    expect(dock.style.left).toBe('644px')
-    expect(dock.style.maxWidth).toBe('760px')
-    spy.mockRestore()
+    act(() => editor.emit('blur', { editor, event: new FocusEvent('blur'), transaction: editor.state.tr }))
+    expect(wrapper.getAttribute('data-visible')).toBe('false')
   })
 
   it('is hidden when readOnly, and the content is not editable', async () => {

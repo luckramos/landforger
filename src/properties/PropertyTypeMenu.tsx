@@ -50,6 +50,12 @@ interface PropertyTypeMenuProps {
   itemLabel: (type: CustomPropertyType) => string
   /** Dropdown trigger text (dropdown variant only). */
   triggerLabel?: string
+  /**
+   * Dropdown variant only: open the menu in normal flow (pushing content) rather
+   * than as an absolute overlay. Needed inside a scrolling container (the
+   * Category Template dialog) where an absolute menu would be clipped.
+   */
+  flowMenu?: boolean
 }
 
 export function PropertyTypeMenu({
@@ -58,6 +64,7 @@ export function PropertyTypeMenu({
   onSelect,
   itemLabel,
   triggerLabel = 'Add property',
+  flowMenu = false,
 }: PropertyTypeMenuProps) {
   const [open, setOpen] = useState(false)
   const anchorRef = useRef<HTMLDivElement>(null)
@@ -172,7 +179,7 @@ export function PropertyTypeMenu({
       <AnimatePresence>
         {open && (
           <motion.div
-            className={styles.typeMenu}
+            className={flowMenu ? `${styles.typeMenu} ${styles.typeMenuInline}` : styles.typeMenu}
             variants={anchoredMenuVariants(motionScale)}
             initial="hidden"
             animate="visible"

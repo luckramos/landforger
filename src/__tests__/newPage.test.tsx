@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 import { createInMemoryStorage } from './testStorage'
@@ -56,6 +56,49 @@ describe('NewPageScreen', () => {
         category: 'events',
         customProperties: [expect.objectContaining({ key: 'happenedOn', type: 'date', value: '2027-10-31' })],
       }),
+    )
+  })
+
+  it('offers Cover as a file-or-link image control, not a bare URL field', async () => {
+    mount()
+    await act(async () => {})
+    fireEvent.click(screen.getByRole('button', { name: 'Events' }))
+    // The Cover control is the shared image tile (upload or paste a link),
+    // no longer a plain text input.
+    const cover = screen.getByRole('button', { name: 'Cover' })
+    expect(cover.textContent).toContain('Add cover')
+    fireEvent.click(cover)
+    expect(screen.getByRole('button', { name: 'Upload a file for Cover' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Paste a link for Cover' })).toBeTruthy()
+  })
+
+  it('edits the Category template inline and reseeds the open create form', async () => {
+    const repo = mount()
+    await act(async () => {})
+    fireEvent.click(screen.getByRole('button', { name: 'Events' }))
+    fireEvent.change(screen.getByLabelText('Happened on'), { target: { value: '2027-10-31' } })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit template' }))
+    const dialog = screen.getByRole('dialog', { name: 'Events template' })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Add property' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Add text to template' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save template' }))
+    await act(async () => {})
+
+    // The newly added field surfaces in the form...
+    const textField = screen.getByLabelText('Text property')
+    fireEvent.change(textField, { target: { value: 'a note' } })
+    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'The Long Night' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Create Event' }))
+    await act(async () => {})
+
+    // ...and the value entered before the template edit survived alongside it.
+    const created = await repo.getPage('testland', 'the-long-night')
+    expect(created?.customProperties).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ key: 'happenedOn', value: '2027-10-31' }),
+        expect.objectContaining({ label: 'Text property', value: 'a note' }),
+      ]),
     )
   })
 })

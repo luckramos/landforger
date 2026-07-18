@@ -60,9 +60,38 @@ describe('Dashboard routes', () => {
   })
 })
 
+describe('Dashboard — Category Template editing', () => {
+  it('opens the template editor from the Category page pencil and seeds future Pages', async () => {
+    const view = await renderAt('/w/ninth-vale/c/characters')
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Characters template' }))
+    const dialog = screen.getByRole('dialog', { name: 'Characters template' })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Add property' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Add number to template' }))
+    fireEvent.change(within(dialog).getByLabelText('Template property name for numberProperty'), { target: { value: 'Renown' } })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save template' }))
+    await act(async () => {})
+
+    const future = await repo.createPage('ninth-vale', { title: 'New Face', category: 'characters' })
+    expect(future.customProperties).toContainEqual(
+      expect.objectContaining({ key: 'numberProperty', label: 'Renown', type: 'number', value: 0 }),
+    )
+    view.unmount()
+  })
+
+  it('shows the template pencil on Category pages but not Tag collections', async () => {
+    const category = await renderAt('/w/ninth-vale/c/characters')
+    expect(screen.getByRole('button', { name: 'Edit Characters template' })).toBeTruthy()
+    category.unmount()
+
+    await renderAt('/w/ninth-vale/t/coastal')
+    expect(screen.queryByRole('button', { name: /template$/ })).toBeNull()
+  })
+})
+
 describe('Dashboard shell controls', () => {
   it('collapses the Sidebar and enters/exits focus mode with Escape', async () => {
-    await renderAt('/w/ninth-vale')
+    // Focus mode is a Page-scoped control, so open a Page to reach it.
+    await renderAt('/w/ninth-vale/p/sera')
     const shell = screen.getByTestId('dashboard-shell')
 
     fireEvent.click(screen.getByRole('button', { name: 'Collapse sidebar' }))
@@ -89,9 +118,9 @@ describe('Dashboard shell controls', () => {
     await renderAt('/w/ninth-vale/p/sera')
     const breadcrumb = screen.getByLabelText('Breadcrumb')
 
-    const worldSegment = breadcrumb.querySelector('a')
-    expect(worldSegment?.textContent).toBe('The Ninth Vale')
-    expect(worldSegment?.getAttribute('title')).toBe('The Ninth Vale')
+    const worldSegment = within(breadcrumb).getByRole('link', { name: 'The Ninth Vale' })
+    expect(worldSegment.textContent).toBe('The Ninth Vale')
+    expect(worldSegment.getAttribute('title')).toBe('The Ninth Vale')
 
     const pageSegment = within(breadcrumb).getByText('Sera Valen')
     expect(pageSegment.getAttribute('title')).toBe('Sera Valen')
@@ -203,7 +232,13 @@ describe('Dashboard shell controls', () => {
 
   it('pulses Saving then Saved when any repository mutation occurs', async () => {
     vi.useFakeTimers()
-    await renderAt('/w/ninth-vale')
+    // The topbar save indicator is a Page-scoped control; open a Page to see it.
+    await renderAt('/w/ninth-vale/p/sera')
+    // Let the editor's mount-time normalization save settle so the indicator
+    // starts from a quiet "Saved" baseline.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2500)
+    })
     expect(screen.getByTestId('save-indicator').textContent).toBe('Saved')
 
     await act(async () => {

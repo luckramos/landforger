@@ -29,6 +29,10 @@
      --bronze-light so it reads as the same "active accent" already used
      for selected/active states elsewhere (MapScreen, Properties, Button). */
   --bronze-hi: var(--bronze-light);
+  /* Input focus border — a softened bronze (70%) so a focused field reads as
+     active without the full-strength accent shouting. One lever for every
+     input/textarea/search :focus + :focus-within border app-wide. */
+  --focus-border: color-mix(in oklab, var(--bronze) 70%, transparent);
   --danger: oklch(0.72 0.16 25);
   --danger-subtle: color-mix(in oklab, var(--danger) 50%, transparent);
   --danger-bg: oklch(0.5 0.12 25 / 0.16);

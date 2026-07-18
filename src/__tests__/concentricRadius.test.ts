@@ -89,9 +89,11 @@ describe('opportunistic radius-token derivation (#64, extends #43)', () => {
     expect(radiusToken('card') + 1.5).toBe(15.5)
   })
 
-  it('Worlds: pill search and dashed create-card radii use tokens, not 999px/14px', () => {
+  it('Worlds: search trigger and dashed create-card radii use tokens, not 999px/14px', () => {
     const css = readFileSync('src/screens/Worlds/Worlds.module.css', 'utf8')
-    expect(css).toContain('border-radius: var(--radius-pill);')
+    // The header now mirrors the Dashboard topbar: the search is a --radius-sm
+    // trigger (was a pill input), the create card keeps its concentric --radius-card.
+    expect(css).toContain('border-radius: var(--radius-sm);')
     expect(css).toContain('border-radius: var(--radius-card);')
     expect(css).not.toContain('border-radius: 999px;')
     expect(css).not.toContain('border-radius: 14px;')

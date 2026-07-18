@@ -41,25 +41,37 @@ describe('Worlds screen', () => {
     expect(await screen.findByText('26 entries')).toBeTruthy()
   })
 
-  it('search filters by name and logline, live', async () => {
+  it('spotlight search filters worlds by name and logline, scoped to worlds only', async () => {
     renderWorlds()
     await screen.findByText('The Ninth Vale')
 
-    const search = screen.getByLabelText('Search worlds')
+    // The header search is now a trigger that opens the Worlds spotlight modal
+    // (parity with the Dashboard topbar), fuzzy-searching Worlds alone.
+    fireEvent.click(screen.getByRole('button', { name: /Search worlds/ }))
+    const search = screen.getByRole('combobox', { name: 'Search worlds by name or premise' })
+
     fireEvent.change(search, { target: { value: 'marrow' } })
-    expect(screen.getByText('Marrowmoor')).toBeTruthy()
-    expect(screen.queryByText('The Ninth Vale')).toBeNull()
+    expect(screen.getByRole('option', { name: 'Marrowmoor, World' })).toBeTruthy()
+    expect(screen.queryByRole('option', { name: 'The Ninth Vale, World' })).toBeNull()
 
     // Logline match: "generation ark" belongs to Aeon Drift.
     fireEvent.change(search, { target: { value: 'generation ark' } })
-    expect(screen.getByText('Aeon Drift')).toBeTruthy()
-    expect(screen.queryByText('Marrowmoor')).toBeNull()
+    expect(screen.getByRole('option', { name: 'Aeon Drift, World' })).toBeTruthy()
+    expect(screen.queryByRole('option', { name: 'Marrowmoor, World' })).toBeNull()
 
     fireEvent.change(search, { target: { value: 'no such world' } })
     expect(screen.getByText(/No worlds match/)).toBeTruthy()
+  })
 
-    fireEvent.change(search, { target: { value: '' } })
-    expect(screen.getByText('The Ninth Vale')).toBeTruthy()
+  it('selecting a spotlight result navigates into that world', async () => {
+    renderWorlds()
+    await screen.findByText('The Ninth Vale')
+
+    fireEvent.click(screen.getByRole('button', { name: /Search worlds/ }))
+    fireEvent.change(screen.getByRole('combobox', { name: 'Search worlds by name or premise' }), { target: { value: 'marrow' } })
+    fireEvent.click(screen.getByRole('option', { name: 'Marrowmoor, World' }))
+
+    expect(await screen.findByRole('heading', { name: 'Marrowmoor' })).toBeTruthy()
   })
 
   it('create modal enables Create only once the world is named', async () => {

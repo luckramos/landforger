@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type CSSProperties } from 'react'
 import { CATEGORIES, type Category, type ImageOrientation, type ImageSize, type PropertyDef } from '../domain/types'
 import { icons } from '../icons'
 import styles from './Properties.module.css'
@@ -6,6 +6,16 @@ import styles from './Properties.module.css'
 const cap = (value: string) => value[0].toUpperCase() + value.slice(1)
 const IMAGE_SIZES: ImageSize[] = ['small', 'medium', 'large']
 const IMAGE_ORIENTATIONS: ImageOrientation[] = ['landscape', 'portrait']
+
+/** Base edge (px) for the settings footprint preview — one step per Size. */
+const PREVIEW_EDGE: Record<ImageSize, number> = { small: 34, medium: 46, large: 58 }
+
+/** The preview frame's width/height, mirroring how a portrait swaps the long edge. */
+function footprintVars(size: ImageSize, orientation: ImageOrientation): CSSProperties {
+  const edge = PREVIEW_EDGE[size]
+  const [width, height] = orientation === 'portrait' ? [edge, Math.round(edge * 1.34)] : [Math.round(edge * 1.5), edge]
+  return { '--fp-w': `${width}px`, '--fp-h': `${height}px` } as CSSProperties
+}
 
 interface PropertyDefinitionEditorProps {
   definition: PropertyDef
@@ -59,42 +69,45 @@ export function PropertyDefinitionEditor({ definition, disabled = false, onChang
     const orientation = definition.orientation ?? 'landscape'
     return (
       <div className={styles.definitionEditor}>
+        <div className={styles.imagePreview}>
+          <span className={styles.imagePreviewFrame} style={footprintVars(size, orientation)} aria-hidden="true">
+            <icons.typeImage size={15} />
+          </span>
+        </div>
         <div className={styles.settingsField}>
-          <div className={styles.segChoiceRow}>
-            <span className={styles.settingsFieldLabel}>Size</span>
-            <div className={styles.segChoice}>
-              {IMAGE_SIZES.map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  disabled={disabled}
-                  aria-label={`${cap(option)} size for ${definition.label}`}
-                  aria-pressed={size === option}
-                  data-active={size === option || undefined}
-                  onClick={() => onChange({ ...definition, size: option })}
-                >
-                  {cap(option)}
-                </button>
-              ))}
-            </div>
+          <span className={styles.settingsFieldLabel}>Size</span>
+          <div className={styles.segChoice} role="group" aria-label={`Image size for ${definition.label}`}>
+            {IMAGE_SIZES.map((option) => (
+              <button
+                key={option}
+                type="button"
+                disabled={disabled}
+                aria-label={`${cap(option)} size for ${definition.label}`}
+                aria-pressed={size === option}
+                data-active={size === option || undefined}
+                onClick={() => onChange({ ...definition, size: option })}
+              >
+                {cap(option)}
+              </button>
+            ))}
           </div>
-          <div className={styles.segChoiceRow}>
-            <span className={styles.settingsFieldLabel}>Orientation</span>
-            <div className={styles.segChoice}>
-              {IMAGE_ORIENTATIONS.map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  disabled={disabled}
-                  aria-label={`${cap(option)} orientation for ${definition.label}`}
-                  aria-pressed={orientation === option}
-                  data-active={orientation === option || undefined}
-                  onClick={() => onChange({ ...definition, orientation: option })}
-                >
-                  {cap(option)}
-                </button>
-              ))}
-            </div>
+        </div>
+        <div className={styles.settingsField}>
+          <span className={styles.settingsFieldLabel}>Orientation</span>
+          <div className={styles.segChoice} role="group" aria-label={`Image orientation for ${definition.label}`}>
+            {IMAGE_ORIENTATIONS.map((option) => (
+              <button
+                key={option}
+                type="button"
+                disabled={disabled}
+                aria-label={`${cap(option)} orientation for ${definition.label}`}
+                aria-pressed={orientation === option}
+                data-active={orientation === option || undefined}
+                onClick={() => onChange({ ...definition, orientation: option })}
+              >
+                {cap(option)}
+              </button>
+            ))}
           </div>
         </div>
       </div>

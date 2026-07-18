@@ -9,6 +9,7 @@
     background calc(var(--mo, 1) * 160ms),
     color calc(var(--mo, 1) * 160ms),
     border-color calc(var(--mo, 1) * 160ms),
+    box-shadow calc(var(--mo, 1) * 220ms) var(--ease-house),
     transform calc(var(--mo, 1) * 160ms) var(--ease-house);
 }
 
@@ -18,19 +19,59 @@
 
 .button:disabled {
   cursor: default;
-  opacity: 0.8;
+  opacity: 0.5;
 }
 
-/* primary — bronze gradient fill, parity with Auth's .submitButton */
+/* primary — flat bronze fill (Auth submit parity); the hover is where it comes alive. */
 .primary {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   padding: 13px 16px;
   border-radius: var(--radius-sm);
   background: var(--bronze);
   color: var(--on-bronze);
 }
 
+/* The signature: a band of light glides across the brass on hover. Invisible
+   at rest (opacity 0), so the normal state stays a clean flat fill. Sits above
+   the fill but below the label (z-index -1 inside the isolated context). */
+.primary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -75%;
+  z-index: -1;
+  width: 55%;
+  background: linear-gradient(
+    100deg,
+    transparent,
+    color-mix(in oklab, white 46%, transparent),
+    transparent
+  );
+  transform: skewX(-16deg) translateX(0);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform calc(var(--mo, 1) * 620ms) var(--ease-house),
+    opacity calc(var(--mo, 1) * 200ms) ease;
+}
+
 .primary:hover:not(:disabled) {
-  filter: brightness(1.08);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 22px -10px color-mix(in oklab, var(--bronze) 72%, transparent);
+}
+
+.primary:hover:not(:disabled)::before {
+  transform: skewX(-16deg) translateX(340%);
+  opacity: 1;
+}
+
+/* Press wins over the hover lift, and drops the shadow as it settles. */
+.primary:active:not(:disabled) {
+  transform: translateY(0) scale(0.96);
+  box-shadow: none;
 }
 
 /* ghost — outline pill, parity with PageScreen's "Create first era" CTA */
@@ -50,5 +91,10 @@
 @media (prefers-reduced-motion: reduce) {
   .button {
     transition-duration: 0ms;
+  }
+  /* No sweep when motion is reduced — an instant white flash would be worse
+     than none. Hover keeps its lift + glow, just without the glide. */
+  .primary::before {
+    display: none;
   }
 }

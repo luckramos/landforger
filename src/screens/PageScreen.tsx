@@ -2,11 +2,12 @@
 // derived, grouped "Mentioned in" panel.
 
 import type { Editor } from '@tiptap/core'
-import { useEffect, useLayoutEffect, useRef, useState, type ElementType, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ElementType, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { Link, useNavigate, useOutletContext, useParams } from 'react-router-dom'
 import { Button } from '../components/Button/Button'
 import type { Backlink } from '../domain/backlinks'
 import type { Category, CustomProperty, Page, PropertyDef, World } from '../domain/types'
+import { upsertCategoryTemplate } from '../domain/properties'
 import { PageEditor } from '../editor/PageEditor'
 import { icons } from '../icons'
 import { ImageInput } from '../properties/ImageInput'
@@ -14,6 +15,8 @@ import { PageMeta } from '../properties/PageMeta'
 import { PageProperties } from '../properties/PageProperties'
 import type { WorldRepository } from '../repository/WorldRepository'
 import { getRepository } from '../state/repository'
+import { MAX_PAGE_WIDTH, MIN_PAGE_WIDTH, useUiStore } from '../state/uiStore'
+import { PageWidthControl } from './PageWidthControl'
 import styles from './PageScreen.module.css'
 import type { DashboardOutletContext } from './Dashboard/DashboardShell'
 
@@ -41,6 +44,13 @@ export function PageScreen({ repository, onEditorReady }: PageScreenProps) {
   const [pages, setPages] = useState<Page[]>([])
   const [backlinks, setBacklinks] = useState<Backlink[]>([])
   const [saveState, setSaveState] = useState<SaveState>('idle')
+
+  // Reader-controlled column width (the Page "measure"), persisted per user so
+  // it holds across Pages and reloads. Wrapped in `min(…, 100vw…)` so a wide
+  // setting can never overflow a narrow viewport or the sidebar.
+  const pageWidth = useUiStore((state) => state.pageWidth)
+  const setPageWidth = useUiStore((state) => state.setPageWidth)
+  const widthCss = `min(${pageWidth}px, calc(100vw - var(--dashboard-sidebar-width, 0px) - 32px))`
 
   const lastSavedBodyRef = useRef('')
   const pendingBodyRef = useRef<string | undefined>(undefined)
@@ -183,9 +193,7 @@ export function PageScreen({ repository, onEditorReady }: PageScreenProps) {
 
   const handleTemplateChange = (category: Category, properties: PropertyDef[]) => {
     if (!worldData) return
-    const categoryTemplates = worldData.categoryTemplates.some((template) => template.category === category)
-      ? worldData.categoryTemplates.map((template) => template.category === category ? { category, properties } : template)
-      : [...worldData.categoryTemplates, { category, properties }]
+    const categoryTemplates = upsertCategoryTemplate(worldData.categoryTemplates, category, properties)
     const optimistic = { ...worldData, categoryTemplates }
     setWorldData(optimistic)
     repo.updateWorld(world, { categoryTemplates }).then(setWorldData).catch(() => setWorldData(worldData))
@@ -230,7 +238,7 @@ export function PageScreen({ repository, onEditorReady }: PageScreenProps) {
   const readOnly = dashboard?.readOnly ?? false
 
   return (
-    <main className={styles.screen}>
+    <main className={styles.screen} style={{ '--page-editor-width': widthCss } as CSSProperties}>
       <header className={styles.header}>
         {(!readOnly || page.cover) && (
           <div className={styles.cover}>
@@ -319,12 +327,14 @@ export function PageScreen({ repository, onEditorReady }: PageScreenProps) {
         onNavigate={(targetSlug) => navigate(`/w/${world}/p/${targetSlug}`)}
         onBodyChange={handleBodyChange}
         readOnly={readOnly}
+        width={widthCss}
         onEditorReady={onEditorReady}
       />
       <BacklinksPanel
         backlinks={backlinks}
         onNavigate={(sourceSlug) => navigate(`/w/${world}/p/${sourceSlug}`)}
       />
+      <PageWidthControl value={pageWidth} min={MIN_PAGE_WIDTH} max={MAX_PAGE_WIDTH} onChange={setPageWidth} />
     </main>
   )
 }

@@ -17,7 +17,7 @@ const fullPage: Page = {
     { key: 'aliases', label: 'Aliases', type: 'text', value: 'The Wayfarer of the Ninth Vale' },
     { key: 'history', label: 'History', type: 'textarea', value: 'Born beyond the tide.' },
     { key: 'status', label: 'Status', type: 'select', options: ['Missing', 'Found'], value: 'Found' },
-    { key: 'portrait', label: 'Portrait', type: 'image', value: '/portraits/sera.webp' },
+    { key: 'portrait', label: 'Portrait', type: 'image', size: 'large', orientation: 'portrait', value: '/portraits/sera.webp' },
     { key: 'age', label: 'Age', type: 'number', value: 29 },
     { key: 'birthday', label: 'Birthday', type: 'date', value: '2026-04-12' },
     { key: 'role', label: 'Role', type: 'text', value: 'Guild Cartographer' },

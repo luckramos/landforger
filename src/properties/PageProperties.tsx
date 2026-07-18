@@ -4,10 +4,10 @@ import { Checkbox } from '../components/Checkbox/Checkbox'
 import { DIALOG_CHUNK_VARIANTS, dialogChunkTransition, dialogContainerVariants, overlayExitTransition } from '../components/motionPrefs'
 import { useUiStore } from '../state/uiStore'
 import { CATEGORIES, type Category, type CustomProperty, type CustomPropertyType, type CustomPropertyValue, type Page, type PropertyDef, type World } from '../domain/types'
-import { propertyFromDefinition, templatePropertiesFor, uniquePropertyKey } from '../domain/properties'
+import { propertyFromDefinition, uniquePropertyKey } from '../domain/properties'
 import { icons } from '../icons'
 import { PropertyInput } from './PropertyInput'
-import { PropertyDefinitionEditor } from './PropertyDefinitionEditor'
+import { CategoryTemplateDialog } from './CategoryTemplateDialog'
 import { PropertySettings, hasSettings } from './PropertySettings'
 import { PropertyTypeMenu } from './PropertyTypeMenu'
 import styles from './Properties.module.css'
@@ -44,7 +44,6 @@ export function PageProperties({
   const [categoryDraft, setCategoryDraft] = useState<Category>(page.category)
   const [applyTemplate, setApplyTemplate] = useState(false)
   const [templateOpen, setTemplateOpen] = useState(false)
-  const [templateDraft, setTemplateDraft] = useState<PropertyDef[]>([])
 
   useEffect(() => {
     setTitleDraft(page.title)
@@ -60,18 +59,6 @@ export function PageProperties({
       const label = `${typeLabel(type)} property`
       const key = uniquePropertyKey(label, properties.map((property) => property.key))
       return [...properties, propertyFromDefinition({ key, label, type })]
-    })
-  }
-
-  const openTemplate = () => {
-    setTemplateDraft(structuredClone(templatePropertiesFor(world, page.category)))
-    setTemplateOpen(true)
-  }
-
-  const addTemplateProperty = (type: CustomPropertyType) => {
-    setTemplateDraft((properties) => {
-      const label = `${typeLabel(type)} property`
-      return [...properties, { key: uniquePropertyKey(label, properties.map((property) => property.key)), label, type }]
     })
   }
 
@@ -146,7 +133,7 @@ export function PageProperties({
             <label>Page title<input aria-label="Page title" value={titleDraft} onChange={(event) => setTitleDraft(event.target.value)} /></label>
             <label>Category<select aria-label="Category" value={categoryDraft} onChange={(event) => setCategoryDraft(event.target.value as Category)}>{CATEGORIES.map((category) => <option key={category} value={category}>{category}</option>)}</select></label>
             {categoryDraft !== page.category && <Checkbox className={styles.checkbox} aria-label="Apply target Category Template" checked={applyTemplate} onChange={(event) => setApplyTemplate(event.target.checked)}>Apply target Category Template</Checkbox>}
-            <button type="button" className={styles.templateLink} aria-label={`Edit ${page.category} template`} onClick={() => { setActionsOpen(false); openTemplate() }}><icons.settings size={13} /> Edit Category Template</button>
+            <button type="button" className={styles.templateLink} aria-label={`Edit ${page.category} template`} onClick={() => { setActionsOpen(false); setTemplateOpen(true) }}><icons.edit size={13} /> Edit Category Template</button>
           </motion.div>
           <motion.div className={styles.dialogActions} variants={DIALOG_CHUNK_VARIANTS} transition={dialogChunkTransition(motionScale)}>
             <button type="button" className={styles.danger} onClick={onDelete}>Delete page</button>
@@ -159,45 +146,13 @@ export function PageProperties({
 
       <AnimatePresence>
       {templateOpen && (
-        <motion.div className={styles.dialogScrim} role="presentation" initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={overlayExitTransition(motionScale)} onClick={() => setTemplateOpen(false)}>
-        <motion.div
-          className={styles.dialog}
-          role="dialog"
-          aria-label={`${page.category} Category Template`}
-          initial="hidden"
-          animate="visible"
-          variants={dialogContainerVariants(motionScale)}
-          exit={{ opacity: 0, y: 6, scale: 0.985, transition: overlayExitTransition(motionScale) }}
-          onClick={(event) => event.stopPropagation()}
-        >
-          <motion.div variants={DIALOG_CHUNK_VARIANTS} transition={dialogChunkTransition(motionScale)}>
-            <h2>{page.category} template</h2>
-            <p>Changes seed future Pages only.</p>
-          </motion.div>
-          <motion.div className={styles.dialogFields} variants={DIALOG_CHUNK_VARIANTS} transition={dialogChunkTransition(motionScale)}>
-            {templateDraft.map((definition, index) => (
-              <div className={styles.templateRow} key={definition.key}>
-                <div>
-                  <input aria-label={`Template property name for ${definition.key}`} value={definition.label} onChange={(event) => setTemplateDraft((properties) => properties.map((property, propertyIndex) => propertyIndex === index ? { ...property, label: event.target.value } : property))} />
-                  <PropertyDefinitionEditor definition={definition} onChange={(changed) => setTemplateDraft((properties) => properties.map((property, propertyIndex) => propertyIndex === index ? changed : property))} />
-                </div>
-                <span>{definition.type}</span>
-                <button type="button" aria-label={`Remove ${definition.label} from template`} onClick={() => setTemplateDraft((properties) => properties.filter((_, propertyIndex) => propertyIndex !== index))}><icons.close size={12} /></button>
-              </div>
-            ))}
-            <PropertyTypeMenu
-              variant="inline"
-              motionScale={motionScale}
-              onSelect={addTemplateProperty}
-              itemLabel={(type) => `Add ${type} to template`}
-            />
-          </motion.div>
-          <motion.div className={styles.dialogActions} variants={DIALOG_CHUNK_VARIANTS} transition={dialogChunkTransition(motionScale)}>
-            <button type="button" className={styles.tintButton} onClick={() => setTemplateOpen(false)}>Cancel</button>
-            <button type="button" className={styles.tintPrimary} onClick={() => { onTemplateChange(page.category, templateDraft); setTemplateOpen(false) }}>Save Category Template</button>
-          </motion.div>
-        </motion.div>
-        </motion.div>
+        <CategoryTemplateDialog
+          world={world}
+          category={page.category}
+          motionScale={motionScale}
+          onClose={() => setTemplateOpen(false)}
+          onSave={(category, properties) => { onTemplateChange(category, properties); setTemplateOpen(false) }}
+        />
       )}
       </AnimatePresence>
     </section>

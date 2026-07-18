@@ -4,7 +4,7 @@ import { AnimatePresence } from 'motion/react'
 import { Link, matchPath, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { DockLayer } from '../../components/DockableWindow/DockLayer'
 import { UserMenu } from '../../components/UserMenu/UserMenu'
-import type { Page, World } from '../../domain/types'
+import type { Category, Page, World } from '../../domain/types'
 import type { WorldRepository } from '../../repository/WorldRepository'
 import { getRepository } from '../../state/repository'
 import { isDockPanelId, useDockStore } from '../../state/dockStore'
@@ -18,6 +18,8 @@ export interface DashboardOutletContext {
   pages: Page[]
   repository: WorldRepository
   readOnly: boolean
+  /** Distraction-free mode — screens hide their own floating chrome when true. */
+  focusMode: boolean
 }
 
 type LoadState = 'loading' | 'ready' | 'missing' | 'error'
@@ -135,8 +137,28 @@ export function DashboardShell() {
   const pageSlug = matchPath('/w/:world/p/:slug', location.pathname)?.params.slug
   const categorySlug = matchPath('/w/:world/c/:category', location.pathname)?.params.category
   const tagSlug = matchPath('/w/:world/t/:tag', location.pathname)?.params.tag
+  const isMap = Boolean(matchPath('/w/:world/map', location.pathname))
   const currentPage = pageSlug ? pages.find((page) => page.slug === pageSlug) : undefined
-  const currentLabel = currentPage?.title ?? categoryMeta(categorySlug ?? '')?.label ?? (tagSlug ? `#${tagSlug}` : undefined)
+  // The trailing breadcrumb segment: a page (carries its Category identity), a
+  // Category listing, a Tag listing, or the Map. `category` — when present —
+  // tints the leading glyph with the same --cat-* color the sidebar uses.
+  const currentCrumb: { label: string; category?: Category; icon?: keyof typeof icons } | undefined = currentPage
+    ? { label: currentPage.title, category: currentPage.category }
+    : categorySlug && categoryMeta(categorySlug)
+      ? { label: categoryMeta(categorySlug)!.label, category: categorySlug as Category }
+      : tagSlug
+        ? { label: `#${tagSlug}` }
+        : isMap
+          ? { label: 'World map', icon: 'map' }
+          : undefined
+  const CrumbIcon = currentCrumb?.category
+    ? categoryMeta(currentCrumb.category)!.icon
+    : currentCrumb?.icon
+      ? icons[currentCrumb.icon]
+      : undefined
+  // "Saved", read-only and focus mode are Page-scoped controls — they only
+  // make sense while a Page is open, so the topbar surfaces them there alone.
+  const onPage = Boolean(pageSlug)
   if (loadState !== 'ready' || !world) {
     return (
       <main className={styles.loading}>
@@ -154,20 +176,12 @@ export function DashboardShell() {
     >
       <aside className={styles.sidebar} aria-label="World navigation" aria-hidden={focusMode || undefined}>
           <div className={styles.brandRow}>
-            <Link to={`/w/${world.slug}`} className={styles.brand} aria-label={`${world.name} home`}>
-              <span className={styles.brandMark}>
-                <img src="/landforger-icon.svg" alt="" aria-hidden="true" />
-              </span>
-              <span className={styles.expandedOnly}><strong>LandForger</strong><small>{world.slug}</small></span>
+            <Link to={`/w/${world.slug}`} className={styles.brand} aria-label={`${world.name} · LandForger home`}>
+              {/* Full lockup in the expanded rail, emblem-only when collapsed —
+                  both are left-anchored and cross-dissolve on collapse. */}
+              <img className={styles.brandFull} src="/landforger.svg" alt="" aria-hidden="true" />
+              <img className={styles.brandIcon} src="/landforger-icon.svg" alt="" aria-hidden="true" />
             </Link>
-            <button
-              type="button"
-              className={styles.iconButton}
-              aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-              onClick={() => setSidebarCollapsed((value) => !value)}
-            >
-              {sidebarCollapsed ? <icons.caretRight size={16} /> : <icons.caretLeft size={16} />}
-            </button>
           </div>
 
           <Link className={styles.newPage} to={`/w/${world.slug}/new`}>
@@ -200,34 +214,70 @@ export function DashboardShell() {
           </nav>
       </aside>
 
+      {/* Collapse toggle lives on the shell — outside the sidebar's clipped box
+          — as a disc straddling the right edge, vertically centred. It rides
+          the animating edge on collapse without re-entering the brand row, so
+          nothing below it ever shifts. */}
+      <button
+        type="button"
+        className={styles.collapseEdge}
+        aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        onClick={() => setSidebarCollapsed((value) => !value)}
+      >
+        {sidebarCollapsed ? <icons.caretRight size={15} /> : <icons.caretLeft size={15} />}
+      </button>
+
       <div className={styles.mainColumn}>
         <header className={styles.topbar} aria-hidden={focusMode || undefined}>
-            <Link to="/worlds" className={styles.worldsBack}><icons.caretLeft size={12} /> Worlds</Link>
             <nav className={styles.crumbs} aria-label="Breadcrumb">
-              <Link to={`/w/${world.slug}`} title={world.name}>{world.name}</Link>
-              {currentLabel && <><span>/</span><span title={currentLabel}>{currentLabel}</span></>}
+              <Link to="/worlds" className={styles.crumbRoot} title="Back to Worlds">
+                <icons.worlds size={15} />
+                <span>Back to Worlds</span>
+              </Link>
+              <Link to={`/w/${world.slug}`} className={styles.crumbWorld} title={world.name}>{world.name}</Link>
+              {currentCrumb && (
+                <span className={styles.crumbCurrent} aria-current="page">
+                  {CrumbIcon && (
+                    <span
+                      className={styles.crumbIcon}
+                      style={currentCrumb.category ? ({ color: `var(--cat-${currentCrumb.category})` } as CSSProperties) : undefined}
+                    >
+                      <CrumbIcon size={15} />
+                    </span>
+                  )}
+                  <span className={styles.crumbLabel} title={currentCrumb.label}>{currentCrumb.label}</span>
+                </span>
+              )}
             </nav>
+
             <button type="button" className={styles.searchTrigger} onClick={() => setSearchOpen(true)}><icons.search size={16} /> <span>Search the world…</span><kbd>⌘K</kbd></button>
-            <span className={styles.saveIndicator} data-testid="save-indicator" data-saving={saving || undefined}>
-              <i />{saving ? 'Saving' : 'Saved'}
-            </span>
-            <button
-              type="button"
-              className={styles.topbarButton}
-              aria-label={readOnly ? 'Disable read-only' : 'Enable read-only'}
-              aria-pressed={readOnly}
-              onClick={() => setReadOnly((value) => !value)}
-            >
-              {readOnly ? <icons.lock /> : <icons.unlock />}
-            </button>
-            <button type="button" className={styles.topbarButton} aria-label="Enter focus mode" onClick={() => setFocusMode(true)}><icons.focus /></button>
-            <UserMenu />
+
+            <div className={styles.rightChrome}>
+              {onPage && (
+                <div className={styles.pageTools} role="group" aria-label="Page tools">
+                  <span className={styles.saveIndicator} data-testid="save-indicator" data-saving={saving || undefined}>
+                    <i />{saving ? 'Saving' : 'Saved'}
+                  </span>
+                  <button
+                    type="button"
+                    className={styles.topbarButton}
+                    aria-label={readOnly ? 'Disable read-only' : 'Enable read-only'}
+                    aria-pressed={readOnly}
+                    onClick={() => setReadOnly((value) => !value)}
+                  >
+                    {readOnly ? <icons.lock /> : <icons.unlock />}
+                  </button>
+                  <button type="button" className={styles.topbarButton} aria-label="Enter focus mode" onClick={() => setFocusMode(true)}><icons.focus /></button>
+                </div>
+              )}
+              <UserMenu />
+            </div>
         </header>
 
         {focusMode && <button type="button" className={styles.exitFocus} aria-label="Exit focus mode" onClick={() => setFocusMode(false)}><icons.close size={14} /> Exit focus</button>}
 
         <div key={location.pathname} className={styles.view} data-route-key={location.pathname}>
-          <Outlet context={{ world, pages, repository, readOnly } satisfies DashboardOutletContext} />
+          <Outlet context={{ world, pages, repository, readOnly, focusMode } satisfies DashboardOutletContext} />
         </div>
       </div>
 
