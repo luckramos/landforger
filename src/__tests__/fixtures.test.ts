@@ -51,8 +51,11 @@ describe('fixtures — seeded worlds', () => {
     }
   })
 
-  it('seeds the reference canvas with six Ninth Vale examples', () => {
-    expect(worlds.find((world) => world.slug === 'ninth-vale')?.canvas?.items).toHaveLength(6)
+  it('seeds the reference canvas with the Ninth Vale mood-board examples', () => {
+    const canvas = worlds.find((world) => world.slug === 'ninth-vale')?.canvas
+    expect(canvas?.items).toHaveLength(4)
+    expect(canvas?.items.every((item) => item.kind === 'text' || item.kind === 'sticky')).toBe(true)
+    expect(canvas?.links).toEqual([])
   })
 })
 

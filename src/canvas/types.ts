@@ -14,28 +14,19 @@ export interface CanvasViewport {
   zoom: number
 }
 
-export type CanvasShape = 'rectangle' | 'rounded' | 'circle' | 'ellipse' | 'diamond' | 'triangle' | 'pentagon' | 'hexagon' | 'star'
+/**
+ * A reference mood board is a collage, not a diagram — so the item set is
+ * annotations and reference nodes, never geometric shapes. This walking-skeleton
+ * slice ships the two annotation kinds (`text`, `sticky`); `stroke` and the four
+ * reference nodes (image/pdf/md/link) arrive in later slices.
+ */
+export type CanvasItemKind = 'text' | 'sticky'
 
 interface CanvasItemBase extends CanvasRect {
   id: string
+  /** Clockwise rotation in degrees about the item's centre. */
+  rotation: number
   color: string
-}
-
-export interface CanvasStrokeItem extends CanvasItemBase {
-  kind: 'stroke'
-  /** Points local to the item's x/y origin. */
-  points: CanvasPoint[]
-}
-
-export interface CanvasConnectorItem extends CanvasItemBase {
-  kind: 'arrow' | 'line' | 'dashed'
-  start: CanvasPoint
-  end: CanvasPoint
-}
-
-export interface CanvasShapeItem extends CanvasItemBase {
-  kind: 'shape'
-  shape: CanvasShape
 }
 
 export interface CanvasTextItem extends CanvasItemBase {
@@ -48,29 +39,23 @@ export interface CanvasStickyItem extends CanvasItemBase {
   text: string
 }
 
-export interface CanvasImageItem extends CanvasItemBase {
-  kind: 'image'
-  src: string
-  alt: string
-}
+export type CanvasItem = CanvasTextItem | CanvasStickyItem
 
-export interface CanvasLinkItem extends CanvasItemBase {
-  kind: 'link'
-  pageSlug: string
-  label: string
+/**
+ * A link is its own record referencing two item ids — never a field on an item —
+ * so many links may share an endpoint (N-to-N) and geometry is always derived
+ * from the endpoints. Canvas-local only; it never touches the world backlink
+ * index or Graph view. Populated by the connector slice; empty here.
+ */
+export interface CanvasLink {
+  id: string
+  fromId: string
+  toId: string
 }
-
-export type CanvasItem =
-  | CanvasStrokeItem
-  | CanvasConnectorItem
-  | CanvasShapeItem
-  | CanvasTextItem
-  | CanvasStickyItem
-  | CanvasImageItem
-  | CanvasLinkItem
 
 export interface ReferenceCanvas {
   items: CanvasItem[]
+  links: CanvasLink[]
 }
 
-export type CanvasTool = 'select' | 'pencil' | 'arrow' | 'line' | 'dashed' | 'shape' | 'text' | 'sticky' | 'eraser' | 'laser'
+export type CanvasTool = 'select' | 'hand' | 'text' | 'sticky'

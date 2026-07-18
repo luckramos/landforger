@@ -51,17 +51,16 @@ describe('concentric radii — outer = inner + padding (#64)', () => {
     expect(css).not.toContain('border-radius: 8px;\n  background: transparent;')
   })
 
-  it('Canvas shape picker: outer radius = button radius + --picker-pad', () => {
+  it('Canvas bottom toolbar: pill container wraps token-radius buttons (concentric, no magic literals)', () => {
+    // The mood-board rebuild replaced the shape picker with a bottom toolbar:
+    // a --radius-pill container holding --radius-sm tool buttons (nested surfaces,
+    // concentric radii, ADR 0002). The point this test still guards is that the
+    // canvas chrome uses radius tokens, never hand-rolled literals.
     const css = readFileSync('src/canvas/ReferenceCanvasPanel.module.css', 'utf8')
 
-    expect(css).toContain('border-radius: var(--radius-xs);')
-    expect(css).toContain('border-radius: calc(var(--radius-xs) + var(--picker-pad));')
+    expect(css).toMatch(/\.toolbar \{[^}]*border-radius: var\(--radius-pill\);/)
+    expect(css).toMatch(/\.tool \{[^}]*border-radius: var\(--radius-sm\);/)
 
-    const pad = localVar(css, 'picker-pad')
-    const inner = radiusToken('xs')
-    expect(inner + pad).toBe(14)
-
-    // Old magic literals: 9px outer, 6px shared tool/swatch button radius.
     expect(css).not.toContain('border-radius: 9px;')
     expect(css).not.toContain('border-radius: 6px;')
   })

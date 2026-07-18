@@ -285,10 +285,10 @@ describe('press feedback normalization (#65)', () => {
     expect(graph).toContain(".categories button:active, .scopeToggle button:active, .zoomControls button:active { transform: scale(0.96); }")
 
     const canvas = readFileSync('src/canvas/ReferenceCanvasPanel.module.css', 'utf8')
-    expect(canvas).toMatch(/\.tools button,\s*\.shapePicker button\s*\{[^}]*transition:\s*transform[^}]*\}/)
-    // The palette swatch's press scales the inner .dot, not the transparent
-    // 40px button — the button IS the hit target (#59) and must not shrink.
-    expect(canvas).toContain('.palette button:active .dot { transform: scale(0.96); }')
+    // The mood-board rebuild replaced the sidebar's .tools/.shapePicker/.palette
+    // with one bottom-toolbar .tool button class; the press reaction lives there.
+    expect(canvas).toMatch(/\.tool\s*\{[^}]*transition:\s*[^}]*transform[^}]*\}/)
+    expect(canvas).toContain('.tool:active { transform: scale(0.96); }')
   })
 
   it('the editor toolbar buttons gained a press reaction with transform in their transition', () => {
@@ -394,9 +394,9 @@ describe('scoped transitions on snapping toggles (#67)', () => {
 
   it('the Reference Canvas tool base rule enumerates background/border-color/color on the --mo scale for its aria-pressed swap, alongside transform', () => {
     const css = readFileSync('src/canvas/ReferenceCanvasPanel.module.css', 'utf8')
-    const base = css.match(/\.tools button,\s*\n\.shapePicker button \{[^}]*\}/)?.[0]
+    const base = css.match(/\.tool \{[^}]*\}/)?.[0]
     expect(base).toBeDefined()
-    expect(base).toContain('transition: transform calc(var(--mo, 1) * 120ms) var(--ease-house)')
+    expect(base).toContain('transform calc(var(--mo, 1) * 120ms) var(--ease-house)')
     expect(base).toContain('background calc(var(--mo, 1) * 160ms) var(--ease-house)')
     expect(base).toContain('border-color calc(var(--mo, 1) * 160ms) var(--ease-house)')
     expect(base).toContain('color calc(var(--mo, 1) * 160ms) var(--ease-house)')

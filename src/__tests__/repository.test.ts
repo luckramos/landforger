@@ -313,7 +313,8 @@ describe('LocalStorageWorldRepository — World mutations', () => {
     const repo = new LocalStorageWorldRepository(storage, fixturesFor(baseWorld, [basePage]))
     await repo.updateWorld('testland', {
       canvas: {
-        items: [{ id: 'note', kind: 'sticky', x: 8, y: 16, width: 160, height: 120, color: '#ffd166', text: 'Keep this' }],
+        items: [{ id: 'note', kind: 'sticky', x: 8, y: 16, width: 160, height: 120, rotation: 0, color: '#ffd166', text: 'Keep this' }],
+        links: [],
       },
     })
 
