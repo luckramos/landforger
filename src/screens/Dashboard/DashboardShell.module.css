@@ -85,7 +85,7 @@
 /* ≥40px hit target (ADR 0002) around the 26px disc. */
 .collapseEdge::after { content: ''; position: absolute; inset: -9px; }
 .collapseEdge:hover { background: color-mix(in oklab, var(--bronze) 14%, var(--panel-3)); border-color: var(--bronze); color: var(--text-hi); }
-.collapseEdge:active { transform: translateY(-50%) scale(0.92); }
+.collapseEdge:active { transform: translateY(-50%) scale(0.96); }
 .collapseEdge:focus-visible { outline: 2px solid var(--bronze); outline-offset: 2px; }
 .shell[data-focus='true'] .collapseEdge { opacity: 0; pointer-events: none; }
 /* Primary create action — the sidebar's one loud element. Adopts the house
