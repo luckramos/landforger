@@ -106,7 +106,7 @@ describe('Worlds screen', () => {
 
     // Navigated into the new World's real Dashboard.
     expect(await screen.findByRole('heading', { name: 'Gloamreach' })).toBeTruthy()
-    expect(screen.getByRole('link', { name: 'Gloamreach home' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Gloamreach · LandForger home' })).toBeTruthy()
 
     // Persisted: a second repository over the same storage sees it.
     const again = new LocalStorageWorldRepository(storage, fixtureFiles)
@@ -144,7 +144,7 @@ describe('Worlds screen', () => {
 
     expect(screen.queryByRole('status', { name: /^Opening/ })).toBeNull()
     expect(await screen.findByRole('heading', { name: 'Marrowmoor' })).toBeTruthy()
-    expect(screen.getByRole('link', { name: 'Marrowmoor home' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Marrowmoor · LandForger home' })).toBeTruthy()
   })
 
   it('keyboard activation (native button click) navigates the same as a pointer click', async () => {
