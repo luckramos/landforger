@@ -1,7 +1,14 @@
-import type { CSSProperties, PointerEvent as ReactPointerEvent, WheelEvent as ReactWheelEvent } from 'react'
+import type {
+  ChangeEvent as ReactChangeEvent,
+  CSSProperties,
+  DragEvent as ReactDragEvent,
+  PointerEvent as ReactPointerEvent,
+  WheelEvent as ReactWheelEvent,
+} from 'react'
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { smoothStrokePath } from './canvasDomain'
 import { ColorPicker } from './ColorPicker'
+import { ImageNode } from './ImageNode'
 import { DEFAULT_CANVAS_COLOR } from './color'
 import { DockableWindow } from '../components/DockableWindow/DockableWindow'
 import { prefersReducedMotion } from '../components/motionPrefs'
@@ -20,10 +27,11 @@ import {
   zoomAt,
   type ResizeHandle,
 } from './engine/geometry'
-import { createItem, ITEM_KINDS, isEditable, strokeFromPoints } from './engine/itemKinds'
+import { createItem, imageFromSource, ITEM_KINDS, isEditable, strokeFromPoints } from './engine/itemKinds'
 import { CanvasStore } from './engine/store'
 import { LaserTrailRenderer } from './LaserTrailRenderer'
-import type { CanvasItem, CanvasPoint, CanvasRect, CanvasTool, CanvasViewport, ReferenceCanvas } from './types'
+import { getAssetStore } from '../state/assetStore'
+import type { CanvasImageItem, CanvasItem, CanvasPoint, CanvasRect, CanvasTool, CanvasViewport, NodeSource, ReferenceCanvas } from './types'
 import styles from './ReferenceCanvasPanel.module.css'
 
 interface ReferenceCanvasPanelProps {
@@ -129,10 +137,15 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
   const [color, setColor] = useState(DEFAULT_CANVAS_COLOR)
   const [drawPreview, setDrawPreview] = useState<CanvasPoint[]>()
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [lightbox, setLightbox] = useState<CanvasImageItem>()
+  // Resolved bitmap URLs per asset id: a string (object URL / href) or null when
+  // the asset is missing (→ "File unavailable" card). Undefined = not yet resolved.
+  const [assetUrls, setAssetUrls] = useState<Record<string, string | null>>({})
 
   const laserPathRef = useRef<SVGPathElement>(null)
   const laserDotsRef = useRef<SVGGElement>(null)
   const laserRef = useRef<LaserTrailRenderer>(undefined)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const stageRef = useRef<HTMLDivElement>(null)
   const operationRef = useRef<Operation>(undefined)
@@ -153,6 +166,29 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
       laserRef.current = undefined
     }
   }, [])
+
+  // --- Resolve bitmap URLs for asset-backed images (url-backed images use href directly) ---
+  // Object URLs are revoked once on unmount (tracked in a ref); revoking per
+  // effect-run would tear down URLs still displayed by the <img>s.
+  const objectUrlsRef = useRef<string[]>([])
+  useEffect(() => () => { for (const url of objectUrlsRef.current) URL.revokeObjectURL(url) }, [])
+  useEffect(() => {
+    let cancelled = false
+    for (const item of snapshot.items) {
+      if (item.kind !== 'image' || item.source.type !== 'asset') continue
+      const { assetId } = item.source
+      if (assetId in assetUrls) continue
+      getAssetStore()
+        .getAssetUrl(assetId)
+        .catch(() => undefined) // a failed lookup degrades to "File unavailable", never an unhandled rejection
+        .then((url) => {
+          if (cancelled) return
+          if (url) objectUrlsRef.current.push(url)
+          setAssetUrls((current) => ({ ...current, [assetId]: url ?? null }))
+        })
+    }
+    return () => { cancelled = true }
+  }, [snapshot.items, assetUrls])
 
   // --- Keyboard: pan, delete, undo/redo, escape ---
   useEffect(() => {
@@ -303,7 +339,10 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
       const dy = page.y - op.startPage.y
       for (const [id, original] of op.originals) store.setItem(id, { ...original, x: original.x + dx, y: original.y + dy })
     } else if (op.kind === 'resize') {
-      store.setItem(op.original.id, resizeItem(op.original, op.handle, page, { aspect: shiftKey }))
+      // Images keep their aspect by default (Shift frees it); everything else is
+      // the reverse — free resize, Shift to lock.
+      const aspect = op.original.kind === 'image' ? !shiftKey : shiftKey
+      store.setItem(op.original.id, resizeItem(op.original, op.handle, page, { aspect }))
     } else if (op.kind === 'rotate') {
       const angle = Math.round(rotationForPointer(op.center, page))
       store.setItem(op.original.id, { ...op.original, rotation: angle })
@@ -386,6 +425,118 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
     setEditingId(undefined)
   }
 
+  // Caption edits are transient while typing; committed once on blur, so a
+  // caption is one undo step rather than one-per-keystroke (mirrors text/sticky).
+  const setCaption = (item: CanvasImageItem, caption: string) => {
+    store.setItem(item.id, { ...item, caption })
+  }
+  const commitCaption = () => store.commit()
+
+  // Correct an image to its intrinsic aspect (long edge ~320px) once, the first
+  // time its bitmap loads. Tracked so it never fights a later user resize.
+  const sizedRef = useRef<Set<string>>(new Set())
+  const applyNaturalSize = (item: CanvasImageItem, naturalW: number, naturalH: number) => {
+    if (sizedRef.current.has(item.id)) return
+    sizedRef.current.add(item.id)
+    const ratio = naturalW / naturalH
+    const width = ratio >= 1 ? 320 : Math.round(320 * ratio)
+    const height = ratio >= 1 ? Math.round(320 / ratio) : 320
+    if (width === item.width && height === item.height) return
+    store.setItem(item.id, { ...item, width, height })
+    store.commit()
+  }
+
+  // --- Image nodes: create from a file (upload → AssetStore) at a page point ---
+  /** Upload a file to the AssetStore and build its `NodeSource`, or null on failure. */
+  const uploadAssetSource = async (file: File): Promise<NodeSource | null> => {
+    try {
+      const asset = await getAssetStore().putAsset(file)
+      return { type: 'asset', assetId: asset.id, filename: file.name, mime: asset.mime, size: asset.size }
+    } catch {
+      return null // upload failed (quota, private mode) — skip rather than crash
+    }
+  }
+
+  const addImageFile = async (file: File, at: CanvasPoint) => {
+    if (!file.type.startsWith('image/')) return
+    const source = await uploadAssetSource(file)
+    if (!source) return
+    const item = imageFromSource(source, at)
+    store.addItem(item)
+    setSelected([item.id])
+    setPickerOpen(false)
+  }
+
+  const imageFilesOf = (list: FileList | null | undefined): File[] =>
+    Array.from(list ?? []).filter((file) => file.type.startsWith('image/'))
+
+  const stageCenterPage = (): CanvasPoint => {
+    const stage = stageRef.current
+    if (!stage) return { x: 0, y: 0 }
+    const rect = stage.getBoundingClientRect()
+    return screenToPage({ x: rect.width / 2, y: rect.height / 2 }, viewportRef.current)
+  }
+
+  const openImagePicker = () => fileInputRef.current?.click()
+
+  // Paste images from the clipboard onto the board (document-level so it works
+  // without the stage holding focus). Kept in a ref so the mount-only listener
+  // always calls the latest closure.
+  const pasteHandlerRef = useRef<(event: ClipboardEvent) => void>(undefined)
+  pasteHandlerRef.current = (event: ClipboardEvent) => {
+    const files = imageFilesOf(event.clipboardData?.files)
+    if (files.length === 0) return
+    event.preventDefault()
+    const center = stageCenterPage()
+    for (const file of files) void addImageFile(file, center)
+  }
+  useEffect(() => {
+    const onPaste = (event: ClipboardEvent) => pasteHandlerRef.current?.(event)
+    document.addEventListener('paste', onPaste)
+    return () => document.removeEventListener('paste', onPaste)
+  }, [])
+
+  const onFilePicked = (event: ReactChangeEvent<HTMLInputElement>) => {
+    const center = stageCenterPage()
+    let offset = 0
+    for (const file of imageFilesOf(event.target.files)) {
+      void addImageFile(file, { x: center.x + offset, y: center.y + offset })
+      offset += 24
+    }
+    event.target.value = '' // allow re-picking the same file
+  }
+
+  const onDrop = (event: ReactDragEvent<HTMLDivElement>) => {
+    const files = imageFilesOf(event.dataTransfer.files)
+    if (files.length === 0) return
+    event.preventDefault()
+    let offset = 0
+    for (const file of files) {
+      void addImageFile(file, clientToPage(event.clientX + offset, event.clientY + offset))
+      offset += 24
+    }
+  }
+
+  /** Re-attach a fresh file to an image whose asset went missing. */
+  const reattachImage = (item: CanvasImageItem, file: File) => {
+    void (async () => {
+      const source = await uploadAssetSource(file)
+      if (!source) return
+      setAssetUrls((current) => {
+        const next = { ...current }
+        // Drop the old resolution so the new asset re-resolves; revoke its URL.
+        if (item.source.type === 'asset') {
+          const stale = next[item.source.assetId]
+          if (stale) URL.revokeObjectURL(stale)
+          delete next[item.source.assetId]
+        }
+        return next
+      })
+      store.setItem(item.id, { ...item, source })
+      store.commit()
+    })()
+  }
+
   const onWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
     event.preventDefault()
     const anchor = localPoint(event, event.currentTarget)
@@ -443,6 +594,8 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
           style={{ '--grid': gridSize, '--grid-x': viewport.panX, '--grid-y': viewport.panY } as CSSProperties}
           onPointerDown={beginStagePointer}
           onWheel={onWheel}
+          onDragOver={(event) => event.preventDefault()}
+          onDrop={onDrop}
         >
           <div className={styles.world} style={{ transform: `translate(${viewport.panX}px, ${viewport.panY}px) scale(${viewport.zoom})` }}>
             {snapshot.items.map((item) => {
@@ -459,9 +612,21 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
                   data-x={Math.round(item.x)}
                   data-width={Math.round(item.width)}
                   style={{ left: item.x, top: item.y, width: item.width, height: item.height, transform: `rotate(${item.rotation}deg)`, '--item-color': item.color } as CSSProperties}
-                  onDoubleClick={() => isEditable(item) && setEditingId(item.id)}
+                  onDoubleClick={() => {
+                    if (item.kind === 'image') setLightbox(item)
+                    else if (isEditable(item)) setEditingId(item.id)
+                  }}
                 >
-                  {item.kind === 'stroke' ? (
+                  {item.kind === 'image' ? (
+                    <ImageNode
+                      item={item}
+                      url={item.source.type === 'asset' ? assetUrls[item.source.assetId] : item.source.href}
+                      onCaption={(caption) => setCaption(item, caption)}
+                      onCaptionCommit={commitCaption}
+                      onReattach={(file) => reattachImage(item, file)}
+                      onNaturalSize={(w, h) => applyNaturalSize(item, w, h)}
+                    />
+                  ) : item.kind === 'stroke' ? (
                     <svg className={styles.strokeSvg} viewBox={`0 0 ${Math.max(1, item.width)} ${Math.max(1, item.height)}`} preserveAspectRatio="none" aria-hidden="true">
                       <path d={smoothStrokePath(item.points)} />
                     </svg>
@@ -523,6 +688,10 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
               <g ref={laserDotsRef} />
             </svg>
           </div>
+
+          {snapshot.items.length === 0 && (
+            <p className={styles.emptyInvite}>Drop images, PDFs, links, or notes to start your board</p>
+          )}
         </div>
 
         <div className={styles.toolbar} role="toolbar" aria-label="Canvas tools">
@@ -530,20 +699,27 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
             <div key={groupDef.name} style={{ display: 'contents' }}>
               {index > 0 && <div className={styles.divider} />}
               <div className={styles.group} role="group" aria-label={groupDef.name}>
-                {groupDef.tools.map((button) => (
-                  <button
-                    key={button.label}
-                    type="button"
-                    className={styles.tool}
-                    aria-label={button.label}
-                    aria-pressed={button.tool ? tool === button.tool : undefined}
-                    title={button.tool ? (button.title ?? button.label) : `${button.label} — coming soon`}
-                    disabled={!button.tool}
-                    onClick={button.tool ? () => selectTool(button.tool!) : undefined}
-                  >
-                    <button.icon size={18} aria-hidden="true" />
-                  </button>
-                ))}
+                {groupDef.tools.map((button) => {
+                  // Image opens a file picker (creation is via file, not a pointer
+                  // mode); tool buttons select a pointer tool; the rest are
+                  // disabled placeholders until their slice lands.
+                  const isImage = button.label === 'Image'
+                  const enabled = Boolean(button.tool) || isImage
+                  return (
+                    <button
+                      key={button.label}
+                      type="button"
+                      className={styles.tool}
+                      aria-label={button.label}
+                      aria-pressed={button.tool ? tool === button.tool : undefined}
+                      title={enabled ? (button.title ?? button.label) : `${button.label} — coming soon`}
+                      disabled={!enabled}
+                      onClick={button.tool ? () => selectTool(button.tool!) : isImage ? openImagePicker : undefined}
+                    >
+                      <button.icon size={18} aria-hidden="true" />
+                    </button>
+                  )
+                })}
               </div>
             </div>
           ))}
@@ -568,6 +744,32 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
 
           {pickerOpen && <ColorPicker value={color} onChange={applyColor} />}
         </div>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          hidden
+          onChange={onFilePicked}
+        />
+
+        {lightbox && (
+          <div
+            className={styles.lightbox}
+            role="dialog"
+            aria-label="Image preview"
+            onPointerDown={() => setLightbox(undefined)}
+          >
+            <img
+              src={lightbox.source.type === 'url' ? lightbox.source.href : assetUrls[lightbox.source.assetId] ?? undefined}
+              alt={lightbox.caption || 'Image preview'}
+            />
+            <button type="button" className={styles.lightboxClose} aria-label="Close preview" onClick={() => setLightbox(undefined)}>
+              <icons.windowClose size={18} aria-hidden="true" />
+            </button>
+          </div>
+        )}
       </div>
     </DockableWindow>
   )

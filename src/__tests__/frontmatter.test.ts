@@ -60,11 +60,16 @@ describe('Page <-> Markdown round-trip', () => {
           { id: 't', kind: 'text', x: 8, y: 8, width: 200, height: 40, rotation: 0, color: '#fff', text: 'A label' },
           { id: 'n', kind: 'sticky', x: 160, y: 80, width: 160, height: 120, rotation: -3, color: 'oklch(0.75 0.1 150)', text: 'Harbor clue' },
           { id: 's', kind: 'stroke', x: 40, y: 40, width: 80, height: 48, rotation: 0, color: 'oklch(0.7 0.13 25)', points: [{ x: 0, y: 0 }, { x: 40, y: 24 }, { x: 80, y: 48 }] },
+          { id: 'img-a', kind: 'image', x: 300, y: 60, width: 320, height: 200, rotation: 0, color: '#000000', caption: 'Coastline ref', source: { type: 'asset', assetId: 'asset-abc', filename: 'coast.png', mime: 'image/png', size: 20481 } },
+          { id: 'img-u', kind: 'image', x: 40, y: 300, width: 240, height: 240, rotation: 2, color: '#000000', caption: '', source: { type: 'url', href: 'https://example.com/ref.jpg' } },
         ],
         links: [{ id: 'l1', fromId: 't', toId: 'n' }],
       },
     }
-    expect(worldFromMarkdown(worldToMarkdown(withCanvas))).toEqual(withCanvas)
+    // The asset-backed image serializes only its reference — never bytes.
+    const md = worldToMarkdown(withCanvas)
+    expect(md).toContain('assetId: asset-abc')
+    expect(worldFromMarkdown(md)).toEqual(withCanvas)
   })
 
   it('round-trips a Page with no cover and no custom properties', () => {

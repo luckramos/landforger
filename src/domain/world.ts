@@ -1,4 +1,4 @@
-import type { CanvasItem, CanvasLink, ReferenceCanvas } from '../canvas/types'
+import type { CanvasItem, CanvasLink, NodeSource, ReferenceCanvas } from '../canvas/types'
 import { joinFrontmatter, splitFrontmatter } from './frontmatter'
 import { CATEGORIES, type Category, type CategoryTemplate, type PropertyDef, type Pin, type World, type WorldMap } from './types'
 import type { YamlValue } from './yaml'
@@ -124,7 +124,29 @@ function canvasItemToRecord(item: CanvasItem): { [key: string]: YamlValue } {
   }
   if (item.kind === 'text' || item.kind === 'sticky') record.text = item.text
   if (item.kind === 'stroke') record.points = item.points.map((point) => ({ x: point.x, y: point.y }))
+  if (item.kind === 'image') {
+    record.source = nodeSourceToRecord(item.source)
+    record.caption = item.caption
+  }
   return record
+}
+
+function nodeSourceToRecord(source: NodeSource): { [key: string]: YamlValue } {
+  return source.type === 'asset'
+    ? { type: 'asset', assetId: source.assetId, filename: source.filename, mime: source.mime, size: source.size }
+    : { type: 'url', href: source.href }
+}
+
+function nodeSourceFromRecord(raw: YamlValue): NodeSource {
+  if (!isRecord(raw)) throw new Error('Malformed node source')
+  if (raw.type === 'url') return { type: 'url', href: asString(raw.href) }
+  return {
+    type: 'asset',
+    assetId: asString(raw.assetId),
+    filename: asString(raw.filename),
+    mime: asString(raw.mime),
+    size: asNumber(raw.size),
+  }
 }
 
 function canvasItemFromRecord(raw: YamlValue): CanvasItem {
@@ -150,6 +172,8 @@ function canvasItemFromRecord(raw: YamlValue): CanvasItem {
           ? raw.points.filter(isRecord).map((point) => ({ x: asNumber(point.x), y: asNumber(point.y) }))
           : [],
       }
+    case 'image':
+      return { ...base, kind: 'image', source: nodeSourceFromRecord(raw.source), caption: asString(raw.caption) }
     default:
       throw new Error(`Malformed canvas item kind: ${JSON.stringify(raw.kind)}`)
   }

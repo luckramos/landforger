@@ -1,4 +1,6 @@
-import type { CanvasItem, CanvasItemKind, CanvasPoint } from '../types'
+import type { CanvasImageItem, CanvasItem, CanvasItemKind, CanvasPoint, NodeSource } from '../types'
+
+const IMAGE_LONG_EDGE = 320
 
 /**
  * Per-kind registry adapted from tldraw's shape-util pattern (our own code):
@@ -22,6 +24,9 @@ export const ITEM_KINDS: Record<CanvasItemKind, ItemKindDef> = {
   // Strokes are drawn freehand (see the pencil tool), not click-created, so the
   // default size is unused; they hold no editable text.
   stroke: { label: 'Stroke', defaultWidth: 0, defaultHeight: 0, editable: false, placeholder: '' },
+  // Images are built from a dropped/pasted file at intrinsic aspect (see
+  // imageFromSource), not click-placed; the caption is edited separately.
+  image: { label: 'Image', defaultWidth: 240, defaultHeight: 180, editable: false, placeholder: '' },
 }
 
 let counter = 0
@@ -49,6 +54,33 @@ export function createItem(kind: 'text' | 'sticky', at: CanvasPoint, color: stri
 
 export function isEditable(item: CanvasItem): item is Extract<CanvasItem, { text: string }> {
   return ITEM_KINDS[item.kind].editable
+}
+
+/**
+ * Build an image node centred on `at`, scaled so its long edge is ~320px at the
+ * given natural aspect. `natural` defaults to a square when dimensions aren't
+ * known yet (e.g. a URL image whose size loads later).
+ */
+export function imageFromSource(
+  source: NodeSource,
+  at: CanvasPoint,
+  natural: { width: number; height: number } = { width: 1, height: 1 },
+): CanvasImageItem {
+  const ratio = natural.width > 0 && natural.height > 0 ? natural.width / natural.height : 1
+  const width = ratio >= 1 ? IMAGE_LONG_EDGE : Math.round(IMAGE_LONG_EDGE * ratio)
+  const height = ratio >= 1 ? Math.round(IMAGE_LONG_EDGE / ratio) : IMAGE_LONG_EDGE
+  return {
+    id: makeItemId(),
+    kind: 'image',
+    x: at.x - width / 2,
+    y: at.y - height / 2,
+    width,
+    height,
+    rotation: 0,
+    color: '#000000',
+    source,
+    caption: '',
+  }
 }
 
 /** Build a freehand stroke item from page-space points: a bounding box + origin-local points. */
