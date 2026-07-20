@@ -64,12 +64,12 @@ describe('Reference canvas (mood board)', () => {
   it('presents the workflow-grouped bottom toolbar with working and forthcoming tools', async () => {
     await renderAt('/w/ninth-vale?panel=canvas')
     const toolbar = await screen.findByRole('toolbar', { name: 'Canvas tools' })
-    for (const tool of ['Select', 'Hand', 'Text', 'Sticky note']) {
+    for (const tool of ['Select', 'Hand', 'Text', 'Sticky note', 'Image']) {
       expect((within(toolbar).getByRole('button', { name: tool }) as HTMLButtonElement).disabled).toBe(false)
     }
-    // The reference-node and connector tools remain disabled placeholders until
-    // their slices land (the shell shows the whole workflow up front).
-    for (const tool of ['Image', 'Link node', 'Link string']) {
+    // The remaining reference-node and connector tools stay disabled placeholders
+    // until their slices land (the shell shows the whole workflow up front).
+    for (const tool of ['PDF', 'Markdown', 'Link node', 'Link string']) {
       expect((within(toolbar).getByRole('button', { name: tool }) as HTMLButtonElement).disabled).toBe(true)
     }
     expect(within(toolbar).getByRole('button', { name: 'Zoom in' })).toBeTruthy()

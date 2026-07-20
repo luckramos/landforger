@@ -17,10 +17,19 @@ export interface CanvasViewport {
 /**
  * A reference mood board is a collage, not a diagram — so the item set is
  * annotations and reference nodes, never geometric shapes. Annotation kinds are
- * `text`, `sticky`, and freeform `stroke`; the four reference nodes
- * (image/pdf/md/link) arrive in later slices.
+ * `text`, `sticky`, and freeform `stroke`; `image` is the first reference node
+ * (pdf/md/link arrive in later slices).
  */
-export type CanvasItemKind = 'text' | 'sticky' | 'stroke'
+export type CanvasItemKind = 'text' | 'sticky' | 'stroke' | 'image'
+
+/**
+ * How a file-backed reference node points at its content. Only this reference —
+ * never the bytes — is written to `_world.md`: an uploaded file lives in the
+ * AssetStore (keyed by `assetId`), while a pasted link is a plain URL.
+ */
+export type NodeSource =
+  | { type: 'asset'; assetId: string; filename: string; mime: string; size: number }
+  | { type: 'url'; href: string }
 
 interface CanvasItemBase extends CanvasRect {
   id: string
@@ -45,7 +54,15 @@ export interface CanvasStrokeItem extends CanvasItemBase {
   points: CanvasPoint[]
 }
 
-export type CanvasItem = CanvasTextItem | CanvasStickyItem | CanvasStrokeItem
+export interface CanvasImageItem extends CanvasItemBase {
+  kind: 'image'
+  /** Where the bitmap comes from — an uploaded asset or a pasted URL. */
+  source: NodeSource
+  /** Optional caption shown beneath the image. */
+  caption: string
+}
+
+export type CanvasItem = CanvasTextItem | CanvasStickyItem | CanvasStrokeItem | CanvasImageItem
 
 /**
  * A link is its own record referencing two item ids — never a field on an item —
