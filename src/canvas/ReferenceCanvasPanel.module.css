@@ -43,7 +43,14 @@
   color: var(--on-bronze, oklch(0.195 0.024 84));
   user-select: none;
 }
-.item[data-editing='true'] { cursor: text; }
+/* A new/empty text item is transparent with no content, so while editing give
+   every item a dashed frame — otherwise placing a text reads as "nothing
+   happened" until the first keystroke. */
+.item[data-editing='true'] {
+  cursor: text;
+  outline: 1px dashed var(--bronze-hi, var(--bronze-light));
+  outline-offset: 2px;
+}
 
 .text {
   display: flex;
@@ -101,17 +108,23 @@
   vector-effect: non-scaling-stroke;
 }
 
-/* Live pencil preview + ephemeral laser overlay, both in page (world) space. */
+/* Live pencil preview + ephemeral laser overlay, both in page (world) space.
+   Explicit width/height: an <svg> defaults to its 300x150 intrinsic size, not
+   the inset:0 box, so without these the overlay is clipped to the top-left. */
 .drawPreview,
 .laser {
   position: absolute;
   inset: 0;
+  width: 100%;
+  height: 100%;
   overflow: visible;
   pointer-events: none;
 }
 .drawPreview path { fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
-.laser path { fill: none; stroke: var(--laser, oklch(0.67 0.22 21)); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
-.laser circle { fill: var(--laser, oklch(0.67 0.22 21)); }
+/* The glow + opacity fuse the per-point dots into one continuous beam — without
+   it the trail reads as discrete anchors rather than a free laser stroke. */
+.laser path { fill: none; stroke: var(--laser, oklch(0.67 0.22 21)); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; opacity: 0.58; filter: drop-shadow(0 0 5px var(--laser, oklch(0.67 0.22 21))); }
+.laser circle { fill: var(--laser, oklch(0.67 0.22 21)); filter: drop-shadow(0 0 4px var(--laser, oklch(0.67 0.22 21))); }
 
 /* --- Selection & handles --- */
 .selectionRing {
