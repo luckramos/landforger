@@ -90,6 +90,50 @@ export function marqueeContains(items: readonly CanvasItem[], marquee: CanvasRec
     .map((item) => item.id)
 }
 
+// --- Eraser ---
+
+function pointSegmentDistance(point: CanvasPoint, from: CanvasPoint, to: CanvasPoint): number {
+  const dx = to.x - from.x
+  const dy = to.y - from.y
+  if (dx === 0 && dy === 0) return Math.hypot(point.x - from.x, point.y - from.y)
+  const t = Math.max(0, Math.min(1, ((point.x - from.x) * dx + (point.y - from.y) * dy) / (dx * dx + dy * dy)))
+  return Math.hypot(point.x - (from.x + t * dx), point.y - (from.y + t * dy))
+}
+
+function orientation(a: CanvasPoint, b: CanvasPoint, c: CanvasPoint): number {
+  return Math.sign((b.y - a.y) * (c.x - b.x) - (b.x - a.x) * (c.y - b.y))
+}
+
+function segmentsCross(a: CanvasPoint, b: CanvasPoint, c: CanvasPoint, d: CanvasPoint): boolean {
+  return orientation(a, b, c) !== orientation(a, b, d) && orientation(c, d, a) !== orientation(c, d, b)
+}
+
+function segmentHitsItem(item: CanvasItem, from: CanvasPoint, to: CanvasPoint, tolerance: number): boolean {
+  if (item.kind === 'stroke') {
+    const world = item.points.map((point) => ({ x: item.x + point.x, y: item.y + point.y }))
+    if (world.length === 1) return pointSegmentDistance(world[0], from, to) <= tolerance
+    return world.slice(1).some((point, index) => {
+      const prev = world[index]
+      if (segmentsCross(prev, point, from, to)) return true
+      return Math.min(
+        pointSegmentDistance(prev, from, to),
+        pointSegmentDistance(point, from, to),
+        pointSegmentDistance(from, prev, point),
+        pointSegmentDistance(to, prev, point),
+      ) <= tolerance
+    })
+  }
+  // Rect-bodied items: hit if an endpoint lands inside, or the path crosses an edge.
+  if (pointInItem(item, from) || pointInItem(item, to)) return true
+  const corners = itemCorners(item)
+  return corners.some((corner, index) => segmentsCross(from, to, corner, corners[(index + 1) % corners.length]))
+}
+
+/** Ids of items the pointer segment `from`→`to` touches, for the whole-item eraser. */
+export function eraseAlongSegment(items: readonly CanvasItem[], from: CanvasPoint, to: CanvasPoint, tolerance = 6): string[] {
+  return items.filter((item) => segmentHitsItem(item, from, to, tolerance)).map((item) => item.id)
+}
+
 // --- Resize ---
 
 export type ResizeHandle = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w'

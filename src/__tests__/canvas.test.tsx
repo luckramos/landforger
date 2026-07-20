@@ -67,8 +67,9 @@ describe('Reference canvas (mood board)', () => {
     for (const tool of ['Select', 'Hand', 'Text', 'Sticky note']) {
       expect((within(toolbar).getByRole('button', { name: tool }) as HTMLButtonElement).disabled).toBe(false)
     }
-    // Later-slice tools are present as disabled placeholders (the shell shows the whole workflow).
-    for (const tool of ['Pencil', 'Image', 'Link string']) {
+    // The reference-node and connector tools remain disabled placeholders until
+    // their slices land (the shell shows the whole workflow up front).
+    for (const tool of ['Image', 'Link node', 'Link string']) {
       expect((within(toolbar).getByRole('button', { name: tool }) as HTMLButtonElement).disabled).toBe(true)
     }
     expect(within(toolbar).getByRole('button', { name: 'Zoom in' })).toBeTruthy()

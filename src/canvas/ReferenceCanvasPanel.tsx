@@ -1,10 +1,15 @@
 import type { CSSProperties, PointerEvent as ReactPointerEvent, WheelEvent as ReactWheelEvent } from 'react'
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { smoothStrokePath } from './canvasDomain'
+import { ColorPicker } from './ColorPicker'
+import { DEFAULT_CANVAS_COLOR } from './color'
 import { DockableWindow } from '../components/DockableWindow/DockableWindow'
+import { prefersReducedMotion } from '../components/motionPrefs'
 import type { World } from '../domain/types'
 import { icons } from '../icons'
 import type { WorldRepository } from '../repository/WorldRepository'
 import {
+  eraseAlongSegment,
   itemCenter,
   marqueeContains,
   pointInItem,
@@ -15,9 +20,10 @@ import {
   zoomAt,
   type ResizeHandle,
 } from './engine/geometry'
-import { createItem, ITEM_KINDS, isEditable } from './engine/itemKinds'
+import { createItem, ITEM_KINDS, isEditable, strokeFromPoints } from './engine/itemKinds'
 import { CanvasStore } from './engine/store'
-import type { CanvasItem, CanvasItemKind, CanvasPoint, CanvasRect, CanvasTool, CanvasViewport, ReferenceCanvas } from './types'
+import { LaserTrailRenderer } from './LaserTrailRenderer'
+import type { CanvasItem, CanvasPoint, CanvasRect, CanvasTool, CanvasViewport, ReferenceCanvas } from './types'
 import styles from './ReferenceCanvasPanel.module.css'
 
 interface ReferenceCanvasPanelProps {
@@ -25,8 +31,6 @@ interface ReferenceCanvasPanelProps {
   repository: WorldRepository
   onClose: () => void
 }
-
-const DEFAULT_COLOR: Record<CanvasItemKind, string> = { text: '#f4efe6', sticky: '#d8aa61' }
 
 type ToolIcon = (typeof icons)[keyof typeof icons]
 interface ToolButton {
@@ -53,9 +57,9 @@ const TOOL_GROUPS: ToolGroup[] = [
   { name: 'Annotate', tools: [
     { label: 'Text', icon: icons.toolText, tool: 'text' },
     { label: 'Sticky note', icon: icons.toolSticky, tool: 'sticky' },
-    { label: 'Pencil', icon: icons.toolPencil },
-    { label: 'Eraser', icon: icons.toolEraser },
-    { label: 'Laser', icon: icons.toolLaser },
+    { label: 'Pencil', icon: icons.toolPencil, tool: 'pencil' },
+    { label: 'Eraser', icon: icons.toolEraser, tool: 'eraser' },
+    { label: 'Laser', icon: icons.toolLaser, tool: 'laser' },
   ] },
   { name: 'Reference nodes', tools: [
     { label: 'Image', icon: icons.typeImage },
@@ -84,6 +88,9 @@ type Operation =
   | { kind: 'drag'; startPage: CanvasPoint; originals: Map<string, CanvasItem> }
   | { kind: 'resize'; handle: ResizeHandle; original: CanvasItem }
   | { kind: 'rotate'; original: CanvasItem; center: CanvasPoint }
+  | { kind: 'draw'; points: CanvasPoint[] }
+  | { kind: 'erase'; previous: CanvasPoint; removedAny: boolean }
+  | { kind: 'laser' }
 
 function initialCanvas(world: World): ReferenceCanvas {
   return {
@@ -119,6 +126,13 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
   const [spacePressed, setSpacePressed] = useState(false)
   const [live, setLive] = useState(false)
   const [marqueeRect, setMarqueeRect] = useState<CanvasRect>()
+  const [color, setColor] = useState(DEFAULT_CANVAS_COLOR)
+  const [drawPreview, setDrawPreview] = useState<CanvasPoint[]>()
+  const [pickerOpen, setPickerOpen] = useState(false)
+
+  const laserPathRef = useRef<SVGPathElement>(null)
+  const laserDotsRef = useRef<SVGGElement>(null)
+  const laserRef = useRef<LaserTrailRenderer>(undefined)
 
   const stageRef = useRef<HTMLDivElement>(null)
   const operationRef = useRef<Operation>(undefined)
@@ -126,6 +140,19 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
   const selectedRef = useRef(selected)
   viewportRef.current = viewport
   selectedRef.current = selected
+
+  // --- Ephemeral laser trail: an imperative rAF renderer, never a persisted item ---
+  useEffect(() => {
+    if (!laserPathRef.current || !laserDotsRef.current) return
+    const renderer = new LaserTrailRenderer(laserPathRef.current, laserDotsRef.current, {
+      reducedMotion: prefersReducedMotion(),
+    })
+    laserRef.current = renderer
+    return () => {
+      renderer.destroy()
+      laserRef.current = undefined
+    }
+  }, [])
 
   // --- Keyboard: pan, delete, undo/redo, escape ---
   useEffect(() => {
@@ -184,6 +211,7 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
       operationRef.current = { kind: 'pan', startScreen: screen, startPan: { x: viewportRef.current.panX, y: viewportRef.current.panY } }
       return
     }
+    setPickerOpen(false)
     if (tool === 'select') {
       // Geometry-accurate hit test: topmost item whose (rotated) body covers the
       // point. A click on transparent space between items falls through to marquee.
@@ -198,9 +226,25 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
       setMarqueeRect({ x: page.x, y: page.y, width: 0, height: 0 })
       return
     }
+    if (tool === 'pencil') {
+      operationRef.current = { kind: 'draw', points: [page] }
+      setDrawPreview([page])
+      setLive(true)
+      return
+    }
+    if (tool === 'eraser') {
+      const hit = eraseAlongSegment(store.getSnapshot().items, page, page)
+      if (hit.length) store.removeItemsTransient(hit)
+      operationRef.current = { kind: 'erase', previous: page, removedAny: hit.length > 0 }
+      return
+    }
+    if (tool === 'laser') {
+      laserRef.current?.addPoint(page)
+      operationRef.current = { kind: 'laser' }
+      return
+    }
     // text / sticky: create an item and edit it immediately
-    const kind = tool as CanvasItemKind
-    const item = createItem(kind, page, DEFAULT_COLOR[kind])
+    const item = createItem(tool, page, color)
     store.addItem(item)
     setSelected([item.id])
     setEditingId(item.id)
@@ -227,6 +271,15 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
     } else if (op.kind === 'rotate') {
       const angle = Math.round(rotationForPointer(op.center, page))
       store.setItem(op.original.id, { ...op.original, rotation: angle })
+    } else if (op.kind === 'draw') {
+      op.points.push(page)
+      setDrawPreview([...op.points])
+    } else if (op.kind === 'erase') {
+      const hit = eraseAlongSegment(store.getSnapshot().items, op.previous, page)
+      if (hit.length) store.removeItemsTransient(hit)
+      operationRef.current = { kind: 'erase', previous: page, removedAny: op.removedAny || hit.length > 0 }
+    } else if (op.kind === 'laser') {
+      laserRef.current?.addPoint(page)
     }
   }
 
@@ -250,6 +303,15 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
       if (moved) store.commit()
     } else if (op.kind === 'resize' || op.kind === 'rotate') {
       store.commit()
+    } else if (op.kind === 'draw') {
+      const points = op.points.length > 1 ? op.points : [op.points[0], { x: op.points[0].x + 1, y: op.points[0].y + 1 }]
+      store.addItem(strokeFromPoints(points, color))
+      setDrawPreview(undefined)
+    } else if (op.kind === 'erase') {
+      // One undo step per eraser gesture, not per item removed.
+      if (op.removedAny) store.commit()
+    } else if (op.kind === 'laser') {
+      laserRef.current?.finish()
     }
     setLive(false)
   }
@@ -309,12 +371,26 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
   }
 
   const selectTool = (next: CanvasTool) => {
+    if (tool === 'laser') laserRef.current?.clear()
     setTool(next)
+    setPickerOpen(false)
     operationRef.current = undefined
+  }
+
+  /** Set the active color for new items, and recolor the current selection. */
+  const applyColor = (next: string) => {
+    setColor(next)
+    if (selectedRef.current.length === 0) return
+    const ids = new Set(selectedRef.current)
+    for (const item of store.getSnapshot().items) {
+      if (ids.has(item.id)) store.setItem(item.id, { ...item, color: next })
+    }
+    store.commit()
   }
 
   const soleSelected = selected.length === 1 ? snapshot.items.find((item) => item.id === selected[0]) : undefined
   const gridSize = 22 * viewport.zoom
+  const previewPath = useMemo(() => (drawPreview ? smoothStrokePath(drawPreview) : undefined), [drawPreview])
 
   return (
     <DockableWindow
@@ -348,7 +424,7 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
               return (
                 <div
                   key={item.id}
-                  className={`${styles.item} ${styles[item.kind]}`}
+                  className={`${styles.item} ${styles[item.kind] ?? ''}`}
                   data-testid={`canvas-item-${item.id}`}
                   data-kind={item.kind}
                   data-selected={isSelected || undefined}
@@ -358,7 +434,11 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
                   style={{ left: item.x, top: item.y, width: item.width, height: item.height, transform: `rotate(${item.rotation}deg)`, '--item-color': item.color } as CSSProperties}
                   onDoubleClick={() => isEditable(item) && setEditingId(item.id)}
                 >
-                  {editing && isEditable(item) ? (
+                  {item.kind === 'stroke' ? (
+                    <svg className={styles.strokeSvg} viewBox={`0 0 ${Math.max(1, item.width)} ${Math.max(1, item.height)}`} preserveAspectRatio="none" aria-hidden="true">
+                      <path d={smoothStrokePath(item.points)} />
+                    </svg>
+                  ) : editing ? (
                     <textarea
                       autoFocus
                       aria-label={item.kind === 'sticky' ? 'Edit sticky note' : 'Edit canvas text'}
@@ -404,6 +484,17 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
             {marqueeRect && (
               <div className={styles.marquee} style={{ left: marqueeRect.x, top: marqueeRect.y, width: marqueeRect.width, height: marqueeRect.height }} />
             )}
+
+            {previewPath && (
+              <svg className={styles.drawPreview} aria-hidden="true">
+                <path d={previewPath} style={{ stroke: color }} />
+              </svg>
+            )}
+
+            <svg className={styles.laser} aria-hidden="true">
+              <path ref={laserPathRef} data-testid="canvas-laser-path" />
+              <g ref={laserDotsRef} />
+            </svg>
           </div>
         </div>
 
@@ -431,13 +522,24 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
           ))}
           <div className={styles.divider} />
           <div className={styles.group} role="group" aria-label="Utilities">
-            <button type="button" className={styles.tool} aria-label="Color" title="Color picker — coming soon" disabled><span className={styles.swatch} /></button>
+            <button
+              type="button"
+              className={styles.tool}
+              aria-label="Color"
+              aria-pressed={pickerOpen}
+              title="Color"
+              onClick={() => setPickerOpen((open) => !open)}
+            >
+              <span className={styles.swatch} style={{ '--swatch-color': color } as CSSProperties} />
+            </button>
             <div className={styles.zoom}>
               <button type="button" className={styles.tool} aria-label="Zoom out" onClick={() => zoomFromCenter(1 / 1.15)}><icons.zoomOut size={16} aria-hidden="true" /></button>
               <button type="button" className={styles.zoomValue} aria-label="Reset zoom" onClick={() => setViewport({ panX: 0, panY: 0, zoom: 1 })}>{Math.round(viewport.zoom * 100)}%</button>
               <button type="button" className={styles.tool} aria-label="Zoom in" onClick={() => zoomFromCenter(1.15)}><icons.zoomIn size={16} aria-hidden="true" /></button>
             </div>
           </div>
+
+          {pickerOpen && <ColorPicker value={color} onChange={applyColor} />}
         </div>
       </div>
     </DockableWindow>

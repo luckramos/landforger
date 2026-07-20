@@ -16,11 +16,11 @@ export interface CanvasViewport {
 
 /**
  * A reference mood board is a collage, not a diagram — so the item set is
- * annotations and reference nodes, never geometric shapes. This walking-skeleton
- * slice ships the two annotation kinds (`text`, `sticky`); `stroke` and the four
- * reference nodes (image/pdf/md/link) arrive in later slices.
+ * annotations and reference nodes, never geometric shapes. Annotation kinds are
+ * `text`, `sticky`, and freeform `stroke`; the four reference nodes
+ * (image/pdf/md/link) arrive in later slices.
  */
-export type CanvasItemKind = 'text' | 'sticky'
+export type CanvasItemKind = 'text' | 'sticky' | 'stroke'
 
 interface CanvasItemBase extends CanvasRect {
   id: string
@@ -39,7 +39,13 @@ export interface CanvasStickyItem extends CanvasItemBase {
   text: string
 }
 
-export type CanvasItem = CanvasTextItem | CanvasStickyItem
+export interface CanvasStrokeItem extends CanvasItemBase {
+  kind: 'stroke'
+  /** Freeform points, local to the item's x/y origin. */
+  points: CanvasPoint[]
+}
+
+export type CanvasItem = CanvasTextItem | CanvasStickyItem | CanvasStrokeItem
 
 /**
  * A link is its own record referencing two item ids — never a field on an item —
@@ -58,4 +64,4 @@ export interface ReferenceCanvas {
   links: CanvasLink[]
 }
 
-export type CanvasTool = 'select' | 'hand' | 'text' | 'sticky'
+export type CanvasTool = 'select' | 'hand' | 'text' | 'sticky' | 'pencil' | 'eraser' | 'laser'

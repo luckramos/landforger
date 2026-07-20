@@ -123,6 +123,7 @@ function canvasItemToRecord(item: CanvasItem): { [key: string]: YamlValue } {
     color: item.color,
   }
   if (item.kind === 'text' || item.kind === 'sticky') record.text = item.text
+  if (item.kind === 'stroke') record.points = item.points.map((point) => ({ x: point.x, y: point.y }))
   return record
 }
 
@@ -141,6 +142,14 @@ function canvasItemFromRecord(raw: YamlValue): CanvasItem {
     case 'text':
     case 'sticky':
       return { ...base, kind: raw.kind, text: asString(raw.text) }
+    case 'stroke':
+      return {
+        ...base,
+        kind: 'stroke',
+        points: Array.isArray(raw.points)
+          ? raw.points.filter(isRecord).map((point) => ({ x: asNumber(point.x), y: asNumber(point.y) }))
+          : [],
+      }
     default:
       throw new Error(`Malformed canvas item kind: ${JSON.stringify(raw.kind)}`)
   }
