@@ -17,10 +17,10 @@ export interface CanvasViewport {
 /**
  * A reference mood board is a collage, not a diagram — so the item set is
  * annotations and reference nodes, never geometric shapes. Annotation kinds are
- * `text`, `sticky`, and freeform `stroke`; `image` is the first reference node
- * (pdf/md/link arrive in later slices).
+ * `text`, `sticky`, and freeform `stroke`; the reference nodes are `image`,
+ * `link`, `pdf`, and `md`.
  */
-export type CanvasItemKind = 'text' | 'sticky' | 'stroke' | 'image'
+export type CanvasItemKind = 'text' | 'sticky' | 'stroke' | 'image' | 'link' | 'pdf' | 'md'
 
 /**
  * How a file-backed reference node points at its content. Only this reference —
@@ -62,7 +62,35 @@ export interface CanvasImageItem extends CanvasItemBase {
   caption: string
 }
 
-export type CanvasItem = CanvasTextItem | CanvasStickyItem | CanvasStrokeItem | CanvasImageItem
+/** A web-link card. Source is always a URL; `title` is the user-editable display name. */
+export interface CanvasLinkItem extends CanvasItemBase {
+  kind: 'link'
+  source: Extract<NodeSource, { type: 'url' }>
+  title: string
+}
+
+/** A PDF reference card (representative — no in-app rendering). */
+export interface CanvasPdfItem extends CanvasItemBase {
+  kind: 'pdf'
+  source: NodeSource
+  title: string
+}
+
+/** A Markdown reference card; its `.md` file is always an uploaded asset (its text is rendered read-only). */
+export interface CanvasMdItem extends CanvasItemBase {
+  kind: 'md'
+  source: Extract<NodeSource, { type: 'asset' }>
+  title: string
+}
+
+export type CanvasItem =
+  | CanvasTextItem
+  | CanvasStickyItem
+  | CanvasStrokeItem
+  | CanvasImageItem
+  | CanvasLinkItem
+  | CanvasPdfItem
+  | CanvasMdItem
 
 /**
  * A link is its own record referencing two item ids — never a field on an item —

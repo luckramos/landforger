@@ -32,6 +32,13 @@ describe('MemoryAssetStore (AssetStore contract)', () => {
     await expect(store.deleteAsset(id)).resolves.toBeUndefined() // idempotent
   })
 
+  it('decodes a stored blob as text (for Markdown previews) and undefined when gone', async () => {
+    const store = new MemoryAssetStore()
+    const { id } = await store.putAsset(new Blob(['# Title\n\nBody'], { type: 'text/markdown' }))
+    expect(await store.getAssetText(id)).toBe('# Title\n\nBody')
+    expect(await store.getAssetText('asset-missing')).toBeUndefined()
+  })
+
   it('issues distinct ids for distinct puts', async () => {
     const store = new MemoryAssetStore()
     const a = await store.putAsset(new Blob(['a'], { type: 'image/png' }))
