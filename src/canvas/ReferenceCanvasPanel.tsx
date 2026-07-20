@@ -75,12 +75,12 @@ const TOOL_GROUPS: ToolGroup[] = [
   ] },
   { name: 'Reference nodes', tools: [
     { label: 'Image', icon: icons.typeImage },
-    { label: 'PDF', icon: icons.documentWidth },
-    { label: 'Markdown', icon: icons.editorText },
+    { label: 'PDF', icon: icons.filePdf },
+    { label: 'Markdown', icon: icons.fileMarkdown },
     { label: 'Link node', icon: icons.link },
   ] },
   { name: 'Connect', tools: [
-    { label: 'Link string', icon: icons.editorLink, tool: 'link', title: 'Link string — drag between two items' },
+    { label: 'Link string', icon: icons.linkConnector, tool: 'link', title: 'Link string — drag between two items' },
   ] },
 ]
 /**
@@ -982,11 +982,15 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
               </div>
             )}
 
-            {/* Edge-hover connection nubs — drag one to a target item to link. */}
+            {/* Edge-hover connection nubs — drag one to a target item to link.
+                Suppressed on the selected item under the select tool, whose edge
+                midpoints already carry the resize handles (they used to collide);
+                use the Link tool, or hover another item, to connect from it. */}
             {(() => {
               if (operationRef.current || (tool !== 'select' && tool !== 'link')) return null
               const item = hoverItemId ? itemsById.get(hoverItemId) : undefined
               if (!item) return null
+              if (tool === 'select' && soleSelected?.id === item.id) return null
               return EDGE_ANCHORS.map((anchor, i) => {
                 const p = anchorPoint(item, anchor)
                 return (
@@ -1016,7 +1020,7 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
                     <button type="button" aria-label="Toggle arrowhead" aria-pressed={link.arrowhead} onClick={() => setLinkStyle(link, { arrowhead: !link.arrowhead })}><icons.arrowRight size={14} aria-hidden="true" /></button>
                     <button type="button" aria-label="Tint link with current color" onClick={() => setLinkStyle(link, { tint: color })}><span className={styles.linkTintSwatch} style={{ background: color }} /></button>
                     <button type="button" aria-label="Clear link tint" onClick={() => setLinkStyle(link, { tint: undefined })}><icons.minus size={14} aria-hidden="true" /></button>
-                    <button type="button" aria-label="Delete link" onClick={() => { store.removeLinks([link.id]); setSelectedLink(undefined) }}><icons.windowClose size={14} aria-hidden="true" /></button>
+                    <button type="button" aria-label="Unlink" title="Unlink" onClick={() => { store.removeLinks([link.id]); setSelectedLink(undefined) }}><icons.unlink size={14} aria-hidden="true" /></button>
                   </div>
                 </>
               )

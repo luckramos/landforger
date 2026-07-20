@@ -78,7 +78,7 @@ describe('Reference canvas — N-to-N link connector', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Select' }))
     fireEvent.pointerDown(stage, { button: 0, clientX: 290, clientY: 172, pointerId: 1 })
     fireEvent.pointerUp(stage, { clientX: 290, clientY: 172, pointerId: 1 })
-    expect(await screen.findByRole('button', { name: 'Delete link' })).toBeTruthy()
+    expect(await screen.findByRole('button', { name: 'Unlink' })).toBeTruthy()
 
     fireEvent.keyDown(document, { key: 'Delete' })
     await waitFor(() => expect(stage.querySelector('[data-testid^="canvas-link-"]')).toBeNull())
@@ -121,5 +121,23 @@ describe('Reference canvas — N-to-N link connector', () => {
       const link = (await repository.getWorld('ninth-vale'))?.canvas?.links[0]
       expect(link?.toId).toBe('c')
     })
+  })
+
+  it('does not show connection nubs on the selected item (no collision with its resize handles)', async () => {
+    const stage = await renderWith([sticky('a', 100, 100), sticky('b', 400, 100)])
+    fireEvent.click(screen.getByRole('button', { name: 'Select' }))
+
+    // Select 'a' (its resize handles appear) then hover it.
+    fireEvent.pointerDown(stage, { button: 0, clientX: 140, clientY: 130, pointerId: 1 })
+    fireEvent.pointerUp(stage, { clientX: 140, clientY: 130, pointerId: 1 })
+    fireEvent.pointerMove(stage, { clientX: 140, clientY: 130, pointerId: 1 })
+
+    // Resize handles present, connection nubs suppressed on the selected item.
+    expect(screen.getByRole('button', { name: 'Resize sticky item e' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /^Connect from/ })).toBeNull()
+
+    // Hovering the OTHER (unselected) item still offers nubs.
+    fireEvent.pointerMove(stage, { clientX: 440, clientY: 130, pointerId: 1 })
+    expect(screen.getAllByRole('button', { name: /^Connect from/ }).length).toBeGreaterThan(0)
   })
 })
