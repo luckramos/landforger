@@ -275,7 +275,12 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
       trackGesture()
       return
     }
-    // text / sticky: create an item and edit it immediately (no gesture tracking)
+    // text / sticky: create an item and edit it immediately (no gesture tracking).
+    // preventDefault stops the browser's default pointerdown focus behaviour from
+    // stealing focus back from the auto-focused textarea (React flushes this
+    // discrete event synchronously, so the textarea mounts mid-event) — without
+    // it the textarea blurs instantly on creation.
+    event.preventDefault()
     const item = createItem(tool, page, color)
     store.addItem(item)
     setSelected([item.id])
@@ -372,14 +377,12 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
     store.setItem(item.id, { ...item, text })
   }
 
-  const finishEditing = (item: CanvasItem) => {
-    const current = store.getSnapshot().items.find((candidate) => candidate.id === item.id)
-    if (current && isEditable(current) && current.text.trim() === '') {
-      store.removeItems([current.id])
-      setSelected((selection) => selection.filter((id) => id !== current.id))
-    } else {
-      store.commit()
-    }
+  const finishEditing = (_item: CanvasItem) => {
+    // Persist whatever was typed and exit editing. Empty items are intentionally
+    // KEPT — an auto-delete-on-empty-blur silently destroyed freshly created
+    // items when the browser stole focus mid-creation. Empty text/sticky show a
+    // placeholder and are removable with the eraser or Delete.
+    store.commit()
     setEditingId(undefined)
   }
 
