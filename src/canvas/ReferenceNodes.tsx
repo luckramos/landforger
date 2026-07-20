@@ -111,7 +111,7 @@ export function PdfNode({ item, url, onTitle, onTitleCommit, onReattach, onOpen 
   return (
     <div className={styles.docBody}>
       <OpenAffordance onOpen={onOpen} label="Open PDF in a new tab" />
-      <span className={styles.docGlyph} aria-hidden="true"><icons.documentWidth size={22} /></span>
+      <span className={styles.docGlyph} aria-hidden="true"><icons.filePdf size={22} /></span>
       <div className={styles.cardText}>
         <TitleInput value={item.title} onChange={onTitle} onCommit={onTitleCommit} />
         <span className={styles.cardMeta}>{[filename, size].filter(Boolean).join(' · ')}</span>
@@ -148,7 +148,7 @@ export function MarkdownNode({ item, html, onTitle, onTitleCommit, onReattach, o
         {html ? <div dangerouslySetInnerHTML={{ __html: html }} /> : <span className={styles.cardMeta}>Loading…</span>}
       </div>
       <div className={styles.mdFooter}>
-        <icons.editorText size={14} aria-hidden="true" />
+        <icons.fileMarkdown size={14} aria-hidden="true" />
         <TitleInput value={item.title} onChange={onTitle} onCommit={onTitleCommit} />
       </div>
     </div>

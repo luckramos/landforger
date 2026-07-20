@@ -51,6 +51,13 @@
   outline: 1px dashed var(--bronze-hi, var(--bronze-light));
   outline-offset: 2px;
 }
+/* Every selected item gets a bronze ring — so a multi-selection (marquee /
+   Cmd+A) is legible, not just the single item that carries the resize handles. */
+.item[data-selected='true'] {
+  outline: 2px solid var(--bronze-hi, var(--bronze-light));
+  outline-offset: 2px;
+  border-radius: var(--radius-xs, 6px);
+}
 
 .text {
   display: flex;
@@ -273,7 +280,14 @@
   stroke-linecap: round;
   filter: drop-shadow(0 1px 1px oklch(0 0 0 / 0.5));
 }
-.links marker path { fill: var(--link-string, oklch(0.72 0.02 260)); }
+.linkArrow {
+  fill: none;
+  stroke: var(--link-string, oklch(0.72 0.02 260));
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 1px 1px oklch(0 0 0 / 0.5));
+}
 .linkSelected { stroke: var(--bronze-light, oklch(0.845 0.069 76.833)); stroke-width: 2.5; }
 
 /* Edge-hover connection nubs. A 12px dot with a ≥40px invisible hit target

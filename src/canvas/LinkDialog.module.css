@@ -1,0 +1,83 @@
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--scrim, oklch(0.13 0.003 107 / 0.7));
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+.panel {
+  display: flex;
+  width: min(440px, 100%);
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px;
+  border: 1px solid var(--hairline-strong, oklch(1 0 0 / 0.12));
+  border-radius: var(--radius-lg, 16px);
+  background: var(--panel-2, oklch(0.16 0.003 68));
+  box-shadow: 0 24px 64px oklch(0 0 0 / 0.55);
+}
+
+.eyebrow {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: var(--text-sm, 12px);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--bronze, oklch(0.64 0.093 70.303));
+}
+.title {
+  margin: -6px 0 4px;
+  font-family: var(--font-serif, system-ui);
+  font-size: var(--text-2xl, 28px);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--text-hi, oklch(0.959 0.01 81.795 / 0.95));
+}
+.fieldLabel {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: var(--text-sm, 12px);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim, oklch(0.959 0.01 81.795 / 0.55));
+}
+.input {
+  width: 100%;
+  padding: 11px 13px;
+  border: 1px solid var(--hairline, oklch(1 0 0 / 0.08));
+  border-radius: var(--radius-sm, 8px);
+  background: var(--panel-3, oklch(0.202 0.005 68));
+  color: var(--text-hi, oklch(0.959 0.01 81.795 / 0.95));
+  /* ≥16px on mobile so focusing never zooms the viewport (ADR 0003). */
+  font-size: 16px;
+}
+@media (min-width: 640px) { .input { font-size: var(--text-base, 14px); } }
+.input::placeholder { color: var(--text-faint, oklch(0.959 0.01 81.795 / 0.5)); }
+.input:focus {
+  outline: none;
+  border-color: var(--focus-border, color-mix(in oklab, var(--bronze) 70%, transparent));
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--bronze, oklch(0.64 0.093 70.303)) 9%, transparent);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}
+.cancelButton {
+  padding: 10px 16px;
+  border: 1px solid var(--hairline, oklch(1 0 0 / 0.08));
+  border-radius: var(--radius-sm, 8px);
+  background: transparent;
+  color: var(--text-dim, oklch(0.959 0.01 81.795 / 0.55));
+  font-size: var(--text-base, 14px);
+  cursor: pointer;
+  transition: background calc(var(--mo, 1) * 140ms) var(--ease-house), color calc(var(--mo, 1) * 140ms) var(--ease-house), transform calc(var(--mo, 1) * 90ms) var(--ease-house);
+}
+.cancelButton:hover { background: var(--hairline, oklch(1 0 0 / 0.08)); color: var(--text-hi, oklch(0.959 0.01 81.795 / 0.95)); }
+.cancelButton:active { transform: scale(0.96); }
+.cancelButton:focus-visible { outline: 2px solid var(--bronze-light, oklch(0.845 0.069 76.833)); outline-offset: 2px; }
