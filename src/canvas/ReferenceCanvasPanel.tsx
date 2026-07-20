@@ -9,6 +9,7 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'reac
 import { smoothStrokePath } from './canvasDomain'
 import { ColorPicker } from './ColorPicker'
 import { ImageNode } from './ImageNode'
+import { LinkDialog } from './LinkDialog'
 import { LinkNode, MarkdownNode, PdfNode } from './ReferenceNodes'
 import { renderMarkdownHtml } from './markdown'
 import { DEFAULT_CANVAS_COLOR } from './color'
@@ -160,9 +161,10 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
   const [pickerOpen, setPickerOpen] = useState(false)
   const [lightbox, setLightbox] = useState<CanvasImageItem>()
   const [mdReader, setMdReader] = useState<CanvasMdItem>()
-  const [selectedLink, setSelectedLink] = useState<string>()
+  const [selectedLinks, setSelectedLinks] = useState<string[]>([])
   const [linkPreview, setLinkPreview] = useState<{ from: CanvasPoint; to: CanvasPoint }>()
   const [hoverItemId, setHoverItemId] = useState<string>()
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false)
   // Resolved bitmap URLs per asset id: a string (object URL / href) or null when
   // the asset is missing (→ "File unavailable" card). Undefined = not yet resolved.
   const [assetUrls, setAssetUrls] = useState<Record<string, string | null>>({})
@@ -178,10 +180,10 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
   const operationRef = useRef<Operation>(undefined)
   const viewportRef = useRef(viewport)
   const selectedRef = useRef(selected)
-  const selectedLinkRef = useRef(selectedLink)
+  const selectedLinksRef = useRef(selectedLinks)
   viewportRef.current = viewport
   selectedRef.current = selected
-  selectedLinkRef.current = selectedLink
+  selectedLinksRef.current = selectedLinks
 
   // --- Ephemeral laser trail: an imperative rAF renderer, never a persisted item ---
   useEffect(() => {
@@ -269,23 +271,30 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
         setSelected((current) => current.filter((id) => store.getSnapshot().items.some((item) => item.id === id)))
         return
       }
+      if (meta && event.key.toLowerCase() === 'a') {
+        // Select every element on the board — items and links.
+        event.preventDefault()
+        const canvas = store.getSnapshot()
+        setSelected(canvas.items.map((item) => item.id))
+        setSelectedLinks(canvas.links.map((link) => link.id))
+        return
+      }
       if (event.key === 'Escape') {
         setSelected([])
-        setSelectedLink(undefined)
+        setSelectedLinks([])
         setEditingId(undefined)
         operationRef.current = undefined
         setMarqueeRect(undefined)
         setLive(false)
       }
       if (event.key === 'Delete' || event.key === 'Backspace') {
-        if (selectedRef.current.length > 0) {
+        // Delete removes whatever is selected — items and/or links together.
+        if (selectedRef.current.length > 0 || selectedLinksRef.current.length > 0) {
           event.preventDefault()
-          store.removeItems(selectedRef.current)
+          if (selectedLinksRef.current.length > 0) store.removeLinks(selectedLinksRef.current)
+          if (selectedRef.current.length > 0) store.removeItems(selectedRef.current)
           setSelected([])
-        } else if (selectedLinkRef.current) {
-          event.preventDefault()
-          store.removeLinks([selectedLinkRef.current]) // removes only the link, never its items
-          setSelectedLink(undefined)
+          setSelectedLinks([])
         }
       }
     }
@@ -357,7 +366,7 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
     if (tool === 'select') {
       const hitItem = [...store.getSnapshot().items].reverse().find((item) => pointInItem(item, page))
       if (hitItem) {
-        setSelectedLink(undefined)
+        setSelectedLinks([])
         startDrag(hitItem, page, event.shiftKey)
         trackGesture()
         return
@@ -366,11 +375,11 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
       const hitLink = linkAtPoint(page)
       if (hitLink) {
         setSelected([])
-        setSelectedLink(hitLink.id)
+        setSelectedLinks([hitLink.id])
         return
       }
       if (!event.shiftKey) setSelected([])
-      setSelectedLink(undefined)
+      setSelectedLinks([])
       setEditingId(undefined)
       operationRef.current = { kind: 'marquee', start: page }
       setMarqueeRect({ x: page.x, y: page.y, width: 0, height: 0 })
@@ -468,8 +477,13 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
     if (!op) return
     if (op.kind === 'marquee') {
       const box = rectFromPoints(op.start, clientToPage(clientX, clientY))
-      const hit = marqueeContains(store.getSnapshot().items, box)
+      const canvas = store.getSnapshot()
+      const hit = marqueeContains(canvas.items, box)
+      // A link is captured when both its endpoint items fall inside the box.
+      const hitSet = new Set(hit)
+      const hitLinks = canvas.links.filter((link) => hitSet.has(link.fromId) && hitSet.has(link.toId)).map((link) => link.id)
       setSelected((current) => (shiftKey ? [...new Set([...current, ...hit])] : hit))
+      setSelectedLinks((current) => (shiftKey ? [...new Set([...current, ...hitLinks])] : hitLinks))
       setMarqueeRect(undefined)
     } else if (op.kind === 'drag') {
       const moved = [...op.originals].some(([id, original]) => {
@@ -517,7 +531,7 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
         } else if (!target) {
           // Dropped on empty canvas → delete the link.
           store.removeLinks([link.id])
-          setSelectedLink(undefined)
+          setSelectedLinks([])
         }
       }
       setLinkPreview(undefined)
@@ -553,7 +567,7 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
   const beginNubDrag = (item: CanvasItem, anchor: LinkAnchor, event: ReactPointerEvent<HTMLButtonElement>) => {
     event.stopPropagation()
     setSelected([])
-    setSelectedLink(undefined)
+    setSelectedLinks([])
     const start = anchorPoint(item, anchor)
     operationRef.current = { kind: 'linkDraw', fromId: item.id, fromAnchor: anchor, current: start }
     setLinkPreview({ from: start, to: start })
@@ -668,11 +682,8 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
     setSelected([item.id])
   }
 
-  /** The Link toolbar tool: prompt for a URL and drop a link card at the centre. */
-  const promptForLink = () => {
-    const href = window.prompt('Paste a link URL')
-    if (href) addLink(href, stageCenterPage())
-  }
+  /** The Link toolbar tool: open the project's link dialog; on submit, drop a card. */
+  const promptForLink = () => setLinkDialogOpen(true)
 
   /** Double-click activation for reference nodes (single-click selects). */
   const activate = (item: CanvasItem) => {
@@ -775,7 +786,7 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
     if (tool === 'laser') laserRef.current?.clear()
     setTool(next)
     setPickerOpen(false)
-    setSelectedLink(undefined)
+    setSelectedLinks([])
     operationRef.current = undefined
   }
 
@@ -837,6 +848,17 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
     return undefined
   }
 
+  /** Midpoint of a link's drawn curve + the local tangent angle, for a centred arrowhead. */
+  const linkMidpoint = (link: CanvasLink): { x: number; y: number; angle: number } | undefined => {
+    const polyline = linkPolyline(link)
+    if (polyline.length < 2) return undefined
+    const i = Math.floor(polyline.length / 2)
+    const a = polyline[Math.max(0, i - 1)]
+    const b = polyline[Math.min(polyline.length - 1, i + 1)]
+    const mid = polyline[i]
+    return { x: mid.x, y: mid.y, angle: (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI }
+  }
+
   return (
     <DockableWindow
       panelId="canvas"
@@ -871,23 +893,30 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
           <div className={styles.world} style={{ transform: `translate(${viewport.panX}px, ${viewport.panY}px) scale(${viewport.zoom})` }}>
             {/* Link strings — the imperative rope renderer owns each path's `d`. */}
             <svg className={styles.links} aria-hidden="true">
-              <defs>
-                {/* context-stroke makes the arrowhead inherit each string's own
-                    colour (neutral default or per-link tint). */}
-                <marker id="link-arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto" markerUnits="userSpaceOnUse">
-                  <path d="M0 0 L8 4 L0 8 Z" fill="context-stroke" />
-                </marker>
-              </defs>
               {snapshot.links.map((link) => (
                 <path
                   key={link.id}
                   ref={(el) => { if (el) linkPathsRef.current.set(link.id, el); else linkPathsRef.current.delete(link.id) }}
                   data-testid={`canvas-link-${link.id}`}
-                  className={`${styles.linkString} ${selectedLink === link.id ? styles.linkSelected : ''}`}
+                  className={`${styles.linkString} ${selectedLinks.includes(link.id) ? styles.linkSelected : ''}`}
                   style={link.tint ? { stroke: link.tint } : undefined}
-                  markerEnd={link.arrowhead ? 'url(#link-arrow)' : undefined}
                 />
               ))}
+              {/* A single arrowhead at the CENTRE of the string (pointing toId), tinted to match. */}
+              {snapshot.links.map((link) => {
+                if (!link.arrowhead) return null
+                const m = linkMidpoint(link)
+                if (!m) return null
+                return (
+                  <polygon
+                    key={`arrow-${link.id}`}
+                    className={styles.linkArrow}
+                    points="0,-4 8,0 0,4"
+                    style={link.tint ? { fill: link.tint } : undefined}
+                    transform={`translate(${m.x} ${m.y}) rotate(${m.angle})`}
+                  />
+                )
+              })}
             </svg>
 
             {snapshot.items.map((item) => {
@@ -1006,9 +1035,9 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
               })
             })()}
 
-            {/* Selected link: draggable anchor dots (re-bind) + a small style bar. */}
+            {/* A singly-selected link: draggable anchor dots (re-bind) + a style bar. */}
             {(() => {
-              const link = selectedLink ? snapshot.links.find((l) => l.id === selectedLink) : undefined
+              const link = selectedLinks.length === 1 ? snapshot.links.find((l) => l.id === selectedLinks[0]) : undefined
               const ends = link && linkEndpoints(link)
               if (!link || !ends) return null
               const mid = { x: (ends.from.x + ends.to.x) / 2, y: (ends.from.y + ends.to.y) / 2 }
@@ -1020,7 +1049,7 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
                     <button type="button" aria-label="Toggle arrowhead" aria-pressed={link.arrowhead} onClick={() => setLinkStyle(link, { arrowhead: !link.arrowhead })}><icons.arrowRight size={14} aria-hidden="true" /></button>
                     <button type="button" aria-label="Tint link with current color" onClick={() => setLinkStyle(link, { tint: color })}><span className={styles.linkTintSwatch} style={{ background: color }} /></button>
                     <button type="button" aria-label="Clear link tint" onClick={() => setLinkStyle(link, { tint: undefined })}><icons.minus size={14} aria-hidden="true" /></button>
-                    <button type="button" aria-label="Unlink" title="Unlink" onClick={() => { store.removeLinks([link.id]); setSelectedLink(undefined) }}><icons.unlink size={14} aria-hidden="true" /></button>
+                    <button type="button" aria-label="Unlink" title="Unlink" onClick={() => { store.removeLinks([link.id]); setSelectedLinks([]) }}><icons.unlink size={14} aria-hidden="true" /></button>
                   </div>
                 </>
               )
@@ -1153,6 +1182,13 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
               <icons.windowClose size={18} aria-hidden="true" />
             </button>
           </div>
+        )}
+
+        {linkDialogOpen && (
+          <LinkDialog
+            onCancel={() => setLinkDialogOpen(false)}
+            onSubmit={(href) => { addLink(href, stageCenterPage()); setLinkDialogOpen(false) }}
+          />
         )}
       </div>
     </DockableWindow>

@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { CanvasItem } from '../canvas/types'
@@ -121,6 +121,60 @@ describe('Reference canvas — N-to-N link connector', () => {
       const link = (await repository.getWorld('ninth-vale'))?.canvas?.links[0]
       expect(link?.toId).toBe('c')
     })
+  })
+
+  it('adds a link node via the project dialog (not a native prompt)', async () => {
+    await renderWith([])
+    // No native window.prompt is used.
+    const promptSpy = vi.spyOn(window, 'prompt')
+    fireEvent.click(screen.getByRole('button', { name: 'Link node' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Add a link' })
+    expect(promptSpy).not.toHaveBeenCalled()
+
+    const add = within(dialog).getByRole('button', { name: 'Add link' })
+    expect((add as HTMLButtonElement).disabled).toBe(true) // disabled until a valid URL
+    fireEvent.change(within(dialog).getByRole('textbox', { name: 'Link URL' }), { target: { value: 'https://are.na/x' } })
+    expect((add as HTMLButtonElement).disabled).toBe(false)
+    fireEvent.click(add)
+
+    await waitFor(() => expect(screen.getByTestId('reference-canvas-stage').querySelector('[data-kind="link"]')).toBeTruthy())
+    expect(screen.queryByRole('dialog', { name: 'Add a link' })).toBeNull() // closed after add
+  })
+
+  it('marquee and Cmd+A select links too, and Delete removes items and links together', async () => {
+    const stage = await renderWith([sticky('a', 100, 100), sticky('b', 400, 100)])
+    drawLink(stage, [178, 130], [402, 130]) // a → b
+    await waitFor(() => expect(stage.querySelector('[data-testid^="canvas-link-"]')).toBeTruthy())
+
+    // Cmd+A selects both items and the link; Delete clears everything.
+    fireEvent.click(screen.getByRole('button', { name: 'Select' }))
+    fireEvent.keyDown(document, { key: 'a', metaKey: true })
+    expect(stage.querySelectorAll('[data-selected="true"]').length).toBe(2)
+    fireEvent.keyDown(document, { key: 'Delete' })
+    await waitFor(() => {
+      expect(stage.querySelector('[data-testid^="canvas-link-"]')).toBeNull()
+      expect(screen.queryByTestId('canvas-item-a')).toBeNull()
+      expect(screen.queryByTestId('canvas-item-b')).toBeNull()
+    })
+  })
+
+  it('draws the arrowhead at the centre of the string when toggled on', async () => {
+    const stage = await renderWith([sticky('a', 100, 100), sticky('b', 400, 100)])
+    drawLink(stage, [178, 130], [402, 130])
+    await waitFor(() => expect(stage.querySelector('[data-testid^="canvas-link-"]')).toBeTruthy())
+    // Select the string, toggle its arrowhead.
+    fireEvent.click(screen.getByRole('button', { name: 'Select' }))
+    fireEvent.pointerDown(stage, { button: 0, clientX: 290, clientY: 172, pointerId: 1 })
+    fireEvent.pointerUp(stage, { clientX: 290, clientY: 172, pointerId: 1 })
+    fireEvent.click(await screen.findByRole('button', { name: 'Toggle arrowhead' }))
+
+    // A polygon arrowhead is drawn, translated near the string's mid-x (~290), not an end.
+    const arrow = stage.querySelector('polygon') as SVGPolygonElement | null
+    expect(arrow).toBeTruthy()
+    const tx = arrow!.getAttribute('transform') ?? ''
+    const x = Number(tx.match(/translate\((-?[\d.]+)/)?.[1])
+    expect(x).toBeGreaterThan(230)
+    expect(x).toBeLessThan(350) // mid-span, not at the ~180 or ~400 ends
   })
 
   it('does not show connection nubs on the selected item (no collision with its resize handles)', async () => {

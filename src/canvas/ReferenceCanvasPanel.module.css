@@ -273,7 +273,7 @@
   stroke-linecap: round;
   filter: drop-shadow(0 1px 1px oklch(0 0 0 / 0.5));
 }
-.links marker path { fill: var(--link-string, oklch(0.72 0.02 260)); }
+.linkArrow { fill: var(--link-string, oklch(0.72 0.02 260)); }
 .linkSelected { stroke: var(--bronze-light, oklch(0.845 0.069 76.833)); stroke-width: 2.5; }
 
 /* Edge-hover connection nubs. A 12px dot with a ≥40px invisible hit target

@@ -107,9 +107,11 @@ describe('Reference canvas — link / pdf / markdown nodes', () => {
     await waitFor(() => expect(stage.querySelector('[data-kind="pdf"]')).toBeTruthy())
     expect(stage.querySelector('[data-kind="md"]')).toBeTruthy()
 
-    // The toolbar Link tool prompts for a URL and drops a link card.
-    vi.spyOn(window, 'prompt').mockReturnValue('https://example.com/ref')
+    // The toolbar Link tool opens the project dialog; submitting a URL drops a card.
     fireEvent.click(screen.getByRole('button', { name: 'Link node' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Add a link' })
+    fireEvent.change(within(dialog).getByRole('textbox', { name: 'Link URL' }), { target: { value: 'https://example.com/ref' } })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Add link' }))
     await waitFor(() => expect(stage.querySelector('[data-kind="link"]')).toBeTruthy())
   })
 
