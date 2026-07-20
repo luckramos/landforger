@@ -195,13 +195,40 @@ function canvasItemFromRecord(raw: YamlValue): CanvasItem {
   }
 }
 
+function anchorToRecord(anchor: { u: number; v: number }): { [key: string]: YamlValue } {
+  return { u: anchor.u, v: anchor.v }
+}
+
+function anchorFromRecord(raw: YamlValue): { u: number; v: number } {
+  if (!isRecord(raw)) return { u: 0.5, v: 0.5 }
+  return { u: asNumber(raw.u, 0.5), v: asNumber(raw.v, 0.5) }
+}
+
 function canvasLinkToRecord(link: CanvasLink): { [key: string]: YamlValue } {
-  return { id: link.id, fromId: link.fromId, toId: link.toId }
+  const record: { [key: string]: YamlValue } = {
+    id: link.id,
+    fromId: link.fromId,
+    toId: link.toId,
+    fromAnchor: anchorToRecord(link.fromAnchor),
+    toAnchor: anchorToRecord(link.toAnchor),
+    arrowhead: link.arrowhead,
+  }
+  if (link.tint !== undefined) record.tint = link.tint
+  return record
 }
 
 function canvasLinkFromRecord(raw: YamlValue): CanvasLink {
   if (!isRecord(raw)) throw new Error('Malformed canvas link')
-  return { id: asString(raw.id), fromId: asString(raw.fromId), toId: asString(raw.toId) }
+  const link: CanvasLink = {
+    id: asString(raw.id),
+    fromId: asString(raw.fromId),
+    toId: asString(raw.toId),
+    fromAnchor: anchorFromRecord(raw.fromAnchor),
+    toAnchor: anchorFromRecord(raw.toAnchor),
+    arrowhead: asBoolean(raw.arrowhead),
+  }
+  if (typeof raw.tint === 'string') link.tint = raw.tint
+  return link
 }
 
 function canvasToRecord(canvas: ReferenceCanvas): { [key: string]: YamlValue } {

@@ -66,7 +66,10 @@ describe('Page <-> Markdown round-trip', () => {
           { id: 'doc', kind: 'pdf', x: 300, y: 400, width: 260, height: 96, rotation: 0, color: '#000000', title: 'Tide charts', source: { type: 'asset', assetId: 'asset-pdf', filename: 'charts.pdf', mime: 'application/pdf', size: 88123 } },
           { id: 'note', kind: 'md', x: 560, y: 400, width: 280, height: 220, rotation: 0, color: '#000000', title: 'Lore notes', source: { type: 'asset', assetId: 'asset-md', filename: 'lore.md', mime: 'text/markdown', size: 412 } },
         ],
-        links: [{ id: 'l1', fromId: 't', toId: 'n' }],
+        links: [
+          { id: 'l1', fromId: 't', toId: 'n', fromAnchor: { u: 1, v: 0.5 }, toAnchor: { u: 0, v: 0.5 }, arrowhead: true, tint: 'oklch(0.7 0.13 25)' },
+          { id: 'l2', fromId: 'n', toId: 'lnk', fromAnchor: { u: 0.5, v: 1 }, toAnchor: { u: 0.5, v: 0 }, arrowhead: false },
+        ],
       },
     }
     // The asset-backed image serializes only its reference — never bytes.

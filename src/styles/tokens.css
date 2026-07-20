@@ -40,6 +40,9 @@
   /* Canvas laser pointer — one red drives the stroke, glow, and fill (was
      three hand-mixed near-duplicates: #ff515f, #ff3348, #ff4a5c). */
   --laser: oklch(0.67 0.22 21);
+  /* Canvas link string — a muted neutral so connectors recede; the string's
+     stroke, arrowhead fill, and default tint all draw from this one token. */
+  --link-string: oklch(0.72 0.02 260);
 
   /* Overlay/scrim background — one bg-tinted black at one alpha, shared by
      every full-screen dimming layer (Maps, Worlds, spotlight, Properties

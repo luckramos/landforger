@@ -6,7 +6,7 @@ function sticky(id: string, x = 0): CanvasItem {
   return { id, kind: 'sticky', x, y: 0, width: 40, height: 40, rotation: 0, color: '#fff', text: '' }
 }
 function link(id: string, fromId: string, toId: string): CanvasLink {
-  return { id, fromId, toId }
+  return { id, fromId, toId, fromAnchor: { u: 0.5, v: 0.5 }, toAnchor: { u: 0.5, v: 0.5 }, arrowhead: false }
 }
 
 describe('CanvasStore', () => {
@@ -61,6 +61,31 @@ describe('CanvasStore', () => {
     store.removeItems(['a'])
     expect(store.getSnapshot().links).toHaveLength(0)
     expect(store.getSnapshot().items.map((i) => i.id)).toEqual(['b'])
+  })
+
+  it('adds, updates and removes links; N-to-N shares endpoints', () => {
+    const store = new CanvasStore({ items: [sticky('a'), sticky('b', 100), sticky('c', 200)], links: [] })
+    store.addLink(link('l1', 'a', 'b'))
+    store.addLink(link('l2', 'a', 'c')) // 'a' has two links (N-to-N)
+    expect(store.getSnapshot().links).toHaveLength(2)
+
+    store.setLink({ ...link('l1', 'a', 'b'), arrowhead: true })
+    expect(store.getSnapshot().links.find((l) => l.id === 'l1')?.arrowhead).toBe(true)
+
+    store.removeLinks(['l1'])
+    expect(store.getSnapshot().links.map((l) => l.id)).toEqual(['l2'])
+
+    // Deleting the shared endpoint removes its remaining link.
+    store.removeItems(['a'])
+    expect(store.getSnapshot().links).toHaveLength(0)
+  })
+
+  it('undo restores a removed link', () => {
+    const store = new CanvasStore({ items: [sticky('a'), sticky('b', 100)], links: [link('l1', 'a', 'b')] })
+    store.removeLinks(['l1'])
+    expect(store.getSnapshot().links).toHaveLength(0)
+    store.undo()
+    expect(store.getSnapshot().links.map((l) => l.id)).toEqual(['l1'])
   })
 
   it('fires the commit callback with the derived snapshot on each committed change', () => {

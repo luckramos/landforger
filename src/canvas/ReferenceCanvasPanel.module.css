@@ -257,6 +257,93 @@
 .openAffordance:active { transform: scale(0.96); }
 .openAffordance:focus-visible { opacity: 1; outline: 2px solid var(--bronze-light, oklch(0.845 0.069 76.833)); outline-offset: 2px; }
 
+/* --- Link strings (the signature) --- */
+.links {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.linkString {
+  fill: none;
+  stroke: var(--link-string, oklch(0.72 0.02 260));
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  filter: drop-shadow(0 1px 1px oklch(0 0 0 / 0.5));
+}
+.links marker path { fill: var(--link-string, oklch(0.72 0.02 260)); }
+.linkSelected { stroke: var(--bronze-light, oklch(0.845 0.069 76.833)); stroke-width: 2.5; }
+
+/* Edge-hover connection nubs. A 12px dot with a ≥40px invisible hit target
+   (ADR 0002) — same pattern as the resize handles. */
+.nub {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  padding: 0;
+  border: 2px solid var(--panel-2, oklch(0.16 0.003 68));
+  border-radius: 50%;
+  background: var(--bronze-light, oklch(0.845 0.069 76.833));
+  cursor: crosshair;
+  box-shadow: 0 0 0 3px oklch(0 0 0 / 0.3);
+  transition: transform calc(var(--mo, 1) * 90ms) var(--ease-house);
+}
+.nub::after { content: ''; position: absolute; inset: -14px; }
+.nub:active { transform: scale(0.96); }
+.nub:focus-visible { outline: 2px solid var(--bronze-light, oklch(0.845 0.069 76.833)); outline-offset: 2px; }
+
+/* Selected-link anchor dots (drag to re-bind). */
+.linkAnchorDot {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  padding: 0;
+  border: 2px solid var(--bronze-hi, var(--bronze-light));
+  border-radius: 50%;
+  background: var(--panel-3, oklch(0.202 0.005 68));
+  cursor: grab;
+  transition: transform calc(var(--mo, 1) * 90ms) var(--ease-house);
+}
+.linkAnchorDot::after { content: ''; position: absolute; inset: -13px; }
+.linkAnchorDot:active { transform: scale(0.96); }
+.linkAnchorDot:focus-visible { outline: 2px solid var(--bronze-light, oklch(0.845 0.069 76.833)); outline-offset: 2px; }
+
+/* Selected-link floating style bar (arrowhead / tint / delete). */
+.linkBar {
+  position: absolute;
+  transform: translate(-50%, -140%);
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid var(--hairline-strong, oklch(1 0 0 / 0.12));
+  border-radius: var(--radius-sm, 8px);
+  background: color-mix(in oklab, var(--panel-3, oklch(0.202 0.005 68)) 92%, transparent);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 24px oklch(0 0 0 / 0.45);
+}
+.linkBar button {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-xs, 6px);
+  background: transparent;
+  color: var(--text-dim, oklch(0.959 0.01 81.795 / 0.55));
+  cursor: pointer;
+  transition: background calc(var(--mo, 1) * 140ms) var(--ease-house), color calc(var(--mo, 1) * 140ms) var(--ease-house), transform calc(var(--mo, 1) * 90ms) var(--ease-house);
+}
+.linkBar button:hover { background: var(--hairline, oklch(1 0 0 / 0.08)); color: var(--text-hi, oklch(0.959 0.01 81.795 / 0.95)); }
+.linkBar button:active { transform: scale(0.96); }
+.linkBar button:focus-visible { outline: 2px solid var(--bronze-light, oklch(0.845 0.069 76.833)); outline-offset: 2px; }
+.linkBar button[aria-pressed='true'] { background: var(--bronze, oklch(0.64 0.093 70.303)); color: var(--on-bronze, oklch(0.195 0.024 84)); }
+.linkTintSwatch { width: 16px; height: 16px; border-radius: 4px; border: 1px solid oklch(1 0 0 / 0.25); }
+
 /* --- Empty board invitation --- */
 .emptyInvite {
   position: absolute;
