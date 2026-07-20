@@ -29,11 +29,13 @@ import {
   zoomAt,
   type ResizeHandle,
 } from './engine/geometry'
-import { createItem, imageFromSource, ITEM_KINDS, isEditable, linkFromUrl, mdFromSource, pdfFromSource, strokeFromPoints } from './engine/itemKinds'
+import { createItem, imageFromSource, ITEM_KINDS, isEditable, linkFromUrl, makeLinkId, mdFromSource, pdfFromSource, strokeFromPoints } from './engine/itemKinds'
+import { anchorPoint, catenaryPoints, distanceToPolyline, EDGE_ANCHORS, nearestAnchor, polylinePath } from './engine/linkGeometry'
 import { CanvasStore } from './engine/store'
 import { LaserTrailRenderer } from './LaserTrailRenderer'
+import { LinkRopeRenderer } from './LinkRopeRenderer'
 import { getAssetStore } from '../state/assetStore'
-import type { CanvasImageItem, CanvasItem, CanvasMdItem, CanvasPoint, CanvasRect, CanvasTool, CanvasViewport, NodeSource, ReferenceCanvas } from './types'
+import type { CanvasImageItem, CanvasItem, CanvasLink, CanvasMdItem, CanvasPoint, CanvasRect, CanvasTool, CanvasViewport, LinkAnchor, NodeSource, ReferenceCanvas } from './types'
 import styles from './ReferenceCanvasPanel.module.css'
 
 interface ReferenceCanvasPanelProps {
@@ -78,7 +80,7 @@ const TOOL_GROUPS: ToolGroup[] = [
     { label: 'Link node', icon: icons.link },
   ] },
   { name: 'Connect', tools: [
-    { label: 'Link string', icon: icons.editorLink },
+    { label: 'Link string', icon: icons.editorLink, tool: 'link', title: 'Link string — drag between two items' },
   ] },
 ]
 /**
@@ -112,6 +114,12 @@ type Operation =
   | { kind: 'draw'; points: CanvasPoint[] }
   | { kind: 'erase'; previous: CanvasPoint; removedAny: boolean }
   | { kind: 'laser' }
+  // Dragging a new link from a source item's anchor toward a target.
+  | { kind: 'linkDraw'; fromId: string; fromAnchor: LinkAnchor; current: CanvasPoint }
+  // Re-binding one end of a selected link by dragging its anchor dot.
+  | { kind: 'anchorDrag'; linkId: string; end: 'from' | 'to'; current: CanvasPoint }
+
+const LINK_HIT_PADDING = 10
 
 function initialCanvas(world: World): ReferenceCanvas {
   return {
@@ -152,6 +160,9 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
   const [pickerOpen, setPickerOpen] = useState(false)
   const [lightbox, setLightbox] = useState<CanvasImageItem>()
   const [mdReader, setMdReader] = useState<CanvasMdItem>()
+  const [selectedLink, setSelectedLink] = useState<string>()
+  const [linkPreview, setLinkPreview] = useState<{ from: CanvasPoint; to: CanvasPoint }>()
+  const [hoverItemId, setHoverItemId] = useState<string>()
   // Resolved bitmap URLs per asset id: a string (object URL / href) or null when
   // the asset is missing (→ "File unavailable" card). Undefined = not yet resolved.
   const [assetUrls, setAssetUrls] = useState<Record<string, string | null>>({})
@@ -160,13 +171,17 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
   const laserDotsRef = useRef<SVGGElement>(null)
   const laserRef = useRef<LaserTrailRenderer>(undefined)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const ropeRef = useRef<LinkRopeRenderer>(undefined)
+  const linkPathsRef = useRef<Map<string, SVGPathElement>>(new Map())
 
   const stageRef = useRef<HTMLDivElement>(null)
   const operationRef = useRef<Operation>(undefined)
   const viewportRef = useRef(viewport)
   const selectedRef = useRef(selected)
+  const selectedLinkRef = useRef(selectedLink)
   viewportRef.current = viewport
   selectedRef.current = selected
+  selectedLinkRef.current = selectedLink
 
   // --- Ephemeral laser trail: an imperative rAF renderer, never a persisted item ---
   useEffect(() => {
@@ -178,6 +193,15 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
     return () => {
       renderer.destroy()
       laserRef.current = undefined
+    }
+  }, [])
+
+  // --- Link strings: an imperative rope renderer owns each string's SVG `d` ---
+  useEffect(() => {
+    ropeRef.current = new LinkRopeRenderer({ reducedMotion: prefersReducedMotion() })
+    return () => {
+      ropeRef.current?.destroy()
+      ropeRef.current = undefined
     }
   }, [])
 
@@ -247,15 +271,22 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
       }
       if (event.key === 'Escape') {
         setSelected([])
+        setSelectedLink(undefined)
         setEditingId(undefined)
         operationRef.current = undefined
         setMarqueeRect(undefined)
         setLive(false)
       }
-      if ((event.key === 'Delete' || event.key === 'Backspace') && selectedRef.current.length > 0) {
-        event.preventDefault()
-        store.removeItems(selectedRef.current)
-        setSelected([])
+      if (event.key === 'Delete' || event.key === 'Backspace') {
+        if (selectedRef.current.length > 0) {
+          event.preventDefault()
+          store.removeItems(selectedRef.current)
+          setSelected([])
+        } else if (selectedLinkRef.current) {
+          event.preventDefault()
+          store.removeLinks([selectedLinkRef.current]) // removes only the link, never its items
+          setSelectedLink(undefined)
+        }
       }
     }
     const onKeyUp = (event: KeyboardEvent) => {
@@ -312,14 +343,34 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
       return
     }
     setPickerOpen(false)
+    // The Link tool: drag from a source item's nearest edge to a target item.
+    if (tool === 'link') {
+      const source = [...store.getSnapshot().items].reverse().find((item) => pointInItem(item, page))
+      if (source) {
+        const fromAnchor = nearestAnchor(source, page)
+        operationRef.current = { kind: 'linkDraw', fromId: source.id, fromAnchor, current: page }
+        setLinkPreview({ from: anchorPoint(source, fromAnchor), to: page })
+        trackGesture()
+      }
+      return
+    }
     if (tool === 'select') {
       const hitItem = [...store.getSnapshot().items].reverse().find((item) => pointInItem(item, page))
       if (hitItem) {
+        setSelectedLink(undefined)
         startDrag(hitItem, page, event.shiftKey)
         trackGesture()
         return
       }
+      // No item under the pointer — try to select a link string.
+      const hitLink = linkAtPoint(page)
+      if (hitLink) {
+        setSelected([])
+        setSelectedLink(hitLink.id)
+        return
+      }
       if (!event.shiftKey) setSelected([])
+      setSelectedLink(undefined)
       setEditingId(undefined)
       operationRef.current = { kind: 'marquee', start: page }
       setMarqueeRect({ x: page.x, y: page.y, width: 0, height: 0 })
@@ -390,6 +441,24 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
       operationRef.current = { kind: 'erase', previous: page, removedAny: op.removedAny || hit.length > 0 }
     } else if (op.kind === 'laser') {
       laserRef.current?.addPoint(page)
+    } else if (op.kind === 'linkDraw') {
+      const source = itemsById.get(op.fromId)
+      operationRef.current = { ...op, current: page }
+      if (source) setLinkPreview({ from: anchorPoint(source, op.fromAnchor), to: page })
+    } else if (op.kind === 'anchorDrag') {
+      operationRef.current = { ...op, current: page }
+      const link = store.getSnapshot().links.find((l) => l.id === op.linkId)
+      const target = [...store.getSnapshot().items].reverse().find((item) => pointInItem(item, page))
+      if (link) {
+        // Live-preview the re-bind: snap to the hovered item's nearest anchor, else follow the pointer.
+        const anchor = target ? nearestAnchor(target, page) : undefined
+        const otherId = op.end === 'from' ? link.toId : link.fromId
+        const otherItem = itemsById.get(otherId)
+        const otherAnchor = op.end === 'from' ? link.toAnchor : link.fromAnchor
+        const otherPoint = otherItem ? anchorPoint(otherItem, otherAnchor) : page
+        const movedPoint = target && anchor ? anchorPoint(target, anchor) : page
+        setLinkPreview(op.end === 'from' ? { from: movedPoint, to: otherPoint } : { from: otherPoint, to: movedPoint })
+      }
     }
   }
 
@@ -418,6 +487,40 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
       if (op.removedAny) store.commit()
     } else if (op.kind === 'laser') {
       laserRef.current?.finish()
+    } else if (op.kind === 'linkDraw') {
+      const page = clientToPage(clientX, clientY)
+      const target = [...store.getSnapshot().items].reverse().find((item) => pointInItem(item, page))
+      // A link needs two distinct items; dropping on empty space or the source cancels.
+      if (target && target.id !== op.fromId) {
+        store.addLink({
+          id: makeLinkId(),
+          fromId: op.fromId,
+          toId: target.id,
+          fromAnchor: op.fromAnchor,
+          toAnchor: nearestAnchor(target, page),
+          arrowhead: false,
+        })
+      }
+      setLinkPreview(undefined)
+    } else if (op.kind === 'anchorDrag') {
+      const page = clientToPage(clientX, clientY)
+      const link = store.getSnapshot().links.find((l) => l.id === op.linkId)
+      const target = [...store.getSnapshot().items].reverse().find((item) => pointInItem(item, page))
+      if (link) {
+        if (target && target.id !== (op.end === 'from' ? link.toId : link.fromId)) {
+          // Re-bind this endpoint to the dropped item.
+          const anchor = nearestAnchor(target, page)
+          store.setLink(op.end === 'from'
+            ? { ...link, fromId: target.id, fromAnchor: anchor }
+            : { ...link, toId: target.id, toAnchor: anchor })
+          store.commit()
+        } else if (!target) {
+          // Dropped on empty canvas → delete the link.
+          store.removeLinks([link.id])
+          setSelectedLink(undefined)
+        }
+      }
+      setLinkPreview(undefined)
     }
     setLive(false)
   }
@@ -444,6 +547,31 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
     operationRef.current = { kind: 'rotate', original: item, center: itemCenter(item) }
     setLive(true)
     trackGesture()
+  }
+
+  /** Start a new link by dragging from an edge nub (select-tool shortcut). */
+  const beginNubDrag = (item: CanvasItem, anchor: LinkAnchor, event: ReactPointerEvent<HTMLButtonElement>) => {
+    event.stopPropagation()
+    setSelected([])
+    setSelectedLink(undefined)
+    const start = anchorPoint(item, anchor)
+    operationRef.current = { kind: 'linkDraw', fromId: item.id, fromAnchor: anchor, current: start }
+    setLinkPreview({ from: start, to: start })
+    trackGesture()
+  }
+
+  /** Start re-binding one end of the selected link by dragging its anchor dot. */
+  const beginAnchorDrag = (link: CanvasLink, end: 'from' | 'to', event: ReactPointerEvent<HTMLButtonElement>) => {
+    event.stopPropagation()
+    const ends = linkEndpoints(link)
+    operationRef.current = { kind: 'anchorDrag', linkId: link.id, end, current: end === 'from' ? ends?.from ?? { x: 0, y: 0 } : ends?.to ?? { x: 0, y: 0 } }
+    trackGesture()
+  }
+
+  /** Toggle the selected link's arrowhead / set its tint. */
+  const setLinkStyle = (link: CanvasLink, patch: Partial<Pick<CanvasLink, 'arrowhead' | 'tint'>>) => {
+    store.setLink({ ...link, ...patch })
+    store.commit()
   }
 
   const updateText = (item: CanvasItem, text: string) => {
@@ -647,6 +775,7 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
     if (tool === 'laser') laserRef.current?.clear()
     setTool(next)
     setPickerOpen(false)
+    setSelectedLink(undefined)
     operationRef.current = undefined
   }
 
@@ -664,6 +793,49 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
   const soleSelected = selected.length === 1 ? snapshot.items.find((item) => item.id === selected[0]) : undefined
   const gridSize = 22 * viewport.zoom
   const previewPath = useMemo(() => (drawPreview ? smoothStrokePath(drawPreview) : undefined), [drawPreview])
+
+  // --- Derived link geometry ---
+  const itemsById = useMemo(() => new Map(snapshot.items.map((item) => [item.id, item])), [snapshot.items])
+
+  /** Page-space endpoints of a link, or undefined if either item is gone. */
+  const linkEndpoints = (link: CanvasLink): { from: CanvasPoint; to: CanvasPoint } | undefined => {
+    const fromItem = itemsById.get(link.fromId)
+    const toItem = itemsById.get(link.toId)
+    if (!fromItem || !toItem) return undefined
+    return { from: anchorPoint(fromItem, link.fromAnchor), to: anchorPoint(toItem, link.toAnchor) }
+  }
+
+  // Feed the rope renderer every commit: each visible link's path element + live
+  // endpoints. The renderer diffs endpoints itself to decide what to animate.
+  useEffect(() => {
+    const entries = snapshot.links.flatMap((link) => {
+      const path = linkPathsRef.current.get(link.id)
+      const endpoints = linkEndpoints(link)
+      return path && endpoints ? [{ id: link.id, path, endpoints }] : []
+    })
+    ropeRef.current?.sync(entries)
+  })
+
+  /** The polyline a link is actually drawn as — parsed from its rendered path
+   *  (which the rope renderer may have frozen), falling back to the catenary. */
+  const linkPolyline = (link: CanvasLink): CanvasPoint[] => {
+    const d = linkPathsRef.current.get(link.id)?.getAttribute('d')
+    const points = d
+      ? [...d.matchAll(/[ML]\s*(-?[\d.]+)\s+(-?[\d.]+)/g)].map((m) => ({ x: Number(m[1]), y: Number(m[2]) }))
+      : []
+    if (points.length >= 2) return points
+    const ends = linkEndpoints(link)
+    return ends ? catenaryPoints(ends.from, ends.to, 16) : []
+  }
+
+  /** The link whose drawn curve is within the hit padding of `point`, if any (topmost). */
+  const linkAtPoint = (point: CanvasPoint): CanvasLink | undefined => {
+    for (const link of [...snapshot.links].reverse()) {
+      const polyline = linkPolyline(link)
+      if (polyline.length >= 2 && distanceToPolyline(point, polyline) <= LINK_HIT_PADDING) return link
+    }
+    return undefined
+  }
 
   return (
     <DockableWindow
@@ -685,11 +857,39 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
           data-panning={operationRef.current?.kind === 'pan' ? 'true' : undefined}
           style={{ '--grid': gridSize, '--grid-x': viewport.panX, '--grid-y': viewport.panY } as CSSProperties}
           onPointerDown={beginStagePointer}
+          onPointerMove={(event) => {
+            if (operationRef.current || (tool !== 'select' && tool !== 'link')) return
+            const page = clientToPage(event.clientX, event.clientY)
+            const hover = [...store.getSnapshot().items].reverse().find((item) => pointInItem(item, page))
+            setHoverItemId(hover?.id)
+          }}
+          onPointerLeave={() => setHoverItemId(undefined)}
           onWheel={onWheel}
           onDragOver={(event) => event.preventDefault()}
           onDrop={onDrop}
         >
           <div className={styles.world} style={{ transform: `translate(${viewport.panX}px, ${viewport.panY}px) scale(${viewport.zoom})` }}>
+            {/* Link strings — the imperative rope renderer owns each path's `d`. */}
+            <svg className={styles.links} aria-hidden="true">
+              <defs>
+                {/* context-stroke makes the arrowhead inherit each string's own
+                    colour (neutral default or per-link tint). */}
+                <marker id="link-arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+                  <path d="M0 0 L8 4 L0 8 Z" fill="context-stroke" />
+                </marker>
+              </defs>
+              {snapshot.links.map((link) => (
+                <path
+                  key={link.id}
+                  ref={(el) => { if (el) linkPathsRef.current.set(link.id, el); else linkPathsRef.current.delete(link.id) }}
+                  data-testid={`canvas-link-${link.id}`}
+                  className={`${styles.linkString} ${selectedLink === link.id ? styles.linkSelected : ''}`}
+                  style={link.tint ? { stroke: link.tint } : undefined}
+                  markerEnd={link.arrowhead ? 'url(#link-arrow)' : undefined}
+                />
+              ))}
+            </svg>
+
             {snapshot.items.map((item) => {
               const isSelected = selected.includes(item.id)
               const editing = editingId === item.id
@@ -782,8 +982,54 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
               </div>
             )}
 
+            {/* Edge-hover connection nubs — drag one to a target item to link. */}
+            {(() => {
+              if (operationRef.current || (tool !== 'select' && tool !== 'link')) return null
+              const item = hoverItemId ? itemsById.get(hoverItemId) : undefined
+              if (!item) return null
+              return EDGE_ANCHORS.map((anchor, i) => {
+                const p = anchorPoint(item, anchor)
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    className={styles.nub}
+                    style={{ left: p.x, top: p.y }}
+                    aria-label={`Connect from ${item.kind} item`}
+                    onPointerDown={(event) => beginNubDrag(item, anchor, event)}
+                  />
+                )
+              })
+            })()}
+
+            {/* Selected link: draggable anchor dots (re-bind) + a small style bar. */}
+            {(() => {
+              const link = selectedLink ? snapshot.links.find((l) => l.id === selectedLink) : undefined
+              const ends = link && linkEndpoints(link)
+              if (!link || !ends) return null
+              const mid = { x: (ends.from.x + ends.to.x) / 2, y: (ends.from.y + ends.to.y) / 2 }
+              return (
+                <>
+                  <button type="button" className={styles.linkAnchorDot} style={{ left: ends.from.x, top: ends.from.y }} aria-label="Re-bind link start" onPointerDown={(e) => beginAnchorDrag(link, 'from', e)} />
+                  <button type="button" className={styles.linkAnchorDot} style={{ left: ends.to.x, top: ends.to.y }} aria-label="Re-bind link end" onPointerDown={(e) => beginAnchorDrag(link, 'to', e)} />
+                  <div className={styles.linkBar} style={{ left: mid.x, top: mid.y }} onPointerDown={(e) => e.stopPropagation()}>
+                    <button type="button" aria-label="Toggle arrowhead" aria-pressed={link.arrowhead} onClick={() => setLinkStyle(link, { arrowhead: !link.arrowhead })}><icons.arrowRight size={14} aria-hidden="true" /></button>
+                    <button type="button" aria-label="Tint link with current color" onClick={() => setLinkStyle(link, { tint: color })}><span className={styles.linkTintSwatch} style={{ background: color }} /></button>
+                    <button type="button" aria-label="Clear link tint" onClick={() => setLinkStyle(link, { tint: undefined })}><icons.minus size={14} aria-hidden="true" /></button>
+                    <button type="button" aria-label="Delete link" onClick={() => { store.removeLinks([link.id]); setSelectedLink(undefined) }}><icons.windowClose size={14} aria-hidden="true" /></button>
+                  </div>
+                </>
+              )
+            })()}
+
             {marqueeRect && (
               <div className={styles.marquee} style={{ left: marqueeRect.x, top: marqueeRect.y, width: marqueeRect.width, height: marqueeRect.height }} />
+            )}
+
+            {linkPreview && (
+              <svg className={styles.drawPreview} aria-hidden="true">
+                <path d={polylinePath(catenaryPoints(linkPreview.from, linkPreview.to, 16))} style={{ stroke: color }} />
+              </svg>
             )}
 
             {previewPath && (

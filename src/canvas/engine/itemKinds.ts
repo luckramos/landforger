@@ -40,6 +40,14 @@ export function makeItemId(): string {
   return `canvas-item-${counter}`
 }
 
+let linkCounter = 0
+
+export function makeLinkId(): string {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return `link-${crypto.randomUUID()}`
+  linkCounter += 1
+  return `link-${linkCounter}`
+}
+
 /** Create a click-placed item (text/sticky) centred on `at`, using registry defaults. */
 export function createItem(kind: 'text' | 'sticky', at: CanvasPoint, color: string): CanvasItem {
   const def = ITEM_KINDS[kind]

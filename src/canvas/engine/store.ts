@@ -115,6 +115,24 @@ export class CanvasStore {
     this.applyRemove(ids)
   }
 
+  addLink = (link: CanvasLink): void => {
+    this.state.links[link.id] = link
+    this.changed()
+    this.commit()
+  }
+
+  /** Transient link update (e.g. dragging an anchor) — no history step until `commit()`. */
+  setLink = (link: CanvasLink): void => {
+    this.state.links[link.id] = link
+    this.changed()
+  }
+
+  removeLinks = (ids: readonly string[]): void => {
+    for (const id of ids) delete this.state.links[id]
+    this.changed()
+    this.commit()
+  }
+
   undo = (): void => {
     if (!this.canUndo()) return
     this.cursor -= 1

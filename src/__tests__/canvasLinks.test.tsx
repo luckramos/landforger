@@ -1,0 +1,125 @@
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { CanvasItem } from '../canvas/types'
+import { LocalStorageWorldRepository } from '../repository/LocalStorageWorldRepository'
+import { fixtureFiles } from '../repository/fixtures'
+import { AppRoutes } from '../routes'
+import { setRepository } from '../state/repository'
+import { resetDockStore, setDockStorage } from '../state/dockStore'
+import { createInMemoryStorage } from './testStorage'
+
+let repository: LocalStorageWorldRepository
+let storage: Storage
+
+function sticky(id: string, x: number, y: number): CanvasItem {
+  return { id, kind: 'sticky', x, y, width: 80, height: 60, rotation: 0, color: '#d8aa61', text: id }
+}
+
+async function renderWith(items: CanvasItem[]) {
+  await repository.updateWorld('ninth-vale', { canvas: { items, links: [] } })
+  render(
+    <MemoryRouter initialEntries={['/w/ninth-vale?panel=canvas']}>
+      <AppRoutes />
+    </MemoryRouter>,
+  )
+  await act(async () => {})
+  const stage = screen.getByTestId('reference-canvas-stage')
+  stage.getBoundingClientRect = () => ({ x: 0, y: 0, left: 0, top: 0, right: 1000, bottom: 600, width: 1000, height: 600, toJSON: () => ({}) }) as DOMRect
+  const world = stage.firstElementChild as HTMLElement
+  world.getBoundingClientRect = () => ({ x: 0, y: 0, left: 0, top: 0, right: 1000, bottom: 600, width: 1000, height: 600, toJSON: () => ({}) }) as DOMRect
+  return stage
+}
+
+/** Drag with the Link tool from a point over item A to a point over item B. */
+function drawLink(stage: HTMLElement, from: [number, number], to: [number, number]) {
+  fireEvent.click(screen.getByRole('button', { name: 'Link string' }))
+  fireEvent.pointerDown(stage, { button: 0, clientX: from[0], clientY: from[1], pointerId: 1 })
+  fireEvent.pointerMove(document, { clientX: to[0], clientY: to[1], pointerId: 1 })
+  fireEvent.pointerUp(document, { clientX: to[0], clientY: to[1], pointerId: 1 })
+}
+
+beforeEach(() => {
+  storage = createInMemoryStorage()
+  repository = new LocalStorageWorldRepository(storage, fixtureFiles)
+  setRepository(repository)
+  setDockStorage(createInMemoryStorage())
+  resetDockStore()
+})
+
+afterEach(() => {
+  setRepository(undefined)
+  setDockStorage(null)
+  vi.restoreAllMocks()
+})
+
+describe('Reference canvas — N-to-N link connector', () => {
+  it('creates links with the Link tool; an item can hold many (N-to-N); links persist', async () => {
+    const stage = await renderWith([sticky('a', 100, 100), sticky('b', 400, 100), sticky('c', 400, 400)])
+
+    drawLink(stage, [140, 130], [440, 130]) // a → b
+    drawLink(stage, [140, 130], [440, 430]) // a → c (shares endpoint a)
+
+    await waitFor(() => expect(stage.querySelectorAll('[data-testid^="canvas-link-"]')).toHaveLength(2))
+    await waitFor(async () => {
+      const saved = await repository.getWorld('ninth-vale')
+      expect(saved?.canvas?.links).toHaveLength(2)
+      expect(saved?.canvas?.links.every((l) => l.fromId === 'a')).toBe(true) // both share 'a'
+    })
+  })
+
+  it('selects a link by its curve and deletes only the link (items stay)', async () => {
+    const stage = await renderWith([sticky('a', 100, 100), sticky('b', 400, 100)])
+    // Drag near a's right edge (180,130) → b's left edge (400,130): a horizontal
+    // string whose apex sags to ~(290,174).
+    drawLink(stage, [178, 130], [402, 130])
+    await waitFor(() => expect(stage.querySelector('[data-testid^="canvas-link-"]')).toBeTruthy())
+
+    fireEvent.click(screen.getByRole('button', { name: 'Select' }))
+    fireEvent.pointerDown(stage, { button: 0, clientX: 290, clientY: 172, pointerId: 1 })
+    fireEvent.pointerUp(stage, { clientX: 290, clientY: 172, pointerId: 1 })
+    expect(await screen.findByRole('button', { name: 'Delete link' })).toBeTruthy()
+
+    fireEvent.keyDown(document, { key: 'Delete' })
+    await waitFor(() => expect(stage.querySelector('[data-testid^="canvas-link-"]')).toBeNull())
+    // Both items survive.
+    expect(screen.getByTestId('canvas-item-a')).toBeTruthy()
+    expect(screen.getByTestId('canvas-item-b')).toBeTruthy()
+  })
+
+  it('deleting an item removes its attached links (no dangling strings)', async () => {
+    const stage = await renderWith([sticky('a', 100, 100), sticky('b', 400, 100)])
+    drawLink(stage, [140, 130], [440, 130])
+    await waitFor(() => expect(stage.querySelector('[data-testid^="canvas-link-"]')).toBeTruthy())
+
+    // Select item 'a' and delete it.
+    fireEvent.click(screen.getByRole('button', { name: 'Select' }))
+    fireEvent.pointerDown(stage, { button: 0, clientX: 140, clientY: 130, pointerId: 1 })
+    fireEvent.pointerUp(stage, { clientX: 140, clientY: 130, pointerId: 1 })
+    fireEvent.keyDown(document, { key: 'Delete' })
+
+    await waitFor(() => expect(screen.queryByTestId('canvas-item-a')).toBeNull())
+    expect(stage.querySelector('[data-testid^="canvas-link-"]')).toBeNull()
+  })
+
+  it('re-binds a link endpoint by dragging its anchor dot onto another item', async () => {
+    const stage = await renderWith([sticky('a', 100, 100), sticky('b', 400, 100), sticky('c', 400, 400)])
+    drawLink(stage, [178, 130], [402, 130]) // a(right) → b(left)
+    await waitFor(() => expect(stage.querySelector('[data-testid^="canvas-link-"]')).toBeTruthy())
+
+    fireEvent.click(screen.getByRole('button', { name: 'Select' }))
+    fireEvent.pointerDown(stage, { button: 0, clientX: 290, clientY: 172, pointerId: 1 })
+    fireEvent.pointerUp(stage, { clientX: 290, clientY: 172, pointerId: 1 })
+
+    // Drag the 'to' anchor from over b (~400,130) onto c (~440,430).
+    const toDot = await screen.findByRole('button', { name: 'Re-bind link end' })
+    fireEvent.pointerDown(toDot, { button: 0, clientX: 400, clientY: 130, pointerId: 1 })
+    fireEvent.pointerMove(document, { clientX: 440, clientY: 430, pointerId: 1 })
+    fireEvent.pointerUp(document, { clientX: 440, clientY: 430, pointerId: 1 })
+
+    await waitFor(async () => {
+      const link = (await repository.getWorld('ninth-vale'))?.canvas?.links[0]
+      expect(link?.toId).toBe('c')
+    })
+  })
+})

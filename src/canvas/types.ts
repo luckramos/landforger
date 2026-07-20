@@ -93,15 +93,33 @@ export type CanvasItem =
   | CanvasMdItem
 
 /**
+ * A normalized anchor on an item's local box: `u`/`v` in 0–1 (0,0 = top-left,
+ * 1,1 = bottom-right). Stored per endpoint so the anchor stays put on the item
+ * as it moves/resizes; the page-space point is derived every render.
+ */
+export interface LinkAnchor {
+  u: number
+  v: number
+}
+
+/**
  * A link is its own record referencing two item ids — never a field on an item —
  * so many links may share an endpoint (N-to-N) and geometry is always derived
  * from the endpoints. Canvas-local only; it never touches the world backlink
- * index or Graph view. Populated by the connector slice; empty here.
+ * index or Graph view. The string's curve/physics are computed from the two
+ * derived endpoints; only these fields persist.
  */
 export interface CanvasLink {
   id: string
   fromId: string
   toId: string
+  /** Fixed per-endpoint anchors (the nub dragged from is remembered). */
+  fromAnchor: LinkAnchor
+  toAnchor: LinkAnchor
+  /** Draw a single arrowhead at the `toId` end. */
+  arrowhead: boolean
+  /** Optional per-link tint (a canvas color string); neutral hairline when absent. */
+  tint?: string
 }
 
 export interface ReferenceCanvas {
@@ -109,4 +127,4 @@ export interface ReferenceCanvas {
   links: CanvasLink[]
 }
 
-export type CanvasTool = 'select' | 'hand' | 'text' | 'sticky' | 'pencil' | 'eraser' | 'laser'
+export type CanvasTool = 'select' | 'hand' | 'text' | 'sticky' | 'pencil' | 'eraser' | 'laser' | 'link'
