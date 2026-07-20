@@ -26,8 +26,10 @@
 
 .world {
   position: absolute;
-  top: 0;
-  left: 0;
+  /* Fill the stage (not just top/left:0) so the item layer and the inset:0
+     laser / pencil-preview overlays have a real box to paint into — a
+     content-sized 0×0 world collapses those SVG viewports to nothing. */
+  inset: 0;
   transform-origin: 0 0;
 }
 /* Promote the compositor layer only while panning (ADR 0002: will-change is transient). */

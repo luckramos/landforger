@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -82,6 +83,13 @@ describe('Reference canvas — drawing tools', () => {
     expect(screen.getByTestId('canvas-laser-path').getAttribute('d')).not.toBe('')
     expect(within(stage).getAllByTestId(/^canvas-item-/)).toHaveLength(before)
     expect(frames.length).toBeGreaterThan(0)
+  })
+
+  it('the world layer fills the stage so the laser/preview overlays have a paint box (#regression)', () => {
+    // A content-sized (top/left:0 only) world collapses to 0x0, so the inset:0
+    // laser and pencil-preview SVGs get a 0x0 viewport and never paint.
+    const css = readFileSync('src/canvas/ReferenceCanvasPanel.module.css', 'utf8')
+    expect(css).toMatch(/\.world \{[^}]*inset: 0;/)
   })
 
   it('the custom color picker authors an OKLCH color that applies to a new sticky and persists', async () => {
