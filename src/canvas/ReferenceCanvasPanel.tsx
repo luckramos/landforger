@@ -198,52 +198,84 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
     }
   }, [store])
 
-  // --- Stage pointer gestures ---
+  // --- Pointer gestures ---
+  // A gesture tracks via document-level listeners (not React pointer capture),
+  // so moves keep flowing even if the pointer leaves the stage or a re-render
+  // swaps DOM nodes — the robust pattern the earlier capture-based version
+  // needed (laser/pencil were dropping move events).
+  const clientToPage = (clientX: number, clientY: number): CanvasPoint => {
+    const stage = stageRef.current
+    if (!stage) return { x: 0, y: 0 }
+    const rect = stage.getBoundingClientRect()
+    return screenToPage({ x: clientX - rect.left, y: clientY - rect.top }, viewportRef.current)
+  }
+  const clientToScreen = (clientX: number, clientY: number): CanvasPoint => {
+    const stage = stageRef.current
+    if (!stage) return { x: 0, y: 0 }
+    const rect = stage.getBoundingClientRect()
+    return { x: clientX - rect.left, y: clientY - rect.top }
+  }
+
+  const trackGesture = () => {
+    const onMove = (event: PointerEvent) => gestureMove(event.clientX, event.clientY, event.shiftKey)
+    const onUp = (event: PointerEvent) => {
+      document.removeEventListener('pointermove', onMove)
+      document.removeEventListener('pointerup', onUp)
+      document.removeEventListener('pointercancel', onUp)
+      gestureEnd(event.clientX, event.clientY, event.shiftKey)
+    }
+    document.addEventListener('pointermove', onMove)
+    document.addEventListener('pointerup', onUp)
+    document.addEventListener('pointercancel', onUp)
+  }
+
   const beginStagePointer = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (event.button !== 0 && event.button !== 1) return
-    const stage = event.currentTarget
-    stage.setPointerCapture?.(event.pointerId)
-    const screen = localPoint(event, stage)
-    const page = screenToPage(screen, viewportRef.current)
+    const screen = clientToScreen(event.clientX, event.clientY)
+    const page = clientToPage(event.clientX, event.clientY)
 
     if (event.button === 1 || spacePressed || tool === 'hand') {
       event.preventDefault()
       operationRef.current = { kind: 'pan', startScreen: screen, startPan: { x: viewportRef.current.panX, y: viewportRef.current.panY } }
+      trackGesture()
       return
     }
     setPickerOpen(false)
     if (tool === 'select') {
-      // Geometry-accurate hit test: topmost item whose (rotated) body covers the
-      // point. A click on transparent space between items falls through to marquee.
       const hitItem = [...store.getSnapshot().items].reverse().find((item) => pointInItem(item, page))
       if (hitItem) {
         startDrag(hitItem, page, event.shiftKey)
+        trackGesture()
         return
       }
       if (!event.shiftKey) setSelected([])
       setEditingId(undefined)
       operationRef.current = { kind: 'marquee', start: page }
       setMarqueeRect({ x: page.x, y: page.y, width: 0, height: 0 })
+      trackGesture()
       return
     }
     if (tool === 'pencil') {
       operationRef.current = { kind: 'draw', points: [page] }
       setDrawPreview([page])
       setLive(true)
+      trackGesture()
       return
     }
     if (tool === 'eraser') {
       const hit = eraseAlongSegment(store.getSnapshot().items, page, page)
       if (hit.length) store.removeItemsTransient(hit)
       operationRef.current = { kind: 'erase', previous: page, removedAny: hit.length > 0 }
+      trackGesture()
       return
     }
     if (tool === 'laser') {
       laserRef.current?.addPoint(page)
       operationRef.current = { kind: 'laser' }
+      trackGesture()
       return
     }
-    // text / sticky: create an item and edit it immediately
+    // text / sticky: create an item and edit it immediately (no gesture tracking)
     const item = createItem(tool, page, color)
     store.addItem(item)
     setSelected([item.id])
@@ -251,14 +283,13 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
     setTool('select')
   }
 
-  const moveStagePointer = (event: ReactPointerEvent<HTMLDivElement>) => {
+  const gestureMove = (clientX: number, clientY: number, shiftKey: boolean) => {
     const op = operationRef.current
     if (!op) return
-    const stage = event.currentTarget
-    const screen = localPoint(event, stage)
-    const page = screenToPage(screen, viewportRef.current)
+    const page = clientToPage(clientX, clientY)
 
     if (op.kind === 'pan') {
+      const screen = clientToScreen(clientX, clientY)
       setViewport((current) => ({ ...current, panX: op.startPan.x + screen.x - op.startScreen.x, panY: op.startPan.y + screen.y - op.startScreen.y }))
     } else if (op.kind === 'marquee') {
       setMarqueeRect(rectFromPoints(op.start, page))
@@ -267,7 +298,7 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
       const dy = page.y - op.startPage.y
       for (const [id, original] of op.originals) store.setItem(id, { ...original, x: original.x + dx, y: original.y + dy })
     } else if (op.kind === 'resize') {
-      store.setItem(op.original.id, resizeItem(op.original, op.handle, page, { aspect: event.shiftKey }))
+      store.setItem(op.original.id, resizeItem(op.original, op.handle, page, { aspect: shiftKey }))
     } else if (op.kind === 'rotate') {
       const angle = Math.round(rotationForPointer(op.center, page))
       store.setItem(op.original.id, { ...op.original, rotation: angle })
@@ -283,19 +314,16 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
     }
   }
 
-  const endStagePointer = (event: ReactPointerEvent<HTMLDivElement>) => {
+  const gestureEnd = (clientX: number, clientY: number, shiftKey: boolean) => {
     const op = operationRef.current
     operationRef.current = undefined
     if (!op) return
     if (op.kind === 'marquee') {
-      const page = screenToPage(localPoint(event, event.currentTarget), viewportRef.current)
-      const box = rectFromPoints(op.start, page)
+      const box = rectFromPoints(op.start, clientToPage(clientX, clientY))
       const hit = marqueeContains(store.getSnapshot().items, box)
-      setSelected((current) => (event.shiftKey ? [...new Set([...current, ...hit])] : hit))
+      setSelected((current) => (shiftKey ? [...new Set([...current, ...hit])] : hit))
       setMarqueeRect(undefined)
     } else if (op.kind === 'drag') {
-      // Only record an undo step if the drag actually moved something — a bare
-      // click to select shouldn't create a no-op history entry.
       const moved = [...op.originals].some(([id, original]) => {
         const current = store.getSnapshot().items.find((item) => item.id === id)
         return current ? current.x !== original.x || current.y !== original.y : false
@@ -308,7 +336,6 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
       store.addItem(strokeFromPoints(points, color))
       setDrawPreview(undefined)
     } else if (op.kind === 'erase') {
-      // One undo step per eraser gesture, not per item removed.
       if (op.removedAny) store.commit()
     } else if (op.kind === 'laser') {
       laserRef.current?.finish()
@@ -328,16 +355,16 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
 
   const beginResize = (item: CanvasItem, handle: ResizeHandle, event: ReactPointerEvent<HTMLButtonElement>) => {
     event.stopPropagation()
-    stageRef.current?.setPointerCapture?.(event.pointerId)
     operationRef.current = { kind: 'resize', handle, original: item }
     setLive(true)
+    trackGesture()
   }
 
   const beginRotate = (item: CanvasItem, event: ReactPointerEvent<HTMLButtonElement>) => {
     event.stopPropagation()
-    stageRef.current?.setPointerCapture?.(event.pointerId)
     operationRef.current = { kind: 'rotate', original: item, center: itemCenter(item) }
     setLive(true)
+    trackGesture()
   }
 
   const updateText = (item: CanvasItem, text: string) => {
@@ -412,9 +439,6 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
           data-panning={operationRef.current?.kind === 'pan' ? 'true' : undefined}
           style={{ '--grid': gridSize, '--grid-x': viewport.panX, '--grid-y': viewport.panY } as CSSProperties}
           onPointerDown={beginStagePointer}
-          onPointerMove={moveStagePointer}
-          onPointerUp={endStagePointer}
-          onPointerCancel={() => { operationRef.current = undefined; setMarqueeRect(undefined); setLive(false) }}
           onWheel={onWheel}
         >
           <div className={styles.world} style={{ transform: `translate(${viewport.panX}px, ${viewport.panY}px) scale(${viewport.zoom})` }}>
