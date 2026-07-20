@@ -1,4 +1,4 @@
-import type { CanvasImageItem, CanvasItem, CanvasItemKind, CanvasPoint, NodeSource } from '../types'
+import type { CanvasImageItem, CanvasItem, CanvasItemKind, CanvasLinkItem, CanvasMdItem, CanvasPdfItem, CanvasPoint, NodeSource } from '../types'
 
 const IMAGE_LONG_EDGE = 320
 
@@ -24,9 +24,12 @@ export const ITEM_KINDS: Record<CanvasItemKind, ItemKindDef> = {
   // Strokes are drawn freehand (see the pencil tool), not click-created, so the
   // default size is unused; they hold no editable text.
   stroke: { label: 'Stroke', defaultWidth: 0, defaultHeight: 0, editable: false, placeholder: '' },
-  // Images are built from a dropped/pasted file at intrinsic aspect (see
-  // imageFromSource), not click-placed; the caption is edited separately.
+  // Reference nodes are built from a dropped/pasted file or a URL (see the
+  // *FromSource builders), not click-placed; their title is edited separately.
   image: { label: 'Image', defaultWidth: 240, defaultHeight: 180, editable: false, placeholder: '' },
+  link: { label: 'Link', defaultWidth: 260, defaultHeight: 76, editable: false, placeholder: '' },
+  pdf: { label: 'PDF', defaultWidth: 260, defaultHeight: 96, editable: false, placeholder: '' },
+  md: { label: 'Markdown', defaultWidth: 280, defaultHeight: 220, editable: false, placeholder: '' },
 }
 
 let counter = 0
@@ -81,6 +84,48 @@ export function imageFromSource(
     source,
     caption: '',
   }
+}
+
+function centredBox(kind: 'link' | 'pdf' | 'md', at: CanvasPoint) {
+  const def = ITEM_KINDS[kind]
+  return {
+    id: makeItemId(),
+    x: at.x - def.defaultWidth / 2,
+    y: at.y - def.defaultHeight / 2,
+    width: def.defaultWidth,
+    height: def.defaultHeight,
+    rotation: 0,
+    color: '#000000',
+  }
+}
+
+/** The hostname of a URL, or the raw string if it doesn't parse. */
+export function domainOf(href: string): string {
+  try {
+    return new URL(href).hostname.replace(/^www\./, '')
+  } catch {
+    return href
+  }
+}
+
+/** A display filename/label for a node source (asset filename, or URL domain). */
+export function labelForSource(source: NodeSource): string {
+  return source.type === 'asset' ? source.filename : domainOf(source.href)
+}
+
+/** Build a link card from a URL, centred on `at`. Title defaults to the domain. */
+export function linkFromUrl(href: string, at: CanvasPoint): CanvasLinkItem {
+  return { ...centredBox('link', at), kind: 'link', source: { type: 'url', href }, title: domainOf(href) }
+}
+
+/** Build a PDF card from a source, centred on `at`. Title defaults to the filename/domain. */
+export function pdfFromSource(source: NodeSource, at: CanvasPoint): CanvasPdfItem {
+  return { ...centredBox('pdf', at), kind: 'pdf', source, title: labelForSource(source) }
+}
+
+/** Build a Markdown card from an uploaded `.md` asset, centred on `at`. Title defaults to the filename. */
+export function mdFromSource(source: Extract<NodeSource, { type: 'asset' }>, at: CanvasPoint): CanvasMdItem {
+  return { ...centredBox('md', at), kind: 'md', source, title: source.filename }
 }
 
 /** Build a freehand stroke item from page-space points: a bounding box + origin-local points. */

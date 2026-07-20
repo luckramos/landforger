@@ -128,6 +128,10 @@ function canvasItemToRecord(item: CanvasItem): { [key: string]: YamlValue } {
     record.source = nodeSourceToRecord(item.source)
     record.caption = item.caption
   }
+  if (item.kind === 'link' || item.kind === 'pdf' || item.kind === 'md') {
+    record.source = nodeSourceToRecord(item.source)
+    record.title = item.title
+  }
   return record
 }
 
@@ -174,6 +178,18 @@ function canvasItemFromRecord(raw: YamlValue): CanvasItem {
       }
     case 'image':
       return { ...base, kind: 'image', source: nodeSourceFromRecord(raw.source), caption: asString(raw.caption) }
+    case 'pdf':
+      return { ...base, kind: 'pdf', source: nodeSourceFromRecord(raw.source), title: asString(raw.title) }
+    case 'md': {
+      const source = nodeSourceFromRecord(raw.source)
+      if (source.type !== 'asset') throw new Error('Markdown node source must be an asset')
+      return { ...base, kind: 'md', source, title: asString(raw.title) }
+    }
+    case 'link': {
+      const source = nodeSourceFromRecord(raw.source)
+      if (source.type !== 'url') throw new Error('Link node source must be a URL')
+      return { ...base, kind: 'link', source, title: asString(raw.title) }
+    }
     default:
       throw new Error(`Malformed canvas item kind: ${JSON.stringify(raw.kind)}`)
   }

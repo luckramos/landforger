@@ -16,6 +16,8 @@ export interface AssetStore {
   putAsset(blob: Blob): Promise<StoredAsset>
   /** An object URL for the stored blob, or undefined if the asset is gone. */
   getAssetUrl(id: string): Promise<string | undefined>
+  /** The stored blob decoded as UTF-8 text (for Markdown previews), or undefined if gone. */
+  getAssetText(id: string): Promise<string | undefined>
   /** Remove a stored blob (no-op if already absent). */
   deleteAsset(id: string): Promise<void>
 }

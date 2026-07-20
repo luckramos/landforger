@@ -9,6 +9,8 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'reac
 import { smoothStrokePath } from './canvasDomain'
 import { ColorPicker } from './ColorPicker'
 import { ImageNode } from './ImageNode'
+import { LinkNode, MarkdownNode, PdfNode } from './ReferenceNodes'
+import { renderMarkdownHtml } from './markdown'
 import { DEFAULT_CANVAS_COLOR } from './color'
 import { DockableWindow } from '../components/DockableWindow/DockableWindow'
 import { prefersReducedMotion } from '../components/motionPrefs'
@@ -27,11 +29,11 @@ import {
   zoomAt,
   type ResizeHandle,
 } from './engine/geometry'
-import { createItem, imageFromSource, ITEM_KINDS, isEditable, strokeFromPoints } from './engine/itemKinds'
+import { createItem, imageFromSource, ITEM_KINDS, isEditable, linkFromUrl, mdFromSource, pdfFromSource, strokeFromPoints } from './engine/itemKinds'
 import { CanvasStore } from './engine/store'
 import { LaserTrailRenderer } from './LaserTrailRenderer'
 import { getAssetStore } from '../state/assetStore'
-import type { CanvasImageItem, CanvasItem, CanvasPoint, CanvasRect, CanvasTool, CanvasViewport, NodeSource, ReferenceCanvas } from './types'
+import type { CanvasImageItem, CanvasItem, CanvasMdItem, CanvasPoint, CanvasRect, CanvasTool, CanvasViewport, NodeSource, ReferenceCanvas } from './types'
 import styles from './ReferenceCanvasPanel.module.css'
 
 interface ReferenceCanvasPanelProps {
@@ -79,6 +81,17 @@ const TOOL_GROUPS: ToolGroup[] = [
     { label: 'Link string', icon: icons.editorLink },
   ] },
 ]
+/**
+ * Reference-node toolbar buttons keyed by label: a file-picker `accept` string,
+ * or the sentinel `'link'` (opens a URL prompt instead of a file picker).
+ */
+const NODE_ACTIONS: Record<string, string> = {
+  Image: 'image/*',
+  PDF: 'application/pdf,.pdf',
+  Markdown: '.md,.markdown,text/markdown',
+  'Link node': 'link',
+}
+
 const RESIZE_HANDLES: { handle: ResizeHandle; left: string; top: string }[] = [
   { handle: 'nw', left: '0%', top: '0%' },
   { handle: 'n', left: '50%', top: '0%' },
@@ -138,6 +151,7 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
   const [drawPreview, setDrawPreview] = useState<CanvasPoint[]>()
   const [pickerOpen, setPickerOpen] = useState(false)
   const [lightbox, setLightbox] = useState<CanvasImageItem>()
+  const [mdReader, setMdReader] = useState<CanvasMdItem>()
   // Resolved bitmap URLs per asset id: a string (object URL / href) or null when
   // the asset is missing (→ "File unavailable" card). Undefined = not yet resolved.
   const [assetUrls, setAssetUrls] = useState<Record<string, string | null>>({})
@@ -167,7 +181,7 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
     }
   }, [])
 
-  // --- Resolve bitmap URLs for asset-backed images (url-backed images use href directly) ---
+  // --- Resolve object URLs for asset-backed nodes (image bitmaps, pdf open-target) ---
   // Object URLs are revoked once on unmount (tracked in a ref); revoking per
   // effect-run would tear down URLs still displayed by the <img>s.
   const objectUrlsRef = useRef<string[]>([])
@@ -175,7 +189,9 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
   useEffect(() => {
     let cancelled = false
     for (const item of snapshot.items) {
-      if (item.kind !== 'image' || item.source.type !== 'asset') continue
+      // Only image bitmaps and the pdf open-target need an object URL; md renders
+      // from text (mdHtml), so it never needs one.
+      if ((item.kind !== 'image' && item.kind !== 'pdf') || item.source.type !== 'asset') continue
       const { assetId } = item.source
       if (assetId in assetUrls) continue
       getAssetStore()
@@ -189,6 +205,25 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
     }
     return () => { cancelled = true }
   }, [snapshot.items, assetUrls])
+
+  // --- Resolve rendered HTML for Markdown nodes (asset text → tiptap HTML) ---
+  const [mdHtml, setMdHtml] = useState<Record<string, string | null>>({})
+  useEffect(() => {
+    let cancelled = false
+    for (const item of snapshot.items) {
+      if (item.kind !== 'md' || item.source.type !== 'asset') continue
+      const { assetId } = item.source
+      if (assetId in mdHtml) continue
+      getAssetStore()
+        .getAssetText(assetId)
+        .catch(() => undefined)
+        .then((text) => {
+          if (cancelled) return
+          setMdHtml((current) => ({ ...current, [assetId]: text == null ? null : renderMarkdownHtml(text) }))
+        })
+    }
+    return () => { cancelled = true }
+  }, [snapshot.items, mdHtml])
 
   // --- Keyboard: pan, delete, undo/redo, escape ---
   useEffect(() => {
@@ -430,7 +465,7 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
   const setCaption = (item: CanvasImageItem, caption: string) => {
     store.setItem(item.id, { ...item, caption })
   }
-  const commitCaption = () => store.commit()
+  const commitEdit = () => store.commit()
 
   // Correct an image to its intrinsic aspect (long edge ~320px) once, the first
   // time its bitmap loads. Tracked so it never fights a later user resize.
@@ -446,9 +481,9 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
     store.commit()
   }
 
-  // --- Image nodes: create from a file (upload → AssetStore) at a page point ---
-  /** Upload a file to the AssetStore and build its `NodeSource`, or null on failure. */
-  const uploadAssetSource = async (file: File): Promise<NodeSource | null> => {
+  // --- Reference nodes: create from a dropped/pasted/picked file, routed by type ---
+  /** Upload a file to the AssetStore and build its asset `NodeSource`, or null on failure. */
+  const uploadAssetSource = async (file: File): Promise<Extract<NodeSource, { type: 'asset' }> | null> => {
     try {
       const asset = await getAssetStore().putAsset(file)
       return { type: 'asset', assetId: asset.id, filename: file.name, mime: asset.mime, size: asset.size }
@@ -457,18 +492,27 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
     }
   }
 
-  const addImageFile = async (file: File, at: CanvasPoint) => {
-    if (!file.type.startsWith('image/')) return
+  /** The reference-node kind a file maps to, by mime/extension — or null if unsupported. */
+  const kindForFile = (file: File): 'image' | 'pdf' | 'md' | null => {
+    if (file.type.startsWith('image/')) return 'image'
+    if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) return 'pdf'
+    if (/^text\/(x-)?markdown$/.test(file.type) || /\.(md|markdown)$/i.test(file.name)) return 'md'
+    return null
+  }
+
+  const supportedFilesOf = (list: FileList | null | undefined): File[] =>
+    Array.from(list ?? []).filter((file) => kindForFile(file) !== null)
+
+  const addFile = async (file: File, at: CanvasPoint) => {
+    const kind = kindForFile(file)
+    if (!kind) return
     const source = await uploadAssetSource(file)
     if (!source) return
-    const item = imageFromSource(source, at)
+    const item = kind === 'image' ? imageFromSource(source, at) : kind === 'pdf' ? pdfFromSource(source, at) : mdFromSource(source, at)
     store.addItem(item)
     setSelected([item.id])
     setPickerOpen(false)
   }
-
-  const imageFilesOf = (list: FileList | null | undefined): File[] =>
-    Array.from(list ?? []).filter((file) => file.type.startsWith('image/'))
 
   const stageCenterPage = (): CanvasPoint => {
     const stage = stageRef.current
@@ -477,18 +521,61 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
     return screenToPage({ x: rect.width / 2, y: rect.height / 2 }, viewportRef.current)
   }
 
-  const openImagePicker = () => fileInputRef.current?.click()
+  /** Open the shared file picker filtered to `accept` (which node tool requested it). */
+  const pickerAcceptRef = useRef('image/*')
+  const openFilePicker = (accept: string) => {
+    pickerAcceptRef.current = accept
+    if (fileInputRef.current) {
+      fileInputRef.current.accept = accept
+      fileInputRef.current.click()
+    }
+  }
 
-  // Paste images from the clipboard onto the board (document-level so it works
-  // without the stage holding focus). Kept in a ref so the mount-only listener
-  // always calls the latest closure.
+  /** Add a link card from a URL string (used by paste and the Link tool). */
+  const addLink = (href: string, at: CanvasPoint) => {
+    const trimmed = href.trim()
+    if (!/^https?:\/\//i.test(trimmed)) return
+    const item = linkFromUrl(trimmed, at)
+    store.addItem(item)
+    setSelected([item.id])
+  }
+
+  /** The Link toolbar tool: prompt for a URL and drop a link card at the centre. */
+  const promptForLink = () => {
+    const href = window.prompt('Paste a link URL')
+    if (href) addLink(href, stageCenterPage())
+  }
+
+  /** Double-click activation for reference nodes (single-click selects). */
+  const activate = (item: CanvasItem) => {
+    if (item.kind === 'image') { setLightbox(item); return }
+    if (item.kind === 'md') { setMdReader(item); return }
+    if (item.kind === 'link') { window.open(item.source.href, '_blank', 'noopener,noreferrer'); return }
+    if (item.kind === 'pdf') {
+      const target = item.source.type === 'url' ? item.source.href : assetUrls[item.source.assetId] ?? undefined
+      if (target) window.open(target, '_blank', 'noopener,noreferrer')
+      return
+    }
+    if (isEditable(item)) setEditingId(item.id)
+  }
+
+  const setTitle = (item: Extract<CanvasItem, { kind: 'link' | 'pdf' | 'md' }>, title: string) => store.setItem(item.id, { ...item, title })
+
+  // Paste from the clipboard onto the board (document-level so it works without
+  // the stage holding focus): image/pdf/md files → nodes, a bare URL → a link.
+  // Kept in a ref so the mount-only listener always calls the latest closure.
   const pasteHandlerRef = useRef<(event: ClipboardEvent) => void>(undefined)
   pasteHandlerRef.current = (event: ClipboardEvent) => {
-    const files = imageFilesOf(event.clipboardData?.files)
-    if (files.length === 0) return
-    event.preventDefault()
+    const files = supportedFilesOf(event.clipboardData?.files)
+    const text = event.clipboardData?.getData('text/plain')?.trim() ?? ''
     const center = stageCenterPage()
-    for (const file of files) void addImageFile(file, center)
+    if (files.length > 0) {
+      event.preventDefault()
+      for (const file of files) void addFile(file, center)
+    } else if (/^https?:\/\/\S+$/i.test(text)) {
+      event.preventDefault()
+      addLink(text, center)
+    }
   }
   useEffect(() => {
     const onPaste = (event: ClipboardEvent) => pasteHandlerRef.current?.(event)
@@ -499,39 +586,44 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
   const onFilePicked = (event: ReactChangeEvent<HTMLInputElement>) => {
     const center = stageCenterPage()
     let offset = 0
-    for (const file of imageFilesOf(event.target.files)) {
-      void addImageFile(file, { x: center.x + offset, y: center.y + offset })
+    for (const file of supportedFilesOf(event.target.files)) {
+      void addFile(file, { x: center.x + offset, y: center.y + offset })
       offset += 24
     }
     event.target.value = '' // allow re-picking the same file
   }
 
   const onDrop = (event: ReactDragEvent<HTMLDivElement>) => {
-    const files = imageFilesOf(event.dataTransfer.files)
+    const files = supportedFilesOf(event.dataTransfer.files)
     if (files.length === 0) return
     event.preventDefault()
     let offset = 0
     for (const file of files) {
-      void addImageFile(file, clientToPage(event.clientX + offset, event.clientY + offset))
+      void addFile(file, clientToPage(event.clientX + offset, event.clientY + offset))
       offset += 24
     }
   }
 
-  /** Re-attach a fresh file to an image whose asset went missing. */
-  const reattachImage = (item: CanvasImageItem, file: File) => {
+  /** Re-attach a fresh file to an asset-backed node (image/pdf/md) whose asset went missing. */
+  const reattachNode = (item: Extract<CanvasItem, { kind: 'image' | 'pdf' | 'md' }>, file: File) => {
     void (async () => {
       const source = await uploadAssetSource(file)
       if (!source) return
-      setAssetUrls((current) => {
-        const next = { ...current }
-        // Drop the old resolution so the new asset re-resolves; revoke its URL.
-        if (item.source.type === 'asset') {
-          const stale = next[item.source.assetId]
+      const staleId = item.source.type === 'asset' ? item.source.assetId : undefined
+      if (staleId) {
+        setAssetUrls((current) => {
+          const next = { ...current }
+          const stale = next[staleId]
           if (stale) URL.revokeObjectURL(stale)
-          delete next[item.source.assetId]
-        }
-        return next
-      })
+          delete next[staleId]
+          return next
+        })
+        setMdHtml((current) => {
+          const next = { ...current }
+          delete next[staleId]
+          return next
+        })
+      }
       store.setItem(item.id, { ...item, source })
       store.commit()
     })()
@@ -612,19 +704,36 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
                   data-x={Math.round(item.x)}
                   data-width={Math.round(item.width)}
                   style={{ left: item.x, top: item.y, width: item.width, height: item.height, transform: `rotate(${item.rotation}deg)`, '--item-color': item.color } as CSSProperties}
-                  onDoubleClick={() => {
-                    if (item.kind === 'image') setLightbox(item)
-                    else if (isEditable(item)) setEditingId(item.id)
-                  }}
+                  onDoubleClick={() => activate(item)}
                 >
                   {item.kind === 'image' ? (
                     <ImageNode
                       item={item}
                       url={item.source.type === 'asset' ? assetUrls[item.source.assetId] : item.source.href}
                       onCaption={(caption) => setCaption(item, caption)}
-                      onCaptionCommit={commitCaption}
-                      onReattach={(file) => reattachImage(item, file)}
+                      onCaptionCommit={commitEdit}
+                      onReattach={(file) => reattachNode(item, file)}
                       onNaturalSize={(w, h) => applyNaturalSize(item, w, h)}
+                    />
+                  ) : item.kind === 'link' ? (
+                    <LinkNode item={item} onTitle={(t) => setTitle(item, t)} onTitleCommit={commitEdit} onOpen={() => activate(item)} />
+                  ) : item.kind === 'pdf' ? (
+                    <PdfNode
+                      item={item}
+                      url={item.source.type === 'asset' ? assetUrls[item.source.assetId] : item.source.href}
+                      onTitle={(t) => setTitle(item, t)}
+                      onTitleCommit={commitEdit}
+                      onReattach={(file) => reattachNode(item, file)}
+                      onOpen={() => activate(item)}
+                    />
+                  ) : item.kind === 'md' ? (
+                    <MarkdownNode
+                      item={item}
+                      html={item.source.type === 'asset' ? mdHtml[item.source.assetId] : undefined}
+                      onTitle={(t) => setTitle(item, t)}
+                      onTitleCommit={commitEdit}
+                      onReattach={(file) => reattachNode(item, file)}
+                      onOpen={() => activate(item)}
                     />
                   ) : item.kind === 'stroke' ? (
                     <svg className={styles.strokeSvg} viewBox={`0 0 ${Math.max(1, item.width)} ${Math.max(1, item.height)}`} preserveAspectRatio="none" aria-hidden="true">
@@ -700,11 +809,18 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
               {index > 0 && <div className={styles.divider} />}
               <div className={styles.group} role="group" aria-label={groupDef.name}>
                 {groupDef.tools.map((button) => {
-                  // Image opens a file picker (creation is via file, not a pointer
-                  // mode); tool buttons select a pointer tool; the rest are
-                  // disabled placeholders until their slice lands.
-                  const isImage = button.label === 'Image'
-                  const enabled = Boolean(button.tool) || isImage
+                  // Reference-node buttons open a file picker / URL prompt (creation
+                  // is via file or paste, not a pointer mode); pointer tools select
+                  // a tool; anything left is a disabled placeholder.
+                  const action = NODE_ACTIONS[button.label]
+                  const enabled = Boolean(button.tool) || Boolean(action)
+                  const onClick = button.tool
+                    ? () => selectTool(button.tool!)
+                    : action === 'link'
+                      ? promptForLink
+                      : action
+                        ? () => openFilePicker(action)
+                        : undefined
                   return (
                     <button
                       key={button.label}
@@ -714,7 +830,7 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
                       aria-pressed={button.tool ? tool === button.tool : undefined}
                       title={enabled ? (button.title ?? button.label) : `${button.label} — coming soon`}
                       disabled={!enabled}
-                      onClick={button.tool ? () => selectTool(button.tool!) : isImage ? openImagePicker : undefined}
+                      onClick={onClick}
                     >
                       <button.icon size={18} aria-hidden="true" />
                     </button>
@@ -751,6 +867,7 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
           accept="image/*"
           multiple
           hidden
+          data-testid="canvas-file-input"
           onChange={onFilePicked}
         />
 
@@ -766,6 +883,23 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
               alt={lightbox.caption || 'Image preview'}
             />
             <button type="button" className={styles.lightboxClose} aria-label="Close preview" onClick={() => setLightbox(undefined)}>
+              <icons.windowClose size={18} aria-hidden="true" />
+            </button>
+          </div>
+        )}
+
+        {mdReader && (
+          <div className={styles.lightbox} role="dialog" aria-label="Markdown reader" onPointerDown={() => setMdReader(undefined)}>
+            <div className={styles.mdReader} onPointerDown={(event) => event.stopPropagation()}>
+              <h2 className={styles.mdReaderTitle}>{mdReader.title}</h2>
+              {mdReader.source.type === 'asset' && mdHtml[mdReader.source.assetId] ? (
+                // Schema-constrained HTML from renderMarkdownHtml (see MarkdownNode).
+                <div className={styles.mdReaderBody} dangerouslySetInnerHTML={{ __html: mdHtml[mdReader.source.assetId] as string }} />
+              ) : (
+                <p className={styles.cardMeta}>File unavailable</p>
+              )}
+            </div>
+            <button type="button" className={styles.lightboxClose} aria-label="Close reader" onClick={() => setMdReader(undefined)}>
               <icons.windowClose size={18} aria-hidden="true" />
             </button>
           </div>

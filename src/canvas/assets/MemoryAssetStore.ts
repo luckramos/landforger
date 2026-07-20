@@ -20,6 +20,10 @@ export class MemoryAssetStore implements AssetStore {
     return URL.createObjectURL(blob)
   }
 
+  async getAssetText(id: string): Promise<string | undefined> {
+    return this.blobs.get(id)?.text()
+  }
+
   async deleteAsset(id: string): Promise<void> {
     this.blobs.delete(id)
   }

@@ -52,6 +52,11 @@ export class IndexedDbAssetStore implements AssetStore {
     return URL.createObjectURL(record.blob)
   }
 
+  async getAssetText(id: string): Promise<string | undefined> {
+    const record = await this.run<{ blob: Blob } | undefined>('readonly', (store) => store.get(id))
+    return record?.blob?.text()
+  }
+
   async deleteAsset(id: string): Promise<void> {
     await this.run('readwrite', (store) => store.delete(id))
   }
