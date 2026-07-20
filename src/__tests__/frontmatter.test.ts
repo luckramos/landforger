@@ -52,13 +52,14 @@ describe('Page <-> Markdown round-trip', () => {
     expect(twice).toBe(once)
   })
 
-  it('round-trips reference-canvas items and links through World frontmatter', () => {
+  it('round-trips reference-canvas items (incl. strokes + OKLCH color) and links through World frontmatter', () => {
     const withCanvas: World = {
       ...fullWorld,
       canvas: {
         items: [
           { id: 't', kind: 'text', x: 8, y: 8, width: 200, height: 40, rotation: 0, color: '#fff', text: 'A label' },
-          { id: 'n', kind: 'sticky', x: 160, y: 80, width: 160, height: 120, rotation: -3, color: '#ffd166', text: 'Harbor clue' },
+          { id: 'n', kind: 'sticky', x: 160, y: 80, width: 160, height: 120, rotation: -3, color: 'oklch(0.75 0.1 150)', text: 'Harbor clue' },
+          { id: 's', kind: 'stroke', x: 40, y: 40, width: 80, height: 48, rotation: 0, color: 'oklch(0.7 0.13 25)', points: [{ x: 0, y: 0 }, { x: 40, y: 24 }, { x: 80, y: 48 }] },
         ],
         links: [{ id: 'l1', fromId: 't', toId: 'n' }],
       },

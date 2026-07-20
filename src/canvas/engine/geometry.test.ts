@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { CanvasItem } from '../types'
 import {
+  eraseAlongSegment,
   itemCenter,
   marqueeContains,
   pointInItem,
@@ -93,6 +94,27 @@ describe('resizeItem (8 handles, local-frame, aspect lock)', () => {
     const next = resizeItem(item, 'se', { x: 100, y: 100 }, { aspect: false })
     expect(next.width).toBeGreaterThanOrEqual(1)
     expect(next.height).toBeGreaterThanOrEqual(1)
+  })
+})
+
+describe('eraseAlongSegment (whole-item eraser)', () => {
+  const note = sticky({ id: 'note', x: 100, y: 100, width: 80, height: 40 })
+  const stroke: CanvasItem = {
+    id: 'stroke', kind: 'stroke', x: 300, y: 300, width: 40, height: 40, rotation: 0, color: '#fff',
+    points: [{ x: 0, y: 0 }, { x: 20, y: 20 }, { x: 40, y: 40 }],
+  }
+
+  it('erases a rect item the pointer path crosses', () => {
+    expect(eraseAlongSegment([note], { x: 90, y: 120 }, { x: 170, y: 120 }, 6)).toEqual(['note'])
+  })
+
+  it('erases a stroke the pointer path passes near (accounting for the item origin)', () => {
+    // Segment near the stroke's world point (320,320).
+    expect(eraseAlongSegment([stroke], { x: 318, y: 322 }, { x: 322, y: 318 }, 6)).toEqual(['stroke'])
+  })
+
+  it('leaves items the path misses', () => {
+    expect(eraseAlongSegment([note, stroke], { x: 0, y: 0 }, { x: 10, y: 5 }, 6)).toEqual([])
   })
 })
 

@@ -94,7 +94,7 @@ export class CanvasStore {
     this.changed()
   }
 
-  removeItems = (ids: readonly string[]): void => {
+  private applyRemove(ids: readonly string[]): void {
     const removing = new Set(ids)
     for (const id of removing) delete this.state.items[id]
     this.state.order = this.state.order.filter((id) => !removing.has(id))
@@ -103,7 +103,16 @@ export class CanvasStore {
       if (removing.has(linkRecord.fromId) || removing.has(linkRecord.toId)) delete this.state.links[linkId]
     }
     this.changed()
+  }
+
+  removeItems = (ids: readonly string[]): void => {
+    this.applyRemove(ids)
     this.commit()
+  }
+
+  /** Remove without an undo step — for continuous gestures (eraser) that commit once at the end. */
+  removeItemsTransient = (ids: readonly string[]): void => {
+    this.applyRemove(ids)
   }
 
   undo = (): void => {

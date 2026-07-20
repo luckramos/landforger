@@ -67,24 +67,27 @@ describe('Reference canvas (mood board)', () => {
     for (const tool of ['Select', 'Hand', 'Text', 'Sticky note']) {
       expect((within(toolbar).getByRole('button', { name: tool }) as HTMLButtonElement).disabled).toBe(false)
     }
-    // Later-slice tools are present as disabled placeholders (the shell shows the whole workflow).
-    for (const tool of ['Pencil', 'Image', 'Link string']) {
+    // The reference-node and connector tools remain disabled placeholders until
+    // their slices land (the shell shows the whole workflow up front).
+    for (const tool of ['Image', 'Link node', 'Link string']) {
       expect((within(toolbar).getByRole('button', { name: tool }) as HTMLButtonElement).disabled).toBe(true)
     }
     expect(within(toolbar).getByRole('button', { name: 'Zoom in' })).toBeTruthy()
     expect(within(toolbar).getByRole('button', { name: 'Zoom out' })).toBeTruthy()
   })
 
-  it('creates and edits a sticky note, auto-deletes empty text, and persists across reload', async () => {
+  it('creates a text item that survives an empty blur (no silent auto-delete) and persists a sticky across reload', async () => {
     await renderAt('/w/ninth-vale?panel=canvas')
     const stage = prepareStage()
 
-    // Empty text auto-deletes on blur.
+    // Creating a text item and blurring it while empty must NOT delete it — a
+    // stolen-focus blur used to destroy freshly created items on the spot.
+    const before = within(stage).getAllByTestId(/^canvas-item-/).length
     createItem(stage, 'Text', [520, 520])
     const textEditor = screen.getByRole('textbox', { name: 'Edit canvas text' })
-    fireEvent.change(textEditor, { target: { value: '' } })
     fireEvent.blur(textEditor)
-    expect(screen.queryByRole('textbox', { name: 'Edit canvas text' })).toBeNull()
+    expect(screen.queryByRole('textbox', { name: 'Edit canvas text' })).toBeNull() // editing ended
+    expect(within(stage).getAllByTestId(/^canvas-item-/).length).toBe(before + 1) // …but the item stayed
 
     // A sticky with content persists.
     createItem(stage, 'Sticky note', [530, 400])

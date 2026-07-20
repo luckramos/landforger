@@ -19,6 +19,9 @@ interface ItemKindDef {
 export const ITEM_KINDS: Record<CanvasItemKind, ItemKindDef> = {
   text: { label: 'Text', defaultWidth: 220, defaultHeight: 44, editable: true, placeholder: 'Type…' },
   sticky: { label: 'Sticky note', defaultWidth: 200, defaultHeight: 144, editable: true, placeholder: 'Write a note…' },
+  // Strokes are drawn freehand (see the pencil tool), not click-created, so the
+  // default size is unused; they hold no editable text.
+  stroke: { label: 'Stroke', defaultWidth: 0, defaultHeight: 0, editable: false, placeholder: '' },
 }
 
 let counter = 0
@@ -29,8 +32,8 @@ export function makeItemId(): string {
   return `canvas-item-${counter}`
 }
 
-/** Create an item of `kind` centred on `at`, using registry defaults. */
-export function createItem(kind: CanvasItemKind, at: CanvasPoint, color: string): CanvasItem {
+/** Create a click-placed item (text/sticky) centred on `at`, using registry defaults. */
+export function createItem(kind: 'text' | 'sticky', at: CanvasPoint, color: string): CanvasItem {
   const def = ITEM_KINDS[kind]
   const base = {
     id: makeItemId(),
@@ -46,4 +49,23 @@ export function createItem(kind: CanvasItemKind, at: CanvasPoint, color: string)
 
 export function isEditable(item: CanvasItem): item is Extract<CanvasItem, { text: string }> {
   return ITEM_KINDS[item.kind].editable
+}
+
+/** Build a freehand stroke item from page-space points: a bounding box + origin-local points. */
+export function strokeFromPoints(points: CanvasPoint[], color: string): Extract<CanvasItem, { kind: 'stroke' }> {
+  const xs = points.map((point) => point.x)
+  const ys = points.map((point) => point.y)
+  const minX = Math.min(...xs)
+  const minY = Math.min(...ys)
+  return {
+    id: makeItemId(),
+    kind: 'stroke',
+    x: minX,
+    y: minY,
+    width: Math.max(1, Math.max(...xs) - minX),
+    height: Math.max(1, Math.max(...ys) - minY),
+    rotation: 0,
+    color,
+    points: points.map((point) => ({ x: point.x - minX, y: point.y - minY })),
+  }
 }
