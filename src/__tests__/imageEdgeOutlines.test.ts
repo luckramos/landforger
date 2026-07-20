@@ -41,12 +41,10 @@ describe('image edge outlines on the dark surface (#60)', () => {
     expect(css).not.toContain(EDGE_OUTLINE)
   })
 
-  it('leaves the Reference Canvas colored 3px image frame untouched', () => {
-    const css = readFileSync('src/canvas/ReferenceCanvasPanel.module.css', 'utf8')
-    expect(css).toContain('.image { overflow: hidden; border: 3px solid color-mix(in oklab, var(--item-color) 80%, white); background: oklch(0.215 0.006 285.899); box-shadow: 0 8px 30px rgba(0,0,0,.42); }')
-    expect(css).not.toContain(EDGE_OUTLINE)
-    expect(css).not.toContain(EDGE_INSET_SHADOW)
-  })
+  // The Reference Canvas image node (and its colored frame) is reintroduced in
+  // the AssetStore + Image slice; the mood-board skeleton ships only text/sticky.
+  // The image-edge treatment guard returns with that slice.
+  it.todo('re-guards the Reference Canvas image frame when the Image node lands (slice #94)')
 
   it('leaves the hairline-framed image tile untouched', () => {
     const css = readFileSync('src/properties/Properties.module.css', 'utf8')

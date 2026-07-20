@@ -1,32 +1,23 @@
-import type {
-  CSSProperties,
-  PointerEvent as ReactPointerEvent,
-  WheelEvent as ReactWheelEvent,
-} from 'react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import type { CSSProperties, PointerEvent as ReactPointerEvent, WheelEvent as ReactWheelEvent } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { DockableWindow } from '../components/DockableWindow/DockableWindow'
-import { prefersReducedMotion } from '../components/motionPrefs'
 import type { World } from '../domain/types'
 import { icons } from '../icons'
 import type { WorldRepository } from '../repository/WorldRepository'
 import {
-  eraseItemsAlongSegment,
-  marqueeSelection,
-  normalizeRect,
-  screenToCanvasPoint,
-  smoothStrokePath,
-  snapRectToGrid,
-  zoomViewportAt,
-} from './canvasDomain'
-import { LaserTrailRenderer } from './LaserTrailRenderer'
-import type {
-  CanvasConnectorItem,
-  CanvasItem,
-  CanvasPoint,
-  CanvasShape,
-  CanvasTool,
-  CanvasViewport,
-} from './types'
+  itemCenter,
+  marqueeContains,
+  pointInItem,
+  rectFromPoints,
+  resizeItem,
+  rotationForPointer,
+  screenToPage,
+  zoomAt,
+  type ResizeHandle,
+} from './engine/geometry'
+import { createItem, ITEM_KINDS, isEditable } from './engine/itemKinds'
+import { CanvasStore } from './engine/store'
+import type { CanvasItem, CanvasItemKind, CanvasPoint, CanvasRect, CanvasTool, CanvasViewport, ReferenceCanvas } from './types'
 import styles from './ReferenceCanvasPanel.module.css'
 
 interface ReferenceCanvasPanelProps {
@@ -35,73 +26,70 @@ interface ReferenceCanvasPanelProps {
   onClose: () => void
 }
 
-type DrawTool = 'pencil' | 'arrow' | 'line' | 'dashed' | 'shape'
+const DEFAULT_COLOR: Record<CanvasItemKind, string> = { text: '#f4efe6', sticky: '#d8aa61' }
 
-type PointerOperation =
-  | { kind: 'draw'; tool: DrawTool; start: CanvasPoint; current: CanvasPoint; points: CanvasPoint[] }
-  | { kind: 'marquee'; start: CanvasPoint; current: CanvasPoint }
-  | { kind: 'pan'; start: CanvasPoint; viewport: CanvasViewport }
-  | { kind: 'drag'; start: CanvasPoint; originals: Map<string, CanvasItem> }
-  | { kind: 'resize'; start: CanvasPoint; item: CanvasItem }
-  | { kind: 'erase'; previous: CanvasPoint }
-  | { kind: 'laser' }
-
-type SemanticIcon = (typeof icons)[keyof typeof icons]
-
-interface ToolDefinition {
-  tool: CanvasTool
+type ToolIcon = (typeof icons)[keyof typeof icons]
+interface ToolButton {
   label: string
-  icon: SemanticIcon
+  icon: ToolIcon
+  tool?: CanvasTool // omitted → a placeholder for a later slice (rendered disabled)
+  title?: string
+}
+interface ToolGroup {
+  name: string
+  tools: ToolButton[]
 }
 
-const TOOLS: ToolDefinition[] = [
-  { tool: 'select', label: 'Select / pan', icon: icons.toolSelect },
-  { tool: 'pencil', label: 'Pencil', icon: icons.toolPencil },
-  { tool: 'arrow', label: 'Arrow', icon: icons.toolArrow },
-  { tool: 'line', label: 'Line', icon: icons.toolLine },
-  { tool: 'dashed', label: 'Dashed line', icon: icons.toolDashed },
-  { tool: 'shape', label: 'Shape', icon: icons.toolShape },
-  { tool: 'text', label: 'Text', icon: icons.toolText },
-  { tool: 'sticky', label: 'Sticky note', icon: icons.toolSticky },
-  { tool: 'eraser', label: 'Eraser', icon: icons.toolEraser },
-  { tool: 'laser', label: 'Laser pointer', icon: icons.toolLaser },
+/**
+ * The bottom toolbar's workflow groups. Data-driven so a later slice adds a tool
+ * by adding a row, not another hand-written <button>. Tools without a `tool` are
+ * disabled placeholders that show the whole workflow before their slice lands.
+ */
+const TOOL_GROUPS: ToolGroup[] = [
+  { name: 'Navigate', tools: [
+    { label: 'Select', icon: icons.toolSelect, tool: 'select' },
+    { label: 'Hand', icon: icons.grip, tool: 'hand', title: 'Pan (Space)' },
+  ] },
+  { name: 'Annotate', tools: [
+    { label: 'Text', icon: icons.toolText, tool: 'text' },
+    { label: 'Sticky note', icon: icons.toolSticky, tool: 'sticky' },
+    { label: 'Pencil', icon: icons.toolPencil },
+    { label: 'Eraser', icon: icons.toolEraser },
+    { label: 'Laser', icon: icons.toolLaser },
+  ] },
+  { name: 'Reference nodes', tools: [
+    { label: 'Image', icon: icons.typeImage },
+    { label: 'PDF', icon: icons.documentWidth },
+    { label: 'Markdown', icon: icons.editorText },
+    { label: 'Link node', icon: icons.link },
+  ] },
+  { name: 'Connect', tools: [
+    { label: 'Link string', icon: icons.editorLink },
+  ] },
+]
+const RESIZE_HANDLES: { handle: ResizeHandle; left: string; top: string }[] = [
+  { handle: 'nw', left: '0%', top: '0%' },
+  { handle: 'n', left: '50%', top: '0%' },
+  { handle: 'ne', left: '100%', top: '0%' },
+  { handle: 'e', left: '100%', top: '50%' },
+  { handle: 'se', left: '100%', top: '100%' },
+  { handle: 's', left: '50%', top: '100%' },
+  { handle: 'sw', left: '0%', top: '100%' },
+  { handle: 'w', left: '0%', top: '50%' },
 ]
 
-interface ShapeDefinition {
-  shape: CanvasShape
-  label: string
-  icon: SemanticIcon
-  clipPath?: string
-  rounded?: boolean
-}
+type Operation =
+  | { kind: 'pan'; startScreen: CanvasPoint; startPan: CanvasPoint }
+  | { kind: 'marquee'; start: CanvasPoint }
+  | { kind: 'drag'; startPage: CanvasPoint; originals: Map<string, CanvasItem> }
+  | { kind: 'resize'; handle: ResizeHandle; original: CanvasItem }
+  | { kind: 'rotate'; original: CanvasItem; center: CanvasPoint }
 
-const SHAPE_META: Record<CanvasShape, ShapeDefinition> = {
-  rectangle: { shape: 'rectangle', label: 'Rectangle shape', icon: icons.shapeRectangle },
-  rounded: { shape: 'rounded', label: 'Rounded shape', icon: icons.shapeRounded, rounded: true },
-  circle: { shape: 'circle', label: 'Circle shape', icon: icons.shapeCircle, clipPath: 'circle(50%)' },
-  ellipse: { shape: 'ellipse', label: 'Ellipse shape', icon: icons.shapeEllipse, clipPath: 'ellipse(50% 42% at 50% 50%)' },
-  diamond: { shape: 'diamond', label: 'Diamond shape', icon: icons.shapeDiamond, clipPath: 'polygon(50% 0, 100% 50%, 50% 100%, 0 50%)' },
-  triangle: { shape: 'triangle', label: 'Triangle shape', icon: icons.shapeTriangle, clipPath: 'polygon(50% 0, 100% 100%, 0 100%)' },
-  pentagon: { shape: 'pentagon', label: 'Pentagon shape', icon: icons.shapePentagon, clipPath: 'polygon(50% 0, 100% 38%, 82% 100%, 18% 100%, 0 38%)' },
-  hexagon: { shape: 'hexagon', label: 'Hexagon shape', icon: icons.shapeHexagon, clipPath: 'polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%)' },
-  star: { shape: 'star', label: 'Star shape', icon: icons.shapeStar, clipPath: 'polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 94%, 50% 72%, 21% 94%, 32% 57%, 2% 35%, 39% 35%)' },
-}
-const SHAPES = Object.values(SHAPE_META)
-
-const COLORS = [
-  ['#e8d7b0', '#d8aa61', '#d99579', '#e06868'],
-  ['#9bc4a5', '#7fb4a8', '#8ba7b8', '#7bdff2'],
-  ['#c8bf72', '#b29bd4', '#d4a5c4', '#f4efe6'],
-]
-
-const INITIAL_VIEWPORT: CanvasViewport = { panX: 0, panY: 0, zoom: 1 }
-const DEFAULT_TEXT_SIZE = { width: 192, height: 48 }
-const DEFAULT_STICKY_SIZE = { width: 192, height: 136 }
-
-function makeId(): string {
-  return typeof crypto !== 'undefined' && 'randomUUID' in crypto
-    ? `canvas-${crypto.randomUUID()}`
-    : `canvas-${Date.now()}-${Math.random().toString(16).slice(2)}`
+function initialCanvas(world: World): ReferenceCanvas {
+  return {
+    items: structuredClone(world.canvas?.items ?? []),
+    links: structuredClone(world.canvas?.links ?? []),
+  }
 }
 
 function localPoint(event: { clientX: number; clientY: number }, stage: HTMLElement): CanvasPoint {
@@ -109,115 +97,66 @@ function localPoint(event: { clientX: number; clientY: number }, stage: HTMLElem
   return { x: event.clientX - rect.left, y: event.clientY - rect.top }
 }
 
-function connectorGeometry(start: CanvasPoint, end: CanvasPoint) {
-  const rect = normalizeRect(start, end)
-  return {
-    ...rect,
-    start: { x: start.x - rect.x, y: start.y - rect.y },
-    end: { x: end.x - rect.x, y: end.y - rect.y },
-  }
-}
-
-function translateItem(item: CanvasItem, dx: number, dy: number): CanvasItem {
-  return { ...item, x: item.x + dx, y: item.y + dy }
-}
-
-function resizeItem(item: CanvasItem, width: number, height: number): CanvasItem {
-  const nextWidth = Math.max(8, width)
-  const nextHeight = Math.max(8, height)
-  if (item.kind === 'stroke') {
-    const scaleX = item.width === 0 ? 1 : nextWidth / item.width
-    const scaleY = item.height === 0 ? 1 : nextHeight / item.height
-    return {
-      ...item,
-      width: nextWidth,
-      height: nextHeight,
-      points: item.points.map((point) => ({ x: point.x * scaleX, y: point.y * scaleY })),
-    }
-  }
-  if (item.kind !== 'arrow' && item.kind !== 'line' && item.kind !== 'dashed') {
-    return { ...item, width: nextWidth, height: nextHeight }
-  }
-  const scaleX = item.width === 0 ? 1 : nextWidth / item.width
-  const scaleY = item.height === 0 ? 1 : nextHeight / item.height
-  return {
-    ...item,
-    width: nextWidth,
-    height: nextHeight,
-    start: { x: item.start.x * scaleX, y: item.start.y * scaleY },
-    end: { x: item.end.x * scaleX, y: item.end.y * scaleY },
-  }
-}
-
-function snapItem(item: CanvasItem): CanvasItem {
-  const snapped = snapRectToGrid(item)
-  return resizeItem({ ...item, x: snapped.x, y: snapped.y }, snapped.width, snapped.height)
-}
-
-function itemStyle(item: CanvasItem): CSSProperties {
-  return {
-    left: item.x,
-    top: item.y,
-    width: item.width,
-    height: item.height,
-    '--item-color': item.color,
-  } as CSSProperties
-}
-
 export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCanvasPanelProps) {
-  const [items, setItems] = useState<CanvasItem[]>(() => structuredClone(world.canvas?.items ?? []))
+  const persistQueue = useRef<Promise<unknown>>(Promise.resolve())
+  const storeRef = useRef<CanvasStore>(undefined)
+  if (!storeRef.current) {
+    storeRef.current = new CanvasStore(initialCanvas(world), (snapshot) => {
+      const canvas = structuredClone(snapshot)
+      persistQueue.current = persistQueue.current
+        .catch(() => undefined)
+        .then(() => repository.updateWorld(world.slug, { canvas }))
+        .catch(() => undefined)
+    })
+  }
+  const store = storeRef.current
+  const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot)
+
   const [tool, setTool] = useState<CanvasTool>('select')
-  const [shape, setShape] = useState<CanvasShape>('rectangle')
-  const [color, setColor] = useState(COLORS[0][1])
-  const [viewport, setViewport] = useState(INITIAL_VIEWPORT)
+  const [viewport, setViewport] = useState<CanvasViewport>({ panX: 0, panY: 0, zoom: 1 })
   const [selected, setSelected] = useState<string[]>([])
   const [editingId, setEditingId] = useState<string>()
-  const [operation, setOperation] = useState<PointerOperation>()
   const [spacePressed, setSpacePressed] = useState(false)
-  const itemsRef = useRef(items)
-  const selectedRef = useRef(selected)
-  const operationRef = useRef(operation)
-  const viewportRef = useRef(viewport)
-  const persistQueue = useRef<Promise<unknown>>(Promise.resolve())
+  const [live, setLive] = useState(false)
+  const [marqueeRect, setMarqueeRect] = useState<CanvasRect>()
+
   const stageRef = useRef<HTMLDivElement>(null)
-  const laserPathRef = useRef<SVGPathElement>(null)
-  const laserDotsRef = useRef<SVGGElement>(null)
-  const laserRef = useRef<LaserTrailRenderer | undefined>(undefined)
-  itemsRef.current = items
-  selectedRef.current = selected
-  operationRef.current = operation
+  const operationRef = useRef<Operation>(undefined)
+  const viewportRef = useRef(viewport)
+  const selectedRef = useRef(selected)
   viewportRef.current = viewport
+  selectedRef.current = selected
 
+  // --- Keyboard: pan, delete, undo/redo, escape ---
   useEffect(() => {
-    if (!laserPathRef.current || !laserDotsRef.current) return
-    const renderer = new LaserTrailRenderer(laserPathRef.current, laserDotsRef.current, {
-      reducedMotion: prefersReducedMotion(),
-    })
-    laserRef.current = renderer
-    return () => {
-      renderer.destroy()
-      laserRef.current = undefined
-    }
-  }, [])
+    const isEditingTarget = (target: EventTarget | null) =>
+      target instanceof Element && target.matches('input, textarea, [contenteditable="true"]')
 
-  useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      const target = event.target
-      const isEditing = target instanceof Element && target.matches('input, textarea, [contenteditable="true"]')
-      if (event.code === 'Space' && !isEditing) {
+      if (event.code === 'Space' && !isEditingTarget(event.target)) {
         event.preventDefault()
         setSpacePressed(true)
+        return
       }
-      if (isEditing) return
+      if (isEditingTarget(event.target)) return
+      const meta = event.metaKey || event.ctrlKey
+      if (meta && event.key.toLowerCase() === 'z') {
+        event.preventDefault()
+        if (event.shiftKey) store.redo()
+        else store.undo()
+        setSelected((current) => current.filter((id) => store.getSnapshot().items.some((item) => item.id === id)))
+        return
+      }
       if (event.key === 'Escape') {
         setSelected([])
         setEditingId(undefined)
-        setOperation(undefined)
+        operationRef.current = undefined
+        setMarqueeRect(undefined)
+        setLive(false)
       }
       if ((event.key === 'Delete' || event.key === 'Backspace') && selectedRef.current.length > 0) {
         event.preventDefault()
-        const ids = new Set(selectedRef.current)
-        commitItems(itemsRef.current.filter((item) => !ids.has(item.id)))
+        store.removeItems(selectedRef.current)
         setSelected([])
       }
     }
@@ -230,340 +169,196 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
       document.removeEventListener('keydown', onKeyDown)
       document.removeEventListener('keyup', onKeyUp)
     }
-  }, [])
+  }, [store])
 
-  const commitItems = (next: CanvasItem[]) => {
-    itemsRef.current = next
-    setItems(next)
-    const snapshot = structuredClone(next)
-    persistQueue.current = persistQueue.current
-      .catch(() => undefined)
-      .then(() => repository.updateWorld(world.slug, { canvas: { items: snapshot } }))
-      .catch(() => undefined)
-  }
-
-  const canvasPoint = (event: ReactPointerEvent<HTMLElement>): CanvasPoint =>
-    screenToCanvasPoint(localPoint(event, event.currentTarget), viewportRef.current)
-
+  // --- Stage pointer gestures ---
   const beginStagePointer = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (event.button !== 0 && event.button !== 1) return
-    const screenPoint = localPoint(event, event.currentTarget)
-    event.currentTarget.setPointerCapture?.(event.pointerId)
-    const point = screenToCanvasPoint(screenPoint, viewportRef.current)
-    if (event.button === 1 || spacePressed) {
+    const stage = event.currentTarget
+    stage.setPointerCapture?.(event.pointerId)
+    const screen = localPoint(event, stage)
+    const page = screenToPage(screen, viewportRef.current)
+
+    if (event.button === 1 || spacePressed || tool === 'hand') {
       event.preventDefault()
-      setOperation({ kind: 'pan', start: screenPoint, viewport: viewportRef.current })
+      operationRef.current = { kind: 'pan', startScreen: screen, startPan: { x: viewportRef.current.panX, y: viewportRef.current.panY } }
       return
     }
     if (tool === 'select') {
+      // Geometry-accurate hit test: topmost item whose (rotated) body covers the
+      // point. A click on transparent space between items falls through to marquee.
+      const hitItem = [...store.getSnapshot().items].reverse().find((item) => pointInItem(item, page))
+      if (hitItem) {
+        startDrag(hitItem, page, event.shiftKey)
+        return
+      }
       if (!event.shiftKey) setSelected([])
-      setOperation({ kind: 'marquee', start: point, current: point })
-    } else if (tool === 'pencil' || tool === 'arrow' || tool === 'line' || tool === 'dashed' || tool === 'shape') {
-      setOperation({ kind: 'draw', tool, start: point, current: point, points: [point] })
-    } else if (tool === 'text' || tool === 'sticky') {
-      const size = tool === 'text' ? DEFAULT_TEXT_SIZE : DEFAULT_STICKY_SIZE
-      const rect = snapRectToGrid({ x: point.x, y: point.y, ...size })
-      const item: CanvasItem = tool === 'text'
-        ? { id: makeId(), kind: 'text', ...rect, color, text: '' }
-        : { id: makeId(), kind: 'sticky', ...rect, color, text: '' }
-      commitItems([...itemsRef.current, item])
-      setSelected([item.id])
-      setEditingId(item.id)
-    } else if (tool === 'eraser') {
-      commitItems(eraseItemsAlongSegment(itemsRef.current, point, point))
-      setOperation({ kind: 'erase', previous: point })
-    } else if (tool === 'laser') {
-      laserRef.current?.addPoint(point)
-      setOperation({ kind: 'laser' })
+      setEditingId(undefined)
+      operationRef.current = { kind: 'marquee', start: page }
+      setMarqueeRect({ x: page.x, y: page.y, width: 0, height: 0 })
+      return
     }
+    // text / sticky: create an item and edit it immediately
+    const kind = tool as CanvasItemKind
+    const item = createItem(kind, page, DEFAULT_COLOR[kind])
+    store.addItem(item)
+    setSelected([item.id])
+    setEditingId(item.id)
+    setTool('select')
   }
 
   const moveStagePointer = (event: ReactPointerEvent<HTMLDivElement>) => {
-    const active = operationRef.current
-    if (!active) return
-    const screenPoint = localPoint(event, event.currentTarget)
-    const point = screenToCanvasPoint(screenPoint, viewportRef.current)
-    if (active.kind === 'pan') {
-      setViewport({
-        ...active.viewport,
-        panX: active.viewport.panX + screenPoint.x - active.start.x,
-        panY: active.viewport.panY + screenPoint.y - active.start.y,
-      })
-    } else if (active.kind === 'marquee') {
-      setOperation({ ...active, current: point })
-    } else if (active.kind === 'draw') {
-      setOperation({ ...active, current: point, points: active.tool === 'pencil' ? [...active.points, point] : active.points })
-    } else if (active.kind === 'drag') {
-      const dx = point.x - active.start.x
-      const dy = point.y - active.start.y
-      const next = itemsRef.current.map((item) => {
-        const original = active.originals.get(item.id)
-        return original ? translateItem(original, dx, dy) : item
-      })
-      itemsRef.current = next
-      setItems(next)
-    } else if (active.kind === 'resize') {
-      const next = itemsRef.current.map((item) => item.id === active.item.id
-        ? resizeItem(active.item, active.item.width + point.x - active.start.x, active.item.height + point.y - active.start.y)
-        : item)
-      itemsRef.current = next
-      setItems(next)
-    } else if (active.kind === 'erase') {
-      const next = eraseItemsAlongSegment(itemsRef.current, active.previous, point)
-      commitItems(next)
-      setOperation({ kind: 'erase', previous: point })
-    } else if (active.kind === 'laser') {
-      laserRef.current?.addPoint(point)
+    const op = operationRef.current
+    if (!op) return
+    const stage = event.currentTarget
+    const screen = localPoint(event, stage)
+    const page = screenToPage(screen, viewportRef.current)
+
+    if (op.kind === 'pan') {
+      setViewport((current) => ({ ...current, panX: op.startPan.x + screen.x - op.startScreen.x, panY: op.startPan.y + screen.y - op.startScreen.y }))
+    } else if (op.kind === 'marquee') {
+      setMarqueeRect(rectFromPoints(op.start, page))
+    } else if (op.kind === 'drag') {
+      const dx = page.x - op.startPage.x
+      const dy = page.y - op.startPage.y
+      for (const [id, original] of op.originals) store.setItem(id, { ...original, x: original.x + dx, y: original.y + dy })
+    } else if (op.kind === 'resize') {
+      store.setItem(op.original.id, resizeItem(op.original, op.handle, page, { aspect: event.shiftKey }))
+    } else if (op.kind === 'rotate') {
+      const angle = Math.round(rotationForPointer(op.center, page))
+      store.setItem(op.original.id, { ...op.original, rotation: angle })
     }
   }
 
   const endStagePointer = (event: ReactPointerEvent<HTMLDivElement>) => {
-    const active = operationRef.current
-    if (!active) return
-    const point = canvasPoint(event)
-    if (active.kind === 'marquee') {
-      const matched = marqueeSelection(itemsRef.current, normalizeRect(active.start, point))
-      setSelected(event.shiftKey ? [...new Set([...selectedRef.current, ...matched])] : matched)
-    } else if (active.kind === 'draw') {
-      const rawRect = normalizeRect(active.start, point)
-      if (active.tool === 'pencil') {
-        const absolutePoints = active.points.length > 1 ? [...active.points, point] : [active.start, point]
-        const bounds = normalizeRect(
-          { x: Math.min(...absolutePoints.map((candidate) => candidate.x)), y: Math.min(...absolutePoints.map((candidate) => candidate.y)) },
-          { x: Math.max(...absolutePoints.map((candidate) => candidate.x)), y: Math.max(...absolutePoints.map((candidate) => candidate.y)) },
-        )
-        const snapped = snapRectToGrid(bounds)
-        const item: CanvasItem = {
-          id: makeId(), kind: 'stroke', ...snapped, color,
-          points: absolutePoints.map((candidate) => ({ x: candidate.x - snapped.x, y: candidate.y - snapped.y })),
-        }
-        commitItems([...itemsRef.current, item])
-        setSelected([item.id])
-      } else if (active.tool === 'shape') {
-        const item: CanvasItem = { id: makeId(), kind: 'shape', ...snapRectToGrid(rawRect), color, shape }
-        commitItems([...itemsRef.current, item])
-        setSelected([item.id])
-      } else {
-        const geometry = connectorGeometry(active.start, point)
-        const snappedRect = snapRectToGrid(geometry)
-        const scaleX = geometry.width === 0 ? 1 : snappedRect.width / geometry.width
-        const scaleY = geometry.height === 0 ? 1 : snappedRect.height / geometry.height
-        const item: CanvasConnectorItem = {
-          id: makeId(), kind: active.tool, ...snappedRect, color,
-          start: { x: geometry.start.x * scaleX, y: geometry.start.y * scaleY },
-          end: { x: geometry.end.x * scaleX, y: geometry.end.y * scaleY },
-        }
-        commitItems([...itemsRef.current, item])
-        setSelected([item.id])
-      }
-    } else if (active.kind === 'drag' || active.kind === 'resize') {
-      const changedIds = active.kind === 'drag' ? new Set(active.originals.keys()) : new Set([active.item.id])
-      commitItems(itemsRef.current.map((item) => changedIds.has(item.id) ? snapItem(item) : item))
-    } else if (active.kind === 'laser') {
-      laserRef.current?.finish()
+    const op = operationRef.current
+    operationRef.current = undefined
+    if (!op) return
+    if (op.kind === 'marquee') {
+      const page = screenToPage(localPoint(event, event.currentTarget), viewportRef.current)
+      const box = rectFromPoints(op.start, page)
+      const hit = marqueeContains(store.getSnapshot().items, box)
+      setSelected((current) => (event.shiftKey ? [...new Set([...current, ...hit])] : hit))
+      setMarqueeRect(undefined)
+    } else if (op.kind === 'drag') {
+      // Only record an undo step if the drag actually moved something — a bare
+      // click to select shouldn't create a no-op history entry.
+      const moved = [...op.originals].some(([id, original]) => {
+        const current = store.getSnapshot().items.find((item) => item.id === id)
+        return current ? current.x !== original.x || current.y !== original.y : false
+      })
+      if (moved) store.commit()
+    } else if (op.kind === 'resize' || op.kind === 'rotate') {
+      store.commit()
     }
-    setOperation(undefined)
+    setLive(false)
   }
 
-  const beginItemDrag = (item: CanvasItem, event: ReactPointerEvent<HTMLDivElement>) => {
-    if (tool !== 'select' || event.button !== 0) return
-    event.stopPropagation()
-    const stage = event.currentTarget.closest('[data-testid="reference-canvas-stage"]') as HTMLElement
-    stage.setPointerCapture?.(event.pointerId)
-    const point = screenToCanvasPoint(localPoint(event, stage), viewportRef.current)
-    const ids = event.shiftKey
+  const startDrag = (item: CanvasItem, page: CanvasPoint, additive: boolean) => {
+    const nextSelected = additive
       ? selectedRef.current.includes(item.id) ? selectedRef.current : [...selectedRef.current, item.id]
       : selectedRef.current.includes(item.id) ? selectedRef.current : [item.id]
-    setSelected(ids)
-    setOperation({
-      kind: 'drag',
-      start: point,
-      originals: new Map(itemsRef.current.filter((candidate) => ids.includes(candidate.id)).map((candidate) => [candidate.id, candidate])),
-    })
+    setSelected(nextSelected)
+    const originals = new Map(store.getSnapshot().items.filter((candidate) => nextSelected.includes(candidate.id)).map((candidate) => [candidate.id, candidate]))
+    operationRef.current = { kind: 'drag', startPage: page, originals }
+    setLive(true)
   }
 
-  const beginResize = (item: CanvasItem, event: ReactPointerEvent<HTMLButtonElement>) => {
+  const beginResize = (item: CanvasItem, handle: ResizeHandle, event: ReactPointerEvent<HTMLButtonElement>) => {
     event.stopPropagation()
-    const stage = event.currentTarget.closest('[data-testid="reference-canvas-stage"]') as HTMLElement
-    stage.setPointerCapture?.(event.pointerId)
-    const point = screenToCanvasPoint(localPoint(event, stage), viewportRef.current)
-    setOperation({ kind: 'resize', start: point, item })
+    stageRef.current?.setPointerCapture?.(event.pointerId)
+    operationRef.current = { kind: 'resize', handle, original: item }
+    setLive(true)
   }
 
-  const updateText = (item: Extract<CanvasItem, { kind: 'text' | 'sticky' }>, text: string) => {
-    const next = itemsRef.current.map((candidate) => candidate.id === item.id ? { ...candidate, text } : candidate)
-    itemsRef.current = next
-    setItems(next)
+  const beginRotate = (item: CanvasItem, event: ReactPointerEvent<HTMLButtonElement>) => {
+    event.stopPropagation()
+    stageRef.current?.setPointerCapture?.(event.pointerId)
+    operationRef.current = { kind: 'rotate', original: item, center: itemCenter(item) }
+    setLive(true)
   }
 
-  const finishEditing = (item: Extract<CanvasItem, { kind: 'text' | 'sticky' }>) => {
-    const current = itemsRef.current.find((candidate) => candidate.id === item.id)
-    const next = current && 'text' in current && current.text.trim() === ''
-      ? itemsRef.current.filter((candidate) => candidate.id !== item.id)
-      : itemsRef.current
-    const removed = next.length !== itemsRef.current.length
-    commitItems(next)
+  const updateText = (item: CanvasItem, text: string) => {
+    if (!isEditable(item)) return
+    store.setItem(item.id, { ...item, text })
+  }
+
+  const finishEditing = (item: CanvasItem) => {
+    const current = store.getSnapshot().items.find((candidate) => candidate.id === item.id)
+    if (current && isEditable(current) && current.text.trim() === '') {
+      store.removeItems([current.id])
+      setSelected((selection) => selection.filter((id) => id !== current.id))
+    } else {
+      store.commit()
+    }
     setEditingId(undefined)
-    if (removed) setSelected([])
   }
 
   const onWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
     event.preventDefault()
     const anchor = localPoint(event, event.currentTarget)
     const factor = event.deltaY < 0 ? 1.1 : 0.9
-    setViewport((current) => zoomViewportAt(current, anchor, current.zoom * factor))
+    setViewport((current) => zoomAt(current, anchor, current.zoom * factor))
   }
 
   const zoomFromCenter = (factor: number) => {
     const stage = stageRef.current
     if (!stage) return
     const rect = stage.getBoundingClientRect()
-    const anchor = { x: rect.width / 2, y: rect.height / 2 }
-    setViewport((current) => zoomViewportAt(current, anchor, current.zoom * factor))
+    setViewport((current) => zoomAt(current, { x: rect.width / 2, y: rect.height / 2 }, current.zoom * factor))
   }
-
-  const marquee = operation?.kind === 'marquee' ? normalizeRect(operation.start, operation.current) : undefined
-  const preview = useMemo(() => {
-    if (operation?.kind !== 'draw') return undefined
-    if (operation.tool === 'pencil') return smoothStrokePath(operation.points)
-    return operation
-  }, [operation])
 
   const selectTool = (next: CanvasTool) => {
-    if (tool === 'laser') laserRef.current?.clear()
     setTool(next)
-    setOperation(undefined)
+    operationRef.current = undefined
   }
+
+  const soleSelected = selected.length === 1 ? snapshot.items.find((item) => item.id === selected[0]) : undefined
+  const gridSize = 22 * viewport.zoom
 
   return (
     <DockableWindow
       panelId="canvas"
       title="Reference canvas"
-      subtitle={`${items.length} items · ${Math.round(viewport.zoom * 100)}%`}
+      subtitle={`${snapshot.items.length} items · ${Math.round(viewport.zoom * 100)}%`}
       accent="var(--bronze)"
       onClose={onClose}
     >
       <div className={styles.canvas}>
-        <div className={styles.toolbar} role="toolbar" aria-label="Canvas tools">
-          <div className={styles.tools}>
-            {TOOLS.map((definition) => (
-              <button
-                key={definition.tool}
-                type="button"
-                aria-label={definition.label}
-                aria-pressed={tool === definition.tool}
-                title={definition.label}
-                onClick={() => selectTool(definition.tool)}
-              >
-                <definition.icon size={14} aria-hidden="true" />
-              </button>
-            ))}
-          </div>
-          {tool === 'shape' && (
-            <div className={styles.shapePicker} role="listbox" aria-label="Canvas shapes">
-              {SHAPES.map((entry) => (
-                <button
-                  key={entry.shape}
-                  type="button"
-                  role="option"
-                  aria-label={entry.label}
-                  aria-selected={shape === entry.shape}
-                  title={entry.label}
-                  onClick={() => setShape(entry.shape)}
-                >
-                  <entry.icon size={14} aria-hidden="true" />
-                </button>
-              ))}
-            </div>
-          )}
-          <div className={styles.palette} aria-label="Canvas color palette">
-            {COLORS.map((row, index) => (
-              <div key={index} role="group" aria-label={`Canvas colors row ${index + 1}`}>
-                {row.map((entry) => (
-                  <button
-                    key={entry}
-                    type="button"
-                    aria-label={`Use color ${entry}`}
-                    aria-pressed={color === entry}
-                    onClick={() => setColor(entry)}
-                  >
-                    <span className={styles.dot} style={{ background: entry }} />
-                  </button>
-                ))}
-              </div>
-            ))}
-          </div>
-          <div className={styles.zoomControls} aria-label="Canvas zoom controls">
-            <button type="button" aria-label="Zoom out" onClick={() => zoomFromCenter(1 / 1.15)}><icons.zoomOut size={10} aria-hidden="true" /></button>
-            <button type="button" aria-label="Reset zoom" onClick={() => setViewport(INITIAL_VIEWPORT)}>{Math.round(viewport.zoom * 100)}%</button>
-            <button type="button" aria-label="Zoom in" onClick={() => zoomFromCenter(1.15)}><icons.zoomIn size={10} aria-hidden="true" /></button>
-          </div>
-          <p>Drag blank space to select · hold Space to pan</p>
-        </div>
-
         <div
           ref={stageRef}
           className={styles.stage}
           data-testid="reference-canvas-stage"
+          data-tool={tool}
           data-zoom={viewport.zoom}
           data-pan={`${viewport.panX},${viewport.panY}`}
-          data-tool={tool}
-          data-live-item={operation?.kind === 'drag' || operation?.kind === 'resize' ? 'true' : undefined}
-          style={{
-            '--grid-size': `${22 * viewport.zoom}px`,
-            '--grid-x': `${viewport.panX}px`,
-            '--grid-y': `${viewport.panY}px`,
-          } as CSSProperties}
+          data-live-item={live ? 'true' : undefined}
+          data-panning={operationRef.current?.kind === 'pan' ? 'true' : undefined}
+          style={{ '--grid': gridSize, '--grid-x': viewport.panX, '--grid-y': viewport.panY } as CSSProperties}
           onPointerDown={beginStagePointer}
           onPointerMove={moveStagePointer}
           onPointerUp={endStagePointer}
-          onPointerCancel={() => setOperation(undefined)}
+          onPointerCancel={() => { operationRef.current = undefined; setMarqueeRect(undefined); setLive(false) }}
           onWheel={onWheel}
         >
-          <div
-            className={styles.world}
-            style={{ transform: `translate(${viewport.panX}px, ${viewport.panY}px) scale(${viewport.zoom})` }}
-          >
-            {items.map((item) => {
+          <div className={styles.world} style={{ transform: `translate(${viewport.panX}px, ${viewport.panY}px) scale(${viewport.zoom})` }}>
+            {snapshot.items.map((item) => {
               const isSelected = selected.includes(item.id)
+              const editing = editingId === item.id
               return (
                 <div
                   key={item.id}
                   className={`${styles.item} ${styles[item.kind]}`}
-                  style={itemStyle(item)}
                   data-testid={`canvas-item-${item.id}`}
                   data-kind={item.kind}
-                  data-shape={item.kind === 'shape' ? item.shape : undefined}
                   data-selected={isSelected || undefined}
-                  data-x={item.x}
-                  data-width={item.width}
-                  onPointerDown={(event) => beginItemDrag(item, event)}
-                  onDoubleClick={() => {
-                    if (item.kind === 'text' || item.kind === 'sticky') setEditingId(item.id)
-                  }}
+                  data-editing={editing || undefined}
+                  data-x={Math.round(item.x)}
+                  data-width={Math.round(item.width)}
+                  style={{ left: item.x, top: item.y, width: item.width, height: item.height, transform: `rotate(${item.rotation}deg)`, '--item-color': item.color } as CSSProperties}
+                  onDoubleClick={() => isEditable(item) && setEditingId(item.id)}
                 >
-                  {item.kind === 'stroke' && (
-                    <svg viewBox={`0 0 ${Math.max(1, item.width)} ${Math.max(1, item.height)}`} preserveAspectRatio="none">
-                      <path d={smoothStrokePath(item.points)} />
-                    </svg>
-                  )}
-                  {(item.kind === 'arrow' || item.kind === 'line' || item.kind === 'dashed') && (
-                    <svg viewBox={`0 0 ${Math.max(1, item.width)} ${Math.max(1, item.height)}`} preserveAspectRatio="none">
-                      <defs><marker id={`arrow-${item.id}`} markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M 0 0 L 8 4 L 0 8 Z" /></marker></defs>
-                      <line
-                        x1={item.start.x} y1={item.start.y} x2={item.end.x} y2={item.end.y}
-                        strokeDasharray={item.kind === 'dashed' ? '8 6' : undefined}
-                        markerEnd={item.kind === 'arrow' ? `url(#arrow-${item.id})` : undefined}
-                      />
-                    </svg>
-                  )}
-                  {item.kind === 'shape' && (
-                    <span
-                      className={SHAPE_META[item.shape].rounded ? styles.roundedShape : undefined}
-                      style={{ clipPath: SHAPE_META[item.shape].clipPath }}
-                    />
-                  )}
-                  {(item.kind === 'text' || item.kind === 'sticky') && editingId === item.id ? (
+                  {editing && isEditable(item) ? (
                     <textarea
                       autoFocus
                       aria-label={item.kind === 'sticky' ? 'Edit sticky note' : 'Edit canvas text'}
@@ -572,38 +367,76 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
                       onChange={(event) => updateText(item, event.target.value)}
                       onBlur={() => finishEditing(item)}
                     />
-                  ) : item.kind === 'text' || item.kind === 'sticky' ? <span>{item.text || 'Double-click to edit'}</span> : null}
-                  {item.kind === 'image' && <img src={item.src} alt={item.alt} draggable={false} />}
-                  {item.kind === 'link' && <a href={`/w/${world.slug}/p/${item.pageSlug}`} onPointerDown={(event) => event.preventDefault()}>↗ {item.label}</a>}
-                  {isSelected && tool === 'select' && (
-                    <button
-                      type="button"
-                      className={styles.itemResize}
-                      aria-label={`Resize ${item.kind} item`}
-                      onPointerDown={(event) => beginResize(item, event)}
-                    />
+                  ) : (
+                    <span className={`${styles.itemContent} ${item.text ? '' : styles.placeholder}`}>
+                      {item.text || ITEM_KINDS[item.kind].placeholder}
+                    </span>
                   )}
                 </div>
               )
             })}
 
-            {marquee && <div className={styles.marquee} style={{ left: marquee.x, top: marquee.y, width: marquee.width, height: marquee.height }} />}
-
-            {operation?.kind === 'draw' && operation.tool === 'shape' && (
-              <div className={styles.shapePreview} style={{ ...normalizeRect(operation.start, operation.current), borderColor: color }} />
+            {soleSelected && tool === 'select' && !editingId && (
+              <div
+                className={styles.handleLayer}
+                style={{ left: soleSelected.x, top: soleSelected.y, width: soleSelected.width, height: soleSelected.height, transform: `rotate(${soleSelected.rotation}deg)` }}
+              >
+                <span className={styles.rotateStem} aria-hidden="true" />
+                <button
+                  type="button"
+                  className={styles.rotateHandle}
+                  aria-label={`Rotate ${soleSelected.kind} item`}
+                  onPointerDown={(event) => beginRotate(soleSelected, event)}
+                />
+                {RESIZE_HANDLES.map(({ handle, left, top }) => (
+                  <button
+                    key={handle}
+                    type="button"
+                    className={styles.handle}
+                    style={{ left, top }}
+                    aria-label={`Resize ${soleSelected.kind} item ${handle}`}
+                    onPointerDown={(event) => beginResize(soleSelected, handle, event)}
+                  />
+                ))}
+              </div>
             )}
-            {preview && operation?.kind === 'draw' && operation.tool !== 'shape' && (
-              <svg className={styles.previewSvg}>
-                {operation.tool === 'pencil'
-                  ? <path d={preview as string} stroke={color} />
-                  : <line x1={operation.start.x} y1={operation.start.y} x2={operation.current.x} y2={operation.current.y} stroke={color} strokeDasharray={operation.tool === 'dashed' ? '8 6' : undefined} />}
-              </svg>
-            )}
 
-            <svg className={styles.laser} aria-hidden="true">
-              <path ref={laserPathRef} data-testid="canvas-laser-path" />
-              <g ref={laserDotsRef} />
-            </svg>
+            {marqueeRect && (
+              <div className={styles.marquee} style={{ left: marqueeRect.x, top: marqueeRect.y, width: marqueeRect.width, height: marqueeRect.height }} />
+            )}
+          </div>
+        </div>
+
+        <div className={styles.toolbar} role="toolbar" aria-label="Canvas tools">
+          {TOOL_GROUPS.map((groupDef, index) => (
+            <div key={groupDef.name} style={{ display: 'contents' }}>
+              {index > 0 && <div className={styles.divider} />}
+              <div className={styles.group} role="group" aria-label={groupDef.name}>
+                {groupDef.tools.map((button) => (
+                  <button
+                    key={button.label}
+                    type="button"
+                    className={styles.tool}
+                    aria-label={button.label}
+                    aria-pressed={button.tool ? tool === button.tool : undefined}
+                    title={button.tool ? (button.title ?? button.label) : `${button.label} — coming soon`}
+                    disabled={!button.tool}
+                    onClick={button.tool ? () => selectTool(button.tool!) : undefined}
+                  >
+                    <button.icon size={18} aria-hidden="true" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+          <div className={styles.divider} />
+          <div className={styles.group} role="group" aria-label="Utilities">
+            <button type="button" className={styles.tool} aria-label="Color" title="Color picker — coming soon" disabled><span className={styles.swatch} /></button>
+            <div className={styles.zoom}>
+              <button type="button" className={styles.tool} aria-label="Zoom out" onClick={() => zoomFromCenter(1 / 1.15)}><icons.zoomOut size={16} aria-hidden="true" /></button>
+              <button type="button" className={styles.zoomValue} aria-label="Reset zoom" onClick={() => setViewport({ panX: 0, panY: 0, zoom: 1 })}>{Math.round(viewport.zoom * 100)}%</button>
+              <button type="button" className={styles.tool} aria-label="Zoom in" onClick={() => zoomFromCenter(1.15)}><icons.zoomIn size={16} aria-hidden="true" /></button>
+            </div>
           </div>
         </div>
       </div>

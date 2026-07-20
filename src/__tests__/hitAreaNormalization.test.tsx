@@ -49,31 +49,20 @@ function assertPitchClearsTarget(size: number, gap: number, inset: number) {
 }
 
 describe('hit-area normalization (#59): packed-row targets never overlap a neighbour', () => {
-  it('Reference Canvas tools/shape-picker: 25px buttons, 15px gap, -7.5px inset', () => {
+  it('Reference Canvas toolbar: real 40px tool buttons (no pseudo-element inset) that never overlap', () => {
+    // The mood-board rebuild replaced the sidebar tools/shape-picker/zoom-grid/
+    // palette with one bottom toolbar of real 40px .tool buttons and a 3px gap —
+    // the desktop floor is met by the button itself, so no ::after inset trick is
+    // needed and neighbours can at most abut.
     const css = readFileSync('src/canvas/ReferenceCanvasPanel.module.css', 'utf8')
-    const size = num(css, 'tools button width', /\.tools button,\n\.shapePicker button \{[^}]*width: (-?\d+(?:\.\d+)?)px/)
-    const toolsGap = num(css, 'tools gap', /\.tools \{[^}]*gap: (-?\d+(?:\.\d+)?)px/)
-    const shapePickerGap = num(css, 'shapePicker gap', /\.shapePicker \{[^}]*gap: (-?\d+(?:\.\d+)?)px/)
-    const inset = num(css, 'tools/shapePicker inset', /\.tools button::after,\n\.shapePicker button::after \{[^}]*inset: (-?\d+(?:\.\d+)?)px/)
-    assertPitchClearsTarget(size, toolsGap, inset)
-    assertPitchClearsTarget(size, shapePickerGap, inset)
-  })
-
-  it('Reference Canvas zoom controls: 18px side buttons, 22px gap, -11px inset', () => {
-    const css = readFileSync('src/canvas/ReferenceCanvasPanel.module.css', 'utf8')
-    const gap = num(css, 'canvas zoomControls gap', /\.zoomControls \{ display: grid; grid-template-columns: 18px 1fr 18px; gap: (-?\d+(?:\.\d+)?)px/)
-    const height = num(css, 'canvas zoomControls button height', /\.zoomControls button \{[^}]*height: (-?\d+(?:\.\d+)?)px/)
-    const inset = num(css, 'canvas zoomControls inset', /\.zoomControls button::after \{[^}]*inset: (-?\d+(?:\.\d+)?)px/)
-    assertPitchClearsTarget(height, gap, inset)
-  })
-
-  it('Reference Canvas palette: restructured to real 40px grid cells (no pseudo-element, so no possible overlap) with an 11px inner dot', () => {
-    const css = readFileSync('src/canvas/ReferenceCanvasPanel.module.css', 'utf8')
-    expect(css).toContain('grid-template-columns: repeat(4, 40px);')
-    expect(css).toMatch(/\.palette button \{[^}]*width: 40px;[^}]*height: 40px;/)
-    expect(css).toMatch(/\.palette \.dot \{[^}]*width: 11px;[^}]*height: 11px;/)
-    // Real grid cells, not an enlarged pseudo-element target — nothing to overlap.
-    expect(css).not.toMatch(/\.palette button::after/)
+    const width = num(css, 'tool width', /\.tool \{[^}]*width: (-?\d+(?:\.\d+)?)px/)
+    const height = num(css, 'tool height', /\.tool \{[^}]*height: (-?\d+(?:\.\d+)?)px/)
+    const gap = num(css, 'group gap', /\.group \{[^}]*gap: (-?\d+(?:\.\d+)?)px/)
+    expect(width).toBe(40)
+    expect(height).toBe(40)
+    assertPitchClearsTarget(width, gap, 0)
+    // Real hit targets, not an enlarged pseudo-element — nothing to overlap.
+    expect(css).not.toMatch(/\.tool::after/)
   })
 
   it('editor toolbar: 29px buttons, 11px gap, -5.5px inset', () => {
@@ -271,7 +260,10 @@ describe('hit-area normalization (#59): Reference Canvas palette behaviour', () 
     setDockStorage(null)
   })
 
-  it('a swatch button paints its color on an inner 11px dot, not on the 40px button itself', async () => {
+  it('the color control paints its swatch on an inner element, keeping the button as the 40px hit target', async () => {
+    // The fixed swatch palette is gone; the mood-board toolbar has a single color
+    // control (the custom picker lands in the pencil/laser slice). The hit-target
+    // rule still holds: the button carries no paint, an inner span does.
     render(
       <MemoryRouter initialEntries={['/w/ninth-vale?panel=canvas']}>
         <AppRoutes />
@@ -280,14 +272,8 @@ describe('hit-area normalization (#59): Reference Canvas palette behaviour', () 
     await act(async () => {})
 
     const dialog = await screen.findByRole('dialog', { name: 'Reference canvas' })
-    const swatch = within(dialog).getAllByRole('button', { name: /^Use color/ })[0]
-
-    // The color moved off the button (which is now just the 40px hit target)…
-    expect(swatch.style.background).toBe('')
-    // …and onto an inner element that carries the color as its painted style.
-    const dot = swatch.querySelector('span')
-    expect(dot).toBeTruthy()
-    expect(dot!.style.background).not.toBe('')
-    expect(swatch.getAttribute('aria-pressed')).not.toBeNull()
+    const colorControl = within(dialog).getByRole('button', { name: 'Color' })
+    expect(colorControl.style.background).toBe('')
+    expect(colorControl.querySelector('span')).toBeTruthy()
   })
 })

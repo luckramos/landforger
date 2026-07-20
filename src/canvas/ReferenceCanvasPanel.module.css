@@ -1,258 +1,224 @@
 .canvas {
-  display: grid;
-  height: 100%;
-  min-height: 0;
-  /* Widened from 74px (#59): the palette below is now a real grid of 40px
-     cells (4 * 40 = 160px content), so the sidebar has to make room for it
-     instead of growing an invisible, overlapping hit target on top of an
-     11px dot. 180px = 160px palette content + 2*9px toolbar padding + 2px
-     rounding slack. */
-  grid-template-columns: 180px minmax(0, 1fr);
-  background: oklch(0.16 0.004 285.918);
-}
-
-.toolbar {
   position: relative;
-  z-index: 4;
   display: flex;
-  min-height: 0;
+  height: 100%;
   flex-direction: column;
-  gap: 10px;
-  padding: 10px 9px;
-  overflow-y: auto;
-  border-right: 1px solid var(--hairline);
-  background: var(--panel-2);
+  background: var(--bg);
 }
 
-/* Hit-area normalization (#59): fixed 25px columns (not 1fr — a 1fr track
-   would stretch far past the button's own width now that the sidebar is
-   wider, distorting the pitch math below) with a 15px gap so growing each
-   button's invisible target to the 40px floor can't reach a neighbour.
-   size 25px | gap 15px | pitch 25+15=40 | inset -7.5px | target 25+15=40
-   40 <= 40 — targets abut, they never overlap. */
-.tools { display: grid; grid-template-columns: repeat(2, 25px); justify-content: center; gap: 15px; }
-.tools button,
-.shapePicker button {
+/* --- Stage --- */
+.stage {
   position: relative;
-  display: grid;
-  width: 25px;
-  height: 25px;
-  place-items: center;
-  border: 1px solid var(--hairline);
-  /* Concentric radius (#64): matches --radius-xs; .shapePicker derives its
-     own outer radius from this same token below. */
+  flex: 1;
+  overflow: hidden;
+  overscroll-behavior: contain;
+  cursor: default;
+  touch-action: none;
+  background-color: var(--bg);
+  background-image: radial-gradient(var(--hairline) 1px, transparent 1px);
+  background-size: calc(var(--grid) * 1px) calc(var(--grid) * 1px);
+  background-position: calc(var(--grid-x) * 1px) calc(var(--grid-y) * 1px);
+}
+.stage[data-tool='hand'] { cursor: grab; }
+.stage[data-panning='true'] { cursor: grabbing; }
+.stage[data-tool='text'],
+.stage[data-tool='sticky'] { cursor: crosshair; }
+
+.world {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+}
+/* Promote the compositor layer only while panning (ADR 0002: will-change is transient). */
+.stage[data-panning='true'] .world { will-change: transform; }
+
+/* --- Items --- */
+.item {
+  position: absolute;
+  box-sizing: border-box;
+  transform-origin: center center;
+  color: var(--on-bronze, oklch(0.195 0.024 84));
+  user-select: none;
+}
+.item[data-editing='true'] { cursor: text; }
+
+.text {
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
+  color: var(--item-color, var(--text-hi));
+  font-size: var(--text-lg);
+  font-weight: 560;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+.sticky {
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--item-color, var(--bronze));
+  color: var(--on-bronze, oklch(0.195 0.024 84));
+  font-size: var(--text-base);
+  line-height: 1.45;
+  box-shadow: 0 10px 24px oklch(0 0 0 / 0.34);
+  text-wrap: pretty;
+  overflow: hidden;
+}
+
+.item textarea {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  resize: none;
+  outline: none;
+}
+/* ADR 0003: inputs never resolve below 16px on mobile; step down only ≥640px.
+   The sticky's 14px display text would zoom-trap iOS while editing. */
+.sticky textarea { font-size: 16px; }
+@media (min-width: 640px) { .sticky textarea { font-size: var(--text-base); } }
+
+.itemContent { width: 100%; height: 100%; overflow: hidden; }
+.placeholder { opacity: 0.55; }
+
+/* --- Selection & handles --- */
+.selectionRing {
+  position: absolute;
+  transform-origin: center center;
+  border: 1.5px solid var(--bronze-hi, var(--bronze-light));
   border-radius: var(--radius-xs);
-  background: var(--panel-1);
-  color: var(--text-dim);
+  pointer-events: none;
+}
+.handleLayer {
+  position: absolute;
+  transform-origin: center center;
+  pointer-events: none;
+}
+.handle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  padding: 0;
+  border: 1.5px solid var(--bronze-hi, var(--bronze-light));
+  border-radius: 3px;
+  background: var(--panel-3);
+  pointer-events: auto;
   cursor: pointer;
-  /* Scoped transitions (#67): the aria-pressed/aria-selected active-tool
-     state (below) eases in instead of snapping; transform (#65's press
-     scale) is kept, not dropped, in the same declaration. */
-  transition: transform calc(var(--mo, 1) * 120ms) var(--ease-house), background calc(var(--mo, 1) * 160ms) var(--ease-house), border-color calc(var(--mo, 1) * 160ms) var(--ease-house), color calc(var(--mo, 1) * 160ms) var(--ease-house);
 }
-.tools button::after,
-.shapePicker button::after {
-  content: '';
+.handle:focus-visible { outline: 2px solid var(--bronze-light, oklch(0.845 0.069 76.833)); outline-offset: 2px; }
+.rotateHandle {
   position: absolute;
-  inset: -7.5px;
+  left: 50%;
+  top: -28px;
+  width: 14px;
+  height: 14px;
+  margin-left: -7px;
+  padding: 0;
+  border: 1.5px solid var(--bronze-hi, var(--bronze-light));
+  border-radius: 50%;
+  background: var(--panel-3);
+  pointer-events: auto;
+  cursor: grab;
 }
-.tools button:active,
-.shapePicker button:active {
-  transform: scale(0.96);
-}
-.tools button[aria-pressed='true'],
-.shapePicker button[aria-selected='true'] {
-  border-color: color-mix(in oklab, var(--bronze) 65%, transparent);
-  background: color-mix(in oklab, var(--bronze) 18%, var(--panel-1));
-  color: var(--bronze-hi, var(--bronze-light));
+.rotateHandle:focus-visible { outline: 2px solid var(--bronze-light, oklch(0.845 0.069 76.833)); outline-offset: 2px; }
+.rotateStem {
+  position: absolute;
+  left: 50%;
+  top: -28px;
+  width: 1px;
+  height: 28px;
+  margin-left: -0.5px;
+  background: var(--bronze-hi, var(--bronze-light));
+  pointer-events: none;
 }
 
-/* Same 25px/15px/40px pitch math as .tools above, so the shape picker's own
-   box has to grow to fit 3 real 40px pitches: 8px padding * 2 + 3*25
-   (buttons) + 2*15 (gaps) = 121px. */
-.shapePicker {
-  /* Concentric radius (#64): outer = inner (--radius-xs, the buttons above)
-     + --picker-pad, so the two can't drift apart. */
-  --picker-pad: 8px;
+.marquee {
   position: absolute;
-  z-index: 8;
-  top: 110px;
-  left: 66px;
-  display: grid;
-  width: 121px;
-  grid-template-columns: repeat(3, 25px);
-  justify-content: center;
-  gap: 15px;
-  padding: var(--picker-pad);
+  border: 1px solid var(--bronze-hi, var(--bronze-light));
+  background: color-mix(in oklab, var(--bronze) 12%, transparent);
+  pointer-events: none;
+}
+
+/* --- Bottom toolbar --- */
+.toolbar {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px;
   border: 1px solid var(--hairline-strong);
-  border-radius: calc(var(--radius-xs) + var(--picker-pad));
-  background: var(--panel-2);
-  box-shadow: 0 14px 38px rgba(0, 0, 0, .55);
-  animation: canvas-pop calc(var(--mo, 1) * 150ms) ease-out;
+  border-radius: var(--radius-pill);
+  background: color-mix(in oklab, var(--panel-3) 90%, transparent);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 12px 40px oklch(0 0 0 / 0.5);
+  user-select: none;
 }
+.group { display: flex; align-items: center; gap: 3px; }
+.divider { width: 1px; height: 26px; background: var(--hairline); margin: 0 3px; }
 
-/* Hit-area normalization (#59): each swatch button IS now the 40x40 target,
-   laid out as real grid cells (0 gap needed — adjoining grid tracks can
-   never overlap each other, unlike a pseudo-element). The painted dot moves
-   to an inner .dot span sized 11px, unaffected by the button's grid size, so
-   the palette still *looks* like an 11px dot grid. 4 columns of 40px wrap
-   the 12 swatches into 3 rows instead of growing a single 480px-wide row —
-   this restructure (rather than a bigger overlapping ::after) is the
-   deliberate fix for the catastrophic swatch-overlap the old pseudo-element
-   approach produced on this control. */
-.palette { display: grid; gap: 0; margin-top: auto; }
-.palette > div {
+.tool {
   display: grid;
-  grid-template-columns: repeat(4, 40px);
-}
-.palette button {
-  position: relative;
-  display: grid;
+  place-items: center;
   width: 40px;
   height: 40px;
   padding: 0;
   border: 0;
+  border-radius: var(--radius-sm);
   background: transparent;
-  place-items: center;
-  cursor: pointer;
-}
-.palette .dot {
-  width: 11px;
-  height: 11px;
-  border: 1px solid oklch(1 0 0 / 0.15);
-  border-radius: 50%;
-  transition: transform calc(var(--mo, 1) * 120ms) var(--ease-house);
-}
-.palette button[aria-pressed='true'] .dot { outline: 2px solid var(--text-hi); outline-offset: 1px; }
-/* Press feedback scales the inner .dot, not the transparent 40px button —
-   the button IS the hit target (#59); scaling it would visibly shrink the
-   pointer target on press, which the .dot indirection avoids. */
-.palette button:active .dot { transform: scale(0.96); }
-
-/* Hit-area normalization (#59): the side zoom buttons' width comes from the
-   grid track (18px, unchanged); height is pinned explicitly to make it a
-   provable 18px square (was an implicit ~16px from padding + line height).
-   A 22px gap means the ::after inset that reaches the 40px floor can't
-   bridge to a neighbour.
-   size 18px | gap 22px | pitch 18+22=40 | inset -11px | target 18+22=40
-   40 <= 40 for every adjacent pair (left↔middle, middle↔right), since the
-   grid gap is uniform across all three tracks. */
-.zoomControls { display: grid; grid-template-columns: 18px 1fr 18px; gap: 22px; }
-.zoomControls button {
-  position: relative;
-  display: grid;
-  height: 18px;
-  min-width: 0;
-  place-items: center;
-  padding: 3px 1px;
-  border: 1px solid var(--hairline);
-  border-radius: 4px;
-  background: var(--panel-1);
   color: var(--text-dim);
-  font: var(--text-xs) var(--font-mono);
   cursor: pointer;
-  transition: transform calc(var(--mo, 1) * 120ms) var(--ease-house);
+  transition:
+    transform calc(var(--mo, 1) * 120ms) var(--ease-house),
+    background calc(var(--mo, 1) * 160ms) var(--ease-house),
+    border-color calc(var(--mo, 1) * 160ms) var(--ease-house),
+    color calc(var(--mo, 1) * 160ms) var(--ease-house);
 }
-.zoomControls button::after {
-  content: '';
-  position: absolute;
-  inset: -11px;
-}
-.zoomControls button:active {
-  transform: scale(0.96);
-}
-.toolbar p { margin: 0; color: var(--text-faint); font: var(--text-xs)/1.45 var(--font-mono); }
+.tool:hover { background: var(--hairline); color: var(--text); }
+.tool:active { transform: scale(0.96); }
+.tool:focus-visible { outline: 2px solid var(--bronze-light, oklch(0.845 0.069 76.833)); outline-offset: 2px; }
+.tool[aria-pressed='true'] { background: var(--bronze, oklch(0.64 0.093 70.303)); color: var(--on-bronze, oklch(0.195 0.024 84)); }
+.tool:disabled { opacity: 0.35; cursor: default; }
+.tool:disabled:hover { background: transparent; color: var(--text-dim); }
 
-.stage {
-  position: relative;
-  min-width: 0;
-  overflow: hidden;
-  touch-action: none;
-  background-color: oklch(0.179 0.006 285.767);
-  background-image: radial-gradient(circle, oklch(0.862 0.058 87.092 / 0.22) 1px, transparent 1.3px);
-  background-position: var(--grid-x) var(--grid-y);
-  background-size: var(--grid-size) var(--grid-size);
-  cursor: crosshair;
+.zoom { display: flex; align-items: center; gap: 2px; }
+.zoomValue {
+  min-width: 48px;
+  min-height: 40px;
+  padding: 6px 4px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  cursor: pointer;
+  transition: transform calc(var(--mo, 1) * 120ms) var(--ease-house), background calc(var(--mo, 1) * 160ms) var(--ease-house), color calc(var(--mo, 1) * 160ms) var(--ease-house);
 }
-.stage[data-tool='select'] { cursor: default; }
-.stage[data-tool='eraser'] { cursor: cell; }
-.stage[data-tool='laser'] { cursor: none; }
-
-.world {
-  position: absolute;
-  inset: 0;
-  transform-origin: 0 0;
-}
-
-.item {
-  position: absolute;
-  box-sizing: border-box;
-  /* ΔL ≈ 0.009 from --panel-3 (issue #80) — references the token instead of
-     duplicating a near-identical warm neutral. */
-  color: var(--panel-3);
-  transition: left calc(var(--mo, 1) * 260ms) var(--ease-house), top calc(var(--mo, 1) * 260ms) var(--ease-house), width calc(var(--mo, 1) * 260ms) var(--ease-house), height calc(var(--mo, 1) * 260ms) var(--ease-house), box-shadow calc(var(--mo, 1) * 200ms) ease;
-  user-select: none;
-}
-.stage[data-live-item='true'] .item { transition: none; }
-.item[data-selected='true'] { box-shadow: 0 0 0 2px oklch(0.183 0.004 285.994), 0 0 0 4px var(--bronze-hi, var(--bronze-light)); }
-.item svg { display: block; width: 100%; height: 100%; overflow: visible; }
-.item svg path,
-.item svg line { fill: none; stroke: var(--item-color); stroke-width: 3; vector-effect: non-scaling-stroke; }
-.item svg marker path { fill: var(--item-color); stroke: none; }
-.item.shape > span { display: block; box-sizing: border-box; width: 100%; height: 100%; border: 2px solid var(--item-color); background: color-mix(in oklab, var(--item-color) 20%, transparent); }
-.item.shape > .roundedShape { border-radius: 18px; }
-.sticky {
-  display: grid;
-  place-items: start;
-  padding: 17px;
-  background: var(--item-color);
-  box-shadow: 0 8px 26px rgba(0, 0, 0, .35);
-  font: 500 var(--text-base)/1.45 var(--font-serif);
-  transform: rotate(-.35deg);
-}
-.text { padding: 6px 9px; color: var(--item-color); font: var(--text-lg)/1.35 var(--font-serif); }
-.sticky textarea,
-.text textarea { width: 100%; height: 100%; resize: none; border: 0; outline: 0; background: transparent; color: inherit; font: inherit; }
-.image { overflow: hidden; border: 3px solid color-mix(in oklab, var(--item-color) 80%, white); background: oklch(0.215 0.006 285.899); box-shadow: 0 8px 30px rgba(0,0,0,.42); }
-.image img { display: block; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
-.link { display: grid; place-items: center; border: 1px solid color-mix(in oklab, var(--item-color) 70%, transparent); border-radius: 10px; background: color-mix(in oklab, var(--item-color) 20%, oklch(0.21 0.006 285.885)); }
-.link a { padding: 10px; color: var(--item-color); font: 600 var(--text-base) var(--font-serif); text-decoration: none; }
-
-.itemResize {
-  position: absolute;
-  right: -7px;
-  bottom: -7px;
-  width: 14px;
-  height: 14px;
-  padding: 0;
-  border: 2px solid oklch(0.178 0 0);
-  border-radius: 3px;
-  background: var(--bronze-hi, var(--bronze-light));
-  cursor: nwse-resize;
-}
-
-.marquee,
-.shapePreview { position: absolute; box-sizing: border-box; border: 1px solid var(--bronze-hi, var(--bronze-light)); background: oklch(0.725 0.102 79.787 / 0.1); pointer-events: none; }
-.previewSvg,
-.laser { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
-.previewSvg path,
-.previewSvg line { fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
-.laser path { fill: none; stroke: var(--laser); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; opacity: .58; filter: drop-shadow(0 0 5px var(--laser)); }
-.laser circle { fill: var(--laser); filter: drop-shadow(0 0 4px var(--laser)); }
-
-@keyframes canvas-pop { from { opacity: 0; transform: translateY(-4px) scale(.96); } }
-
-@media (max-width: 700px) {
-  /* Narrow viewport: the palette drops to 2 columns of 40px (80px content,
-     fits the narrower 100px sidebar with its 6px inline padding) instead of
-     the desktop's 4 columns, so it wraps to 6 rows rather than overflowing. */
-  .canvas { grid-template-columns: 100px minmax(0, 1fr); }
-  .toolbar { padding-inline: 6px; }
-  .shapePicker { left: 58px; }
-  .palette > div { grid-template-columns: repeat(2, 40px); }
+.zoomValue:hover { background: var(--hairline); color: var(--text-hi); }
+.zoomValue:active { transform: scale(0.96); }
+.zoomValue:focus-visible { outline: 2px solid var(--bronze-light, oklch(0.845 0.069 76.833)); outline-offset: 2px; }
+.swatch {
+  width: 20px;
+  height: 20px;
+  border: 1px solid oklch(1 0 0 / 0.25);
+  border-radius: var(--radius-xs);
+  background: var(--swatch-color, var(--bronze));
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .shapePicker { animation: none; }
-  .item { transition: none; }
+  .tool { transition-duration: 0.01ms; }
+  .world { will-change: auto; }
 }

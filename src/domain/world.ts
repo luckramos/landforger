@@ -1,4 +1,4 @@
-import type { CanvasItem, CanvasPoint, ReferenceCanvas } from '../canvas/types'
+import type { CanvasItem, CanvasLink, ReferenceCanvas } from '../canvas/types'
 import { joinFrontmatter, splitFrontmatter } from './frontmatter'
 import { CATEGORIES, type Category, type CategoryTemplate, type PropertyDef, type Pin, type World, type WorldMap } from './types'
 import type { YamlValue } from './yaml'
@@ -107,15 +107,9 @@ function pinFromRecord(raw: YamlValue): Pin {
 }
 
 // --- Reference Canvas ---
-
-function pointToRecord(point: CanvasPoint): { [key: string]: YamlValue } {
-  return { x: point.x, y: point.y }
-}
-
-function pointFromRecord(raw: YamlValue): CanvasPoint {
-  if (!isRecord(raw)) throw new Error('Malformed canvas point')
-  return { x: asNumber(raw.x), y: asNumber(raw.y) }
-}
+// A reference mood board: annotation items (text/sticky) plus reference nodes
+// (later slices), joined by canvas-local N-to-N links. Only references — never
+// file bytes — are serialized here; MD stays the source of truth.
 
 function canvasItemToRecord(item: CanvasItem): { [key: string]: YamlValue } {
   const record: { [key: string]: YamlValue } = {
@@ -125,23 +119,10 @@ function canvasItemToRecord(item: CanvasItem): { [key: string]: YamlValue } {
     y: item.y,
     width: item.width,
     height: item.height,
+    rotation: item.rotation,
     color: item.color,
   }
-  if (item.kind === 'stroke') record.points = item.points.map(pointToRecord)
-  if (item.kind === 'arrow' || item.kind === 'line' || item.kind === 'dashed') {
-    record.start = pointToRecord(item.start)
-    record.end = pointToRecord(item.end)
-  }
-  if (item.kind === 'shape') record.shape = item.shape
   if (item.kind === 'text' || item.kind === 'sticky') record.text = item.text
-  if (item.kind === 'image') {
-    record.src = item.src
-    record.alt = item.alt
-  }
-  if (item.kind === 'link') {
-    record.pageSlug = item.pageSlug
-    record.label = item.label
-  }
   return record
 }
 
@@ -153,36 +134,40 @@ function canvasItemFromRecord(raw: YamlValue): CanvasItem {
     y: asNumber(raw.y),
     width: asNumber(raw.width),
     height: asNumber(raw.height),
+    rotation: asNumber(raw.rotation),
     color: asString(raw.color),
   }
   switch (raw.kind) {
-    case 'stroke':
-      return { ...base, kind: 'stroke', points: Array.isArray(raw.points) ? raw.points.map(pointFromRecord) : [] }
-    case 'arrow':
-    case 'line':
-    case 'dashed':
-      return { ...base, kind: raw.kind, start: pointFromRecord(raw.start ?? {}), end: pointFromRecord(raw.end ?? {}) }
-    case 'shape':
-      return { ...base, kind: 'shape', shape: asString(raw.shape, 'rectangle') as Extract<CanvasItem, { kind: 'shape' }>['shape'] }
     case 'text':
     case 'sticky':
       return { ...base, kind: raw.kind, text: asString(raw.text) }
-    case 'image':
-      return { ...base, kind: 'image', src: asString(raw.src), alt: asString(raw.alt) }
-    case 'link':
-      return { ...base, kind: 'link', pageSlug: asString(raw.pageSlug), label: asString(raw.label) }
     default:
       throw new Error(`Malformed canvas item kind: ${JSON.stringify(raw.kind)}`)
   }
 }
 
+function canvasLinkToRecord(link: CanvasLink): { [key: string]: YamlValue } {
+  return { id: link.id, fromId: link.fromId, toId: link.toId }
+}
+
+function canvasLinkFromRecord(raw: YamlValue): CanvasLink {
+  if (!isRecord(raw)) throw new Error('Malformed canvas link')
+  return { id: asString(raw.id), fromId: asString(raw.fromId), toId: asString(raw.toId) }
+}
+
 function canvasToRecord(canvas: ReferenceCanvas): { [key: string]: YamlValue } {
-  return { items: canvas.items.map(canvasItemToRecord) }
+  return {
+    items: canvas.items.map(canvasItemToRecord),
+    links: canvas.links.map(canvasLinkToRecord),
+  }
 }
 
 function canvasFromRecord(raw: YamlValue): ReferenceCanvas {
   if (!isRecord(raw)) throw new Error('Malformed reference canvas')
-  return { items: Array.isArray(raw.items) ? raw.items.map(canvasItemFromRecord) : [] }
+  return {
+    items: Array.isArray(raw.items) ? raw.items.map(canvasItemFromRecord) : [],
+    links: Array.isArray(raw.links) ? raw.links.map(canvasLinkFromRecord) : [],
+  }
 }
 
 /** Serializes a World to `_world.md` (frontmatter: meta, era order, templates, maps & pins; body: free-form notes). */

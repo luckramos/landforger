@@ -246,58 +246,43 @@ pins:
     eras: [era-charts, era-saltcinder]
 canvas:
   items:
+    - id: canvas-note-title
+      kind: text
+      x: 120
+      y: 72
+      width: 280
+      height: 44
+      rotation: 0
+      color: "#f4efe6"
+      text: "Drowned Coast — reference board"
     - id: canvas-note-tides
       kind: sticky
       x: 120
-      y: 104
+      y: 152
       width: 208
       height: 152
+      rotation: -3
       color: "#d8aa61"
       text: "Tide readings: compare the ninth bell against the drowned stair."
     - id: canvas-note-route
       kind: sticky
-      x: 376
-      y: 304
-      width: 192
-      height: 136
+      x: 384
+      y: 232
+      width: 200
+      height: 144
+      rotation: 2
       color: "#9bc4a5"
       text: "Safer route through Duskwater after moonrise."
-    - id: canvas-image-coast
-      kind: image
-      x: 416
-      y: 72
-      width: 288
-      height: 184
-      color: "#b0824a"
-      src: /maps/drowned-coast-saltcinder.svg
-      alt: "Chart of the Drowned Coast"
-    - id: canvas-image-vale
-      kind: image
-      x: 632
-      y: 304
-      width: 240
-      height: 168
-      color: "#8ba7b8"
-      src: /maps/ninth-vale.svg
-      alt: "Chart of the Ninth Vale"
-    - id: canvas-link-sera
-      kind: link
-      x: 112
-      y: 320
+    - id: canvas-note-order
+      kind: sticky
+      x: 208
+      y: 360
       width: 216
-      height: 72
+      height: 140
+      rotation: 0
       color: "#d99579"
-      pageSlug: sera
-      label: Sera Valen
-    - id: canvas-link-compass
-      kind: link
-      x: 704
-      y: 104
-      width: 224
-      height: 72
-      color: "#c8bf72"
-      pageSlug: tidewane-compass
-      label: Tidewane Compass
+      text: "The Order burns any chart that names the ninth vale."
+  links: []
 created: 2026-01-01T00:00:00.000Z
 updated: 2026-07-13T00:00:00.000Z
 ---
