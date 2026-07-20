@@ -146,10 +146,12 @@ describe('Reference canvas — N-to-N link connector', () => {
     drawLink(stage, [178, 130], [402, 130]) // a → b
     await waitFor(() => expect(stage.querySelector('[data-testid^="canvas-link-"]')).toBeTruthy())
 
-    // Cmd+A selects both items and the link; Delete clears everything.
+    // Cmd+A selects both items and the link; every selected item shows the
+    // data-selected indicator, and the link path carries its selected class.
     fireEvent.click(screen.getByRole('button', { name: 'Select' }))
     fireEvent.keyDown(document, { key: 'a', metaKey: true })
-    expect(stage.querySelectorAll('[data-selected="true"]').length).toBe(2)
+    expect(stage.querySelectorAll('[data-kind][data-selected="true"]').length).toBe(2)
+    expect(stage.querySelector('[data-testid^="canvas-link-"]')?.getAttribute('class')).toMatch(/linkSelected/)
     fireEvent.keyDown(document, { key: 'Delete' })
     await waitFor(() => {
       expect(stage.querySelector('[data-testid^="canvas-link-"]')).toBeNull()
@@ -168,11 +170,12 @@ describe('Reference canvas — N-to-N link connector', () => {
     fireEvent.pointerUp(stage, { clientX: 290, clientY: 172, pointerId: 1 })
     fireEvent.click(await screen.findByRole('button', { name: 'Toggle arrowhead' }))
 
-    // A polygon arrowhead is drawn, translated near the string's mid-x (~290), not an end.
-    const arrow = stage.querySelector('polygon') as SVGPolygonElement | null
+    // The ">>>" chevron path is the only link-layer path carrying a transform;
+    // it sits near the string's mid-x (~290), not at an end, with three chevrons.
+    const arrow = stage.querySelector('svg path[transform]') as SVGPathElement | null
     expect(arrow).toBeTruthy()
-    const tx = arrow!.getAttribute('transform') ?? ''
-    const x = Number(tx.match(/translate\((-?[\d.]+)/)?.[1])
+    expect((arrow!.getAttribute('d') ?? '').match(/M/g)?.length).toBe(3) // three chevrons
+    const x = Number((arrow!.getAttribute('transform') ?? '').match(/translate\((-?[\d.]+)/)?.[1])
     expect(x).toBeGreaterThan(230)
     expect(x).toBeLessThan(350) // mid-span, not at the ~180 or ~400 ends
   })

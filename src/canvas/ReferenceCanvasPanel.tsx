@@ -902,17 +902,23 @@ export function ReferenceCanvasPanel({ world, repository, onClose }: ReferenceCa
                   style={link.tint ? { stroke: link.tint } : undefined}
                 />
               ))}
-              {/* A single arrowhead at the CENTRE of the string (pointing toId), tinted to match. */}
+              {/* Three chevrons ">>>" at the CENTRE of the string, pointing toId
+                  and oriented along the tangent — a bigger, clearer direction cue
+                  than a single head. Tinted to match the string. */}
               {snapshot.links.map((link) => {
                 if (!link.arrowhead) return null
                 const m = linkMidpoint(link)
                 if (!m) return null
+                // Three chevrons spaced along the local x-axis, centred on the midpoint.
+                const chevrons = [-9, 0, 9]
+                  .map((cx) => `M ${cx - 4} -6 L ${cx + 4} 0 L ${cx - 4} 6`)
+                  .join(' ')
                 return (
-                  <polygon
+                  <path
                     key={`arrow-${link.id}`}
                     className={styles.linkArrow}
-                    points="0,-4 8,0 0,4"
-                    style={link.tint ? { fill: link.tint } : undefined}
+                    d={chevrons}
+                    style={link.tint ? { stroke: link.tint } : undefined}
                     transform={`translate(${m.x} ${m.y}) rotate(${m.angle})`}
                   />
                 )
