@@ -34,8 +34,11 @@ export class LaserTrailRenderer {
     options: LaserTrailOptions = {},
   ) {
     this.now = options.now ?? (() => performance.now())
-    this.requestFrame = options.requestFrame ?? requestAnimationFrame
-    this.cancelFrame = options.cancelFrame ?? cancelAnimationFrame
+    // Bind to window: requestAnimationFrame/cancelAnimationFrame throw if called
+    // with `this` set to anything other than the Window (which storing the bare
+    // reference on the instance does). The optional overrides are used by tests.
+    this.requestFrame = options.requestFrame ?? ((callback) => window.requestAnimationFrame(callback))
+    this.cancelFrame = options.cancelFrame ?? ((handle) => window.cancelAnimationFrame(handle))
     this.reducedMotion = options.reducedMotion ?? false
   }
 
