@@ -1,0 +1,1674 @@
+openapi: 3.1.0
+
+info:
+  title: LandForger API
+  version: 0.1.0
+  description: >-
+    Backend contract for LandForger — a worldbuilding wiki.
+
+    Derived from a scan of the React frontend (`web/src`). This is the shared
+    source of truth for both `api/` (Go server, via oapi-codegen) and `web/`
+    (generated TS client).
+
+    ## Design notes baked into this contract
+    - **Multi-tenancy**: every `/worlds/**` resource is scoped to the
+      authenticated account. The frontend carries no `ownerId` today — the
+      server derives ownership from the session cookie. There is no
+      cross-account access.
+    - **Identifiers**: Worlds and Pages are addressed by immutable **slug**
+      (kebab-case, generated server-side from name/title, collision-suffixed).
+      Maps, Pins and Folders are addressed by opaque **id**.
+    - **Markdown is the source of truth**: `Page.body` and `World.body` are raw
+      Markdown; the server owns YAML-frontmatter (de)serialization. The API
+      exchanges parsed domain objects, not raw `.md`.
+    - **Assets (R2)**: binary assets (map charts, page covers, image
+      properties, canvas blobs) never travel through this API as bytes. The
+      client requests a presigned upload URL, PUTs the file straight to R2, then
+      commits the returned `assetId`. Responses hydrate `assetId` → servable URL.
+    - **Derived reads**: backlinks and the relationship graph are computed by
+      the server from page bodies / relation properties / era membership. There
+      is no link table the client writes to.
+
+servers:
+  - url: https://api.landforger.app/v1
+    description: Production
+  - url: http://localhost:8080/v1
+    description: Local dev
+
+security:
+  - cookieAuth: []
+
+tags:
+  - name: Auth
+    description: Signup, login, session lifecycle, password reset, email verification.
+  - name: Account
+    description: Authenticated account self-management and preferences.
+  - name: Worlds
+    description: Top-level worldbuilding containers (owned by an account).
+  - name: Pages
+    description: Wiki pages within a world (Markdown + frontmatter).
+  - name: Category Templates
+    description: Per-world property seeds for each page category.
+  - name: Search
+    description: Search, filtering, suggestion and the relationship graph.
+  - name: Maps
+    description: Map charts, the map library and root-map wiring.
+  - name: Map Folders
+    description: Library folder hierarchy for organizing maps.
+  - name: Pins
+    description: Page placements on a map, with per-era visibility.
+  - name: Assets
+    description: Presigned-URL upload flow to object storage (R2) and resolution.
+
+# ============================================================================
+# PATHS
+# ============================================================================
+paths:
+
+  # ---------------------------------------------------------------- Auth ----
+  /auth/signup:
+    post:
+      tags: [Auth]
+      summary: Register a new account
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password]
+              properties:
+                name: { type: string }
+                email: { type: string, format: email }
+                password: { type: string, format: password, minLength: 8 }
+                termsAccepted: { type: boolean, description: Acceptance of Terms / Privacy Charter. }
+      responses:
+        '201':
+          description: Account created (session cookie set). Email verification may still be pending.
+          headers:
+            Set-Cookie: { $ref: '#/components/headers/SessionCookie' }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  account: { $ref: '#/components/schemas/Account' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Authenticate and receive tokens
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, format: password }
+                rememberMe:
+                  type: boolean
+                  description: Longer-lived refresh token when true.
+      responses:
+        '200':
+          description: Authenticated (session cookie set).
+          headers:
+            Set-Cookie: { $ref: '#/components/headers/SessionCookie' }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  account: { $ref: '#/components/schemas/Account' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: End the current session
+      description: Deletes the session row and clears the cookie.
+      responses:
+        '204':
+          description: Logged out (session cookie cleared).
+          headers:
+            Set-Cookie: { $ref: '#/components/headers/ClearSessionCookie' }
+
+  /auth/session:
+    get:
+      tags: [Auth]
+      summary: Get the current account (session bootstrap)
+      description: Used on app load to restore a session from the cookie.
+      responses:
+        '200':
+          description: Current account.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  account: { $ref: '#/components/schemas/Account' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /auth/password-reset/request:
+    post:
+      tags: [Auth]
+      summary: Request a password-reset email
+      description: Always returns 202 — never reveals whether the email exists.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        '202': { description: If the email exists, a reset link has been sent. }
+
+  /auth/password-reset/confirm:
+    post:
+      tags: [Auth]
+      summary: Complete a password reset with a token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, newPassword]
+              properties:
+                token: { type: string }
+                newPassword: { type: string, format: password, minLength: 8 }
+      responses:
+        '200': { description: Password updated. }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+  /auth/verify-email:
+    post:
+      tags: [Auth]
+      summary: Confirm an email address with a verification token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string }
+      responses:
+        '200':
+          description: Email verified.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  account: { $ref: '#/components/schemas/Account' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+  /auth/verify-email/resend:
+    post:
+      tags: [Auth]
+      summary: Resend the verification email
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: { type: string, format: email }
+      responses:
+        '202': { description: Verification email re-sent if applicable. }
+
+  # ------------------------------------------------------------- Account ----
+  /account/profile:
+    patch:
+      tags: [Account]
+      summary: Update account profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                email: { type: string, format: email }
+                avatarAssetId:
+                  type: string
+                  description: assetId from a prior presigned upload; server resolves to avatarUrl.
+      responses:
+        '200':
+          description: Updated account.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  account: { $ref: '#/components/schemas/Account' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /account/password:
+    patch:
+      tags: [Account]
+      summary: Change password (while authenticated)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword: { type: string, format: password }
+                newPassword: { type: string, format: password, minLength: 8 }
+      responses:
+        '200': { description: Password changed. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /account/settings:
+    get:
+      tags: [Account]
+      summary: Get per-account UI settings
+      responses:
+        '200':
+          description: Settings.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserSettings' }
+    patch:
+      tags: [Account]
+      summary: Update per-account UI settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UserSettings' }
+      responses:
+        '200':
+          description: Updated settings.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserSettings' }
+
+  /account:
+    delete:
+      tags: [Account]
+      summary: Delete the current account and all its data
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                password: { type: string, format: password, description: Confirm-by-password. }
+      responses:
+        '204': { description: Account deleted. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  # -------------------------------------------------------------- Worlds ----
+  /worlds:
+    get:
+      tags: [Worlds]
+      summary: List (or search) the account's worlds
+      description: >-
+        Doubles as the Worlds launcher search. Empty `q` returns all worlds
+        ordered by name. Returns lightweight summaries (with `pageCount`) to
+        avoid the N+1 the frontend currently does.
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema: { type: string }
+          description: Fuzzy match on name, substring fallback on logline.
+      responses:
+        '200':
+          description: World summaries.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/WorldSummary' }
+    post:
+      tags: [Worlds]
+      summary: Create a world
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateWorldInput' }
+      responses:
+        '201':
+          description: Created world (slug generated server-side).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/World' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /worlds/{worldSlug}:
+    parameters:
+      - $ref: '#/components/parameters/WorldSlug'
+    get:
+      tags: [Worlds]
+      summary: Get a full world (with maps, pins, folders, templates, canvas)
+      responses:
+        '200':
+          description: World.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/World' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Worlds]
+      summary: Update world fields
+      description: >-
+        Accepts a partial world. `rootMap: null` explicitly clears it. The
+        server re-normalizes the timeline (drops stale era slugs, re-resolves
+        activeEra) rather than blind-passthrough.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WorldMutationInput' }
+      responses:
+        '200':
+          description: Updated world.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/World' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Worlds]
+      summary: Delete a world and all its pages, maps and assets
+      description: Not wired in the current frontend; included for completeness.
+      responses:
+        '204': { description: Deleted. }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # --------------------------------------------------------------- Pages ----
+  /worlds/{worldSlug}/pages:
+    parameters:
+      - $ref: '#/components/parameters/WorldSlug'
+    get:
+      tags: [Pages]
+      summary: List pages in a world (with filters)
+      parameters:
+        - name: category
+          in: query
+          schema: { $ref: '#/components/schemas/Category' }
+        - name: tag
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Pages.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Page' }
+    post:
+      tags: [Pages]
+      summary: Create a page
+      description: >-
+        Slug generated from title. If `customProperties` is omitted, the server
+        seeds them from the world's CategoryTemplate for that category.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreatePageInput' }
+      responses:
+        '201':
+          description: Created page.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Page' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /worlds/{worldSlug}/pages/search:
+    parameters:
+      - $ref: '#/components/parameters/WorldSlug'
+    get:
+      tags: [Search]
+      summary: Full-text search over page bodies
+      description: >-
+        Not yet called by the UI (today's spotlight is title-only) but exposed
+        because Page.body is the source of truth. Returns a highlighted snippet.
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string }
+        - name: fields
+          in: query
+          description: CSV subset of title,summary,body,tags (default all).
+          schema: { type: string }
+      responses:
+        '200':
+          description: Ranked page hits with snippets.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/PageSearchHit' }
+
+  /worlds/{worldSlug}/pages/suggest:
+    parameters:
+      - $ref: '#/components/parameters/WorldSlug'
+    get:
+      tags: [Search]
+      summary: Wikilink / mention autocomplete
+      description: Substring match over "title slug"; powers the editor's [[ and @ menus.
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 8 }
+      responses:
+        '200':
+          description: Suggestions.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/WikiLinkPage' }
+
+  /worlds/{worldSlug}/pages/resolve:
+    parameters:
+      - $ref: '#/components/parameters/WorldSlug'
+    post:
+      tags: [Search]
+      summary: Batch-resolve slugs to existing pages
+      description: >-
+        Used for editor ghost-link detection and relation-chip resolution
+        without fetching the whole page list. Returns only slugs that exist.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [slugs]
+              properties:
+                slugs:
+                  type: array
+                  items: { type: string }
+      responses:
+        '200':
+          description: Existing pages among the requested slugs.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/PageRef' }
+
+  /worlds/{worldSlug}/pages/{pageSlug}:
+    parameters:
+      - $ref: '#/components/parameters/WorldSlug'
+      - $ref: '#/components/parameters/PageSlug'
+    get:
+      tags: [Pages]
+      summary: Get a page
+      responses:
+        '200':
+          description: Page.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Page' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Pages]
+      summary: Update a page (title, body, frontmatter, properties, eras)
+      description: >-
+        Partial. Fields sent as null/omitted are not blanked. `title` change is
+        a rename (slug stays immutable). Changing category to/from `eras`
+        updates the world's eraOrder. Body edits are debounce-saved by the UI.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdatePageInput' }
+      responses:
+        '200':
+          description: Updated page.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Page' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Pages]
+      summary: Delete a page
+      description: >-
+        Does not rewrite other pages; dangling references become ghost links,
+        resolved at render time.
+      responses:
+        '204': { description: Deleted. }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /worlds/{worldSlug}/pages/{pageSlug}/category:
+    parameters:
+      - $ref: '#/components/parameters/WorldSlug'
+      - $ref: '#/components/parameters/PageSlug'
+    patch:
+      tags: [Pages]
+      summary: Recategorize a page
+      description: Optionally re-seed the page's properties from the target category template.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [category]
+              properties:
+                category: { $ref: '#/components/schemas/Category' }
+                applyTemplate: { type: boolean, default: false }
+      responses:
+        '200':
+          description: Updated page.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Page' }
+
+  /worlds/{worldSlug}/pages/{pageSlug}/backlinks:
+    parameters:
+      - $ref: '#/components/parameters/WorldSlug'
+      - $ref: '#/components/parameters/PageSlug'
+    get:
+      tags: [Search]
+      summary: Inverse references to this page
+      description: Derived from body wikilinks, relation properties and era membership.
+      responses:
+        '200':
+          description: Backlinks.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Backlink' }
+
+  # ------------------------------------------- Per-world spotlight & tags ----
+  /worlds/{worldSlug}/search:
+    parameters:
+      - $ref: '#/components/parameters/WorldSlug'
+    get:
+      tags: [Search]
+      summary: Spotlight search (pages + categories) within a world
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Mixed page/category results.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/SpotlightHit' }
+
+  /worlds/{worldSlug}/tags:
+    parameters:
+      - $ref: '#/components/parameters/WorldSlug'
+    get:
+      tags: [Search]
+      summary: Distinct tags used across the world (autocomplete)
+      responses:
+        '200':
+          description: Tag list.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { type: string }
+
+  /worlds/{worldSlug}/graph:
+    parameters:
+      - $ref: '#/components/parameters/WorldSlug'
+    get:
+      tags: [Search]
+      summary: Relationship graph (nodes + edges)
+      parameters:
+        - name: scope
+          in: query
+          schema: { type: string, enum: [global, local], default: global }
+        - name: focalSlug
+          in: query
+          description: Required when scope=local.
+          schema: { type: string }
+        - name: categories
+          in: query
+          description: CSV of categories to include (default all).
+          schema: { type: string }
+      responses:
+        '200':
+          description: Graph.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RelationshipGraph' }
+
+  # -------------------------------------------------- Category Templates ----
+  /worlds/{worldSlug}/category-templates/{category}:
+    parameters:
+      - $ref: '#/components/parameters/WorldSlug'
+      - name: category
+        in: path
+        required: true
+        schema: { $ref: '#/components/schemas/Category' }
+    get:
+      tags: [Category Templates]
+      summary: Get a category's property template
+      responses:
+        '200':
+          description: Template.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CategoryTemplate' }
+    put:
+      tags: [Category Templates]
+      summary: Upsert a category's property template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [properties]
+              properties:
+                properties:
+                  type: array
+                  items: { $ref: '#/components/schemas/PropertyDef' }
+      responses:
+        '200':
+          description: Upserted template.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CategoryTemplate' }
+
+  # ---------------------------------------------------------------- Maps ----
+  /worlds/{worldSlug}/maps:
+    parameters:
+      - $ref: '#/components/parameters/WorldSlug'
+    get:
+      tags: [Maps]
+      summary: List maps (optionally within a folder)
+      parameters:
+        - name: folder
+          in: query
+          description: Folder id; omit for library root.
+          schema: { type: string }
+      responses:
+        '200':
+          description: Maps.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/WorldMap' }
+    post:
+      tags: [Maps]
+      summary: Create a map
+      description: >-
+        One endpoint covers the three creation modes. `setRoot` makes it the
+        world's root map; `parentPinId` drills a child map from a pin (fails if
+        that pin already has a child); otherwise it lands in `folder` (or root).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title]
+              properties:
+                title: { type: string }
+                setRoot: { type: boolean, default: false }
+                folder: { type: string }
+                parentPinId: { type: string }
+                chartAssetId:
+                  type: string
+                  description: Optional initial chart image (assetId from presign).
+      responses:
+        '201':
+          description: Created map.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WorldMap' }
+
+  /worlds/{worldSlug}/maps/{mapId}:
+    parameters:
+      - $ref: '#/components/parameters/WorldSlug'
+      - $ref: '#/components/parameters/MapId'
+    get:
+      tags: [Maps]
+      summary: Get a map
+      responses:
+        '200':
+          description: Map.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WorldMap' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Maps]
+      summary: Update a map (rename, move folder, toggle era-linked)
+      description: >-
+        Toggling `eraLinked` carries the currently-visible chart across the
+        boundary (needs the world's activeEra/eraOrder as context) — server
+        replicates that seeding/collapsing logic.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                folder:
+                  type: string
+                  nullable: true
+                  description: null = move to library root.
+                eraLinked: { type: boolean }
+      responses:
+        '200':
+          description: Updated map.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WorldMap' }
+    delete:
+      tags: [Maps]
+      summary: Delete a map (cascades)
+      description: >-
+        Removes the map's pins, un-parents its direct child maps (they rise to
+        library root), clears childMap on its former parent pin, and reassigns
+        World.rootMap if this was root.
+      responses:
+        '204': { description: Deleted. }
+
+  /worlds/{worldSlug}/maps/{mapId}/chart/{key}:
+    parameters:
+      - $ref: '#/components/parameters/WorldSlug'
+      - $ref: '#/components/parameters/MapId'
+      - name: key
+        in: path
+        required: true
+        description: '"all" for a fixed map, or an Era slug for an era-linked map.'
+        schema: { type: string }
+    put:
+      tags: [Maps]
+      summary: Set the chart image for a key
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [assetId]
+              properties:
+                assetId: { type: string, description: From a prior presigned upload. }
+      responses:
+        '200':
+          description: Updated map.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WorldMap' }
+    delete:
+      tags: [Maps]
+      summary: Clear the chart image for a key
+      responses:
+        '200':
+          description: Updated map.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WorldMap' }
+
+  /worlds/{worldSlug}/maps/{mapId}/parent:
+    parameters:
+      - $ref: '#/components/parameters/WorldSlug'
+      - $ref: '#/components/parameters/MapId'
+    patch:
+      tags: [Maps]
+      summary: Attach/detach a map to a pin (reparent)
+      description: >-
+        `parentPinId` omitted/null detaches to library root. Validated: the pin
+        must be free or already this map's parent, and the move must not create
+        a cycle.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                parentPinId: { type: string, nullable: true }
+      responses:
+        '200':
+          description: Updated map.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WorldMap' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /worlds/{worldSlug}/root-map:
+    parameters:
+      - $ref: '#/components/parameters/WorldSlug'
+    put:
+      tags: [Maps]
+      summary: Set the world's root map
+      description: Detaches any existing parent/child link on the chosen map.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mapId]
+              properties:
+                mapId: { type: string }
+      responses:
+        '200':
+          description: Updated world.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/World' }
+
+  /worlds/{worldSlug}/library/search:
+    parameters:
+      - $ref: '#/components/parameters/WorldSlug'
+    get:
+      tags: [Search]
+      summary: Search the map library (folders + maps)
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Folder/map hits with breadcrumb subtitles.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/LibraryHit' }
+
+  # -------------------------------------------------------- Map Folders ----
+  /worlds/{worldSlug}/map-folders:
+    parameters:
+      - $ref: '#/components/parameters/WorldSlug'
+    get:
+      tags: [Map Folders]
+      summary: List the folder tree
+      responses:
+        '200':
+          description: Folders.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/MapFolder' }
+    post:
+      tags: [Map Folders]
+      summary: Create a folder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                parentFolder: { type: string }
+      responses:
+        '201':
+          description: Created folder.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MapFolder' }
+
+  /worlds/{worldSlug}/map-folders/{folderId}:
+    parameters:
+      - $ref: '#/components/parameters/WorldSlug'
+      - name: folderId
+        in: path
+        required: true
+        schema: { type: string }
+    patch:
+      tags: [Map Folders]
+      summary: Rename or re-nest a folder
+      description: Re-nesting is a no-op if it would create a cycle.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                parentFolder: { type: string, nullable: true }
+      responses:
+        '200':
+          description: Updated folder.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MapFolder' }
+    delete:
+      tags: [Map Folders]
+      summary: Delete a folder (promotes contents)
+      description: Subfolders and maps are promoted to this folder's parent; nothing is deleted.
+      responses:
+        '204': { description: Deleted. }
+
+  # ---------------------------------------------------------------- Pins ----
+  /worlds/{worldSlug}/pins:
+    parameters:
+      - $ref: '#/components/parameters/WorldSlug'
+    post:
+      tags: [Pins]
+      summary: Place a page on a map
+      description: >-
+        Server seeds `eras` from the page's own eras and clamps x/y to 2–98.
+        The page should be a 'locations' page to be linkable to a child map.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mapId, pageSlug, x, y]
+              properties:
+                mapId: { type: string }
+                pageSlug: { type: string }
+                x: { type: number }
+                y: { type: number }
+      responses:
+        '201':
+          description: Created pin.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Pin' }
+
+  /worlds/{worldSlug}/pins/{pinId}:
+    parameters:
+      - $ref: '#/components/parameters/WorldSlug'
+      - name: pinId
+        in: path
+        required: true
+        schema: { type: string }
+    patch:
+      tags: [Pins]
+      summary: Move a pin or narrow its era visibility
+      description: >-
+        `x`/`y` for drag (clamped 2–98). `eras` narrows visibility: no-op on
+        Timeless pages, and must retain ≥1 real era for non-Timeless pages.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                x: { type: number }
+                y: { type: number }
+                eras:
+                  type: array
+                  items: { type: string }
+      responses:
+        '200':
+          description: Updated pin.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Pin' }
+    delete:
+      tags: [Pins]
+      summary: Remove a placement
+      responses:
+        '204': { description: Deleted. }
+
+  /worlds/{worldSlug}/maps/{mapId}/pins:
+    parameters:
+      - $ref: '#/components/parameters/WorldSlug'
+      - $ref: '#/components/parameters/MapId'
+    get:
+      tags: [Pins]
+      summary: List a map's pins, filtered by era
+      description: >-
+        Filters World.pins by mapId and era visibility; each pin is joined with
+        its target page's title/category. Pins to deleted pages are excluded.
+      parameters:
+        - name: era
+          in: query
+          description: Era slug, or "active" to use the world's active era.
+          schema: { type: string, default: active }
+      responses:
+        '200':
+          description: Visible pins with page display fields.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/PinView' }
+
+  /worlds/{worldSlug}/maps/{mapId}/pins/search:
+    parameters:
+      - $ref: '#/components/parameters/WorldSlug'
+      - $ref: '#/components/parameters/MapId'
+    get:
+      tags: [Search]
+      summary: Search pins on the currently-open map
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Pin hits.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/PinSearchHit' }
+
+  # -------------------------------------------------------------- Assets ----
+  /worlds/{worldSlug}/assets/presign:
+    parameters:
+      - $ref: '#/components/parameters/WorldSlug'
+    post:
+      tags: [Assets]
+      summary: Request a presigned upload URL
+      description: >-
+        Step 1 of the R2 upload flow. The client then PUTs the raw file to
+        `uploadUrl` (directly to R2, not this API), and finally commits the
+        returned `assetId` onto a map chart / page cover / property.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [filename, contentType]
+              properties:
+                filename: { type: string }
+                contentType: { type: string }
+                sizeBytes: { type: integer }
+      responses:
+        '200':
+          description: Presigned upload target.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PresignResponse' }
+
+  /assets/{assetId}:
+    parameters:
+      - name: assetId
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      tags: [Assets]
+      summary: Resolve an asset to a servable URL + metadata
+      description: >-
+        Consumed wherever the frontend needs a URL rather than a key (map
+        images, page cover, image properties, canvas image/pdf nodes).
+      responses:
+        '200':
+          description: Asset metadata + URL.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Asset' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Assets]
+      summary: Delete an asset
+      responses:
+        '204': { description: Deleted. }
+
+  /assets/{assetId}/text:
+    parameters:
+      - name: assetId
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      tags: [Assets]
+      summary: Fetch a text asset's UTF-8 content
+      description: Used by the canvas to preview uploaded .md files.
+      responses:
+        '200':
+          description: Text content.
+          content:
+            text/plain:
+              schema: { type: string }
+
+# ============================================================================
+# COMPONENTS
+# ============================================================================
+components:
+
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: session
+      description: >-
+        Opaque session token in an HttpOnly, Secure, SameSite=Lax cookie. The
+        server stores a SHA-256 hash of the token in a Postgres `sessions`
+        table and resolves the account on each request (sliding expiry). Issued
+        via Set-Cookie on /auth/login and /auth/signup; cleared on /auth/logout.
+        Keep frontend and API under one registrable domain so SameSite=Lax
+        applies and no CSRF token is needed.
+
+  headers:
+    SessionCookie:
+      description: Sets the HttpOnly session cookie.
+      schema:
+        type: string
+        example: session=<token>; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=1209600
+    ClearSessionCookie:
+      description: Clears the session cookie.
+      schema:
+        type: string
+        example: session=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0
+
+  parameters:
+    WorldSlug:
+      name: worldSlug
+      in: path
+      required: true
+      schema: { type: string }
+    PageSlug:
+      name: pageSlug
+      in: path
+      required: true
+      schema: { type: string }
+    MapId:
+      name: mapId
+      in: path
+      required: true
+      schema: { type: string }
+
+  responses:
+    BadRequest:
+      description: Malformed request.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Unauthorized:
+      description: Missing or invalid credentials.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Resource not found.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Conflict:
+      description: Conflict (e.g. duplicate email, cyclic move).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    ValidationError:
+      description: Semantic validation failure.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+  schemas:
+
+    # ---- Shared ----
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string, description: Stable machine-readable error code. }
+        message: { type: string }
+        fields:
+          type: object
+          additionalProperties: { type: string }
+          description: Per-field validation messages, when applicable.
+
+    Timestamp:
+      type: string
+      format: date-time
+
+    Category:
+      type: string
+      enum: [stories, eras, characters, locations, items, organizations, events]
+
+    # ---- Auth / Account ----
+    Account:
+      type: object
+      required: [id, name, email]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        email: { type: string, format: email }
+        avatarUrl: { type: string, nullable: true }
+        createdAt: { $ref: '#/components/schemas/Timestamp' }
+        emailVerifiedAt:
+          oneOf:
+            - { $ref: '#/components/schemas/Timestamp' }
+            - { type: 'null' }
+
+    UserSettings:
+      type: object
+      required: [motionScale, pageWidth, toolbarAnchor]
+      properties:
+        motionScale: { type: number, description: Motion-intensity multiplier (--mo). }
+        pageWidth: { type: number }
+        toolbarAnchor: { type: string, enum: [top, bottom] }
+
+    # ---- World ----
+    WorldSummary:
+      type: object
+      required: [slug, name, genre, color, logline, activeEra, updated]
+      properties:
+        slug: { type: string }
+        name: { type: string }
+        genre: { type: string }
+        color: { type: string, description: Any valid CSS color. }
+        logline: { type: string }
+        activeEra: { type: string }
+        pageCount: { type: integer }
+        updated: { $ref: '#/components/schemas/Timestamp' }
+
+    World:
+      type: object
+      required:
+        [slug, name, genre, color, logline, eraOrder, activeEra,
+         categoryTemplates, maps, pins, mapFolders, created, updated, body]
+      properties:
+        slug: { type: string, description: Immutable, server-generated. }
+        name: { type: string }
+        genre: { type: string }
+        color: { type: string }
+        logline: { type: string }
+        eraOrder:
+          type: array
+          items: { type: string }
+          description: Ordered Era Page slugs — the timeline sequence.
+        activeEra: { type: string, description: Exactly one Era slug; shared by timeline and maps. }
+        rootMap: { type: string, nullable: true, description: Map id the "World map" entry opens. }
+        categoryTemplates:
+          type: array
+          items: { $ref: '#/components/schemas/CategoryTemplate' }
+        maps:
+          type: array
+          items: { $ref: '#/components/schemas/WorldMap' }
+        pins:
+          type: array
+          items: { $ref: '#/components/schemas/Pin' }
+        mapFolders:
+          type: array
+          items: { $ref: '#/components/schemas/MapFolder' }
+        canvas:
+          $ref: '#/components/schemas/ReferenceCanvas'
+        created: { $ref: '#/components/schemas/Timestamp' }
+        updated: { $ref: '#/components/schemas/Timestamp' }
+        body: { type: string, description: World's own free-form Markdown notes. }
+
+    CreateWorldInput:
+      type: object
+      required: [name, genre, color, template]
+      properties:
+        name: { type: string }
+        logline: { type: string }
+        genre: { type: string }
+        color: { type: string }
+        template:
+          type: string
+          enum: [blank, starter]
+          description: '"starter" seeds the 7 default category templates.'
+
+    WorldMutationInput:
+      description: >-
+        Partial world update. Any provided field replaces its value. `rootMap`
+        may be set to null to clear it. slug/created/updated are read-only.
+      type: object
+      properties:
+        name: { type: string }
+        genre: { type: string }
+        color: { type: string }
+        logline: { type: string }
+        eraOrder: { type: array, items: { type: string } }
+        activeEra: { type: string }
+        rootMap: { type: string, nullable: true }
+        categoryTemplates: { type: array, items: { $ref: '#/components/schemas/CategoryTemplate' } }
+        canvas: { $ref: '#/components/schemas/ReferenceCanvas' }
+        body: { type: string }
+
+    # ---- Page ----
+    Page:
+      type: object
+      required: [slug, category, title, tags, summary, eras, created, updated, customProperties, body]
+      properties:
+        slug: { type: string, description: Immutable, server-generated from title. }
+        category: { $ref: '#/components/schemas/Category' }
+        title: { type: string }
+        tags: { type: array, items: { type: string } }
+        summary: { type: string }
+        cover: { type: string, nullable: true, description: Asset URL (resolved) / assetId (write). }
+        eras:
+          type: array
+          items: { type: string }
+          description: Era slugs this page occupies; empty = Timeless.
+        created: { $ref: '#/components/schemas/Timestamp' }
+        updated: { $ref: '#/components/schemas/Timestamp' }
+        customProperties:
+          type: array
+          items: { $ref: '#/components/schemas/CustomProperty' }
+        body: { type: string, description: Markdown body (tiptap source of truth). }
+
+    PageRef:
+      type: object
+      required: [slug, title, category]
+      properties:
+        slug: { type: string }
+        title: { type: string }
+        category: { $ref: '#/components/schemas/Category' }
+
+    CreatePageInput:
+      type: object
+      required: [title, category]
+      properties:
+        title: { type: string }
+        category: { $ref: '#/components/schemas/Category' }
+        tags: { type: array, items: { type: string } }
+        summary: { type: string }
+        cover: { type: string }
+        eras: { type: array, items: { type: string } }
+        customProperties:
+          type: array
+          items: { $ref: '#/components/schemas/CustomProperty' }
+          description: Omit to seed from the category template.
+        body: { type: string }
+
+    UpdatePageInput:
+      description: Partial page update; omitted fields are untouched.
+      type: object
+      properties:
+        title: { type: string }
+        category: { $ref: '#/components/schemas/Category' }
+        tags: { type: array, items: { type: string } }
+        summary: { type: string }
+        cover: { type: string, nullable: true }
+        eras: { type: array, items: { type: string } }
+        customProperties:
+          type: array
+          items: { $ref: '#/components/schemas/CustomProperty' }
+        body: { type: string }
+
+    # ---- Properties / Templates ----
+    CustomPropertyType:
+      type: string
+      enum: [text, textarea, select, relation, image, number, date]
+
+    PropertyDef:
+      type: object
+      required: [key, label, type]
+      properties:
+        key: { type: string }
+        label: { type: string }
+        type: { $ref: '#/components/schemas/CustomPropertyType' }
+        options:
+          type: array
+          items: { type: string }
+          description: For select only.
+        targetCategories:
+          type: array
+          items: { $ref: '#/components/schemas/Category' }
+          description: For relation only; omitted = any category.
+        size:
+          type: string
+          enum: [small, medium, large]
+          description: For image only.
+        orientation:
+          type: string
+          enum: [landscape, portrait]
+          description: For image only.
+
+    CustomProperty:
+      allOf:
+        - $ref: '#/components/schemas/PropertyDef'
+        - type: object
+          required: [value]
+          properties:
+            value:
+              description: Scalar, or string[] of target slugs for relation.
+              oneOf:
+                - { type: string }
+                - { type: number }
+                - { type: array, items: { type: string } }
+
+    CategoryTemplate:
+      type: object
+      required: [category, properties]
+      properties:
+        category: { $ref: '#/components/schemas/Category' }
+        properties:
+          type: array
+          items: { $ref: '#/components/schemas/PropertyDef' }
+
+    # ---- Maps / Folders / Pins ----
+    WorldMap:
+      type: object
+      required: [id, title, eraLinked, images]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        eraLinked:
+          type: boolean
+          description: false = one fixed chart under key "all"; true = one chart per Era slug.
+        images:
+          type: object
+          additionalProperties: { type: string }
+          description: >-
+            Map of key ("all" or Era slug) → resolved asset URL in responses,
+            assetId when writing via the chart endpoint.
+        parentMap: { type: string, nullable: true }
+        parentPin: { type: string, nullable: true }
+        folder: { type: string, nullable: true, description: Library folder id; absent = root. }
+
+    MapFolder:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        parentFolder: { type: string, nullable: true }
+
+    Pin:
+      type: object
+      required: [id, mapId, pageSlug, x, y, eras]
+      properties:
+        id: { type: string }
+        mapId: { type: string }
+        pageSlug: { type: string }
+        x: { type: number, description: Percentage, clamped 2–98. }
+        y: { type: number, description: Percentage, clamped 2–98. }
+        eras:
+          type: array
+          items: { type: string }
+          description: Subset of the page's eras this pin is visible in; [] on Timeless = always.
+        childMap: { type: string, nullable: true }
+
+    PinView:
+      allOf:
+        - $ref: '#/components/schemas/Pin'
+        - type: object
+          required: [pageTitle, pageCategory]
+          properties:
+            pageTitle: { type: string }
+            pageCategory: { $ref: '#/components/schemas/Category' }
+
+    # ---- Search results ----
+    MatchIndices:
+      type: array
+      items: { type: integer }
+      description: Character indices of the matched substring, for highlighting.
+
+    PageSearchHit:
+      type: object
+      required: [slug, category, title, score]
+      properties:
+        slug: { type: string }
+        category: { $ref: '#/components/schemas/Category' }
+        title: { type: string }
+        summary: { type: string }
+        snippet: { type: string, description: Highlighted excerpt from the body. }
+        score: { type: number }
+        matchIndices: { $ref: '#/components/schemas/MatchIndices' }
+
+    SpotlightHit:
+      oneOf:
+        - type: object
+          required: [kind, slug, category, title, score]
+          properties:
+            kind: { type: string, enum: [page] }
+            slug: { type: string }
+            category: { $ref: '#/components/schemas/Category' }
+            title: { type: string }
+            summary: { type: string }
+            score: { type: number }
+            matchIndices: { $ref: '#/components/schemas/MatchIndices' }
+        - type: object
+          required: [kind, category, title, score]
+          properties:
+            kind: { type: string, enum: [category] }
+            category: { $ref: '#/components/schemas/Category' }
+            title: { type: string }
+            score: { type: number }
+            matchIndices: { $ref: '#/components/schemas/MatchIndices' }
+      discriminator:
+        propertyName: kind
+
+    WikiLinkPage:
+      type: object
+      required: [slug, title, category]
+      properties:
+        slug: { type: string }
+        title: { type: string }
+        category: { $ref: '#/components/schemas/Category' }
+        summary: { type: string }
+        tags: { type: array, items: { type: string } }
+
+    LibraryHit:
+      type: object
+      required: [kind, id, title, subtitle, score]
+      properties:
+        kind: { type: string, enum: [folder, map] }
+        id: { type: string }
+        title: { type: string }
+        subtitle: { type: string, description: Breadcrumb path or containing folder. }
+        score: { type: number }
+        matchIndices: { $ref: '#/components/schemas/MatchIndices' }
+
+    PinSearchHit:
+      type: object
+      required: [pinId, title, category, score]
+      properties:
+        pinId: { type: string }
+        title: { type: string }
+        category: { $ref: '#/components/schemas/Category' }
+        subtitle: { type: string }
+        score: { type: number }
+        matchIndices: { $ref: '#/components/schemas/MatchIndices' }
+
+    # ---- Backlinks / Graph ----
+    ReferenceKind:
+      type: string
+      enum: [body, relation, era-membership]
+
+    Backlink:
+      type: object
+      required: [sourceSlug, sourceTitle, sourceCategory, kinds, snippet]
+      properties:
+        sourceSlug: { type: string }
+        sourceTitle: { type: string }
+        sourceCategory: { $ref: '#/components/schemas/Category' }
+        kinds:
+          type: array
+          items: { $ref: '#/components/schemas/ReferenceKind' }
+        snippet: { type: string }
+
+    RelationshipGraph:
+      type: object
+      required: [nodes, edges]
+      properties:
+        nodes:
+          type: array
+          items:
+            type: object
+            required: [slug, title, category, degree]
+            properties:
+              slug: { type: string }
+              title: { type: string }
+              category: { $ref: '#/components/schemas/Category' }
+              degree: { type: integer }
+        edges:
+          type: array
+          items:
+            type: object
+            required: [key, sourceSlug, targetSlug, kinds]
+            properties:
+              key: { type: string, description: Lexicographically-ordered slug pair. }
+              sourceSlug: { type: string }
+              targetSlug: { type: string }
+              kinds:
+                type: array
+                items: { $ref: '#/components/schemas/ReferenceKind' }
+        focalSlug: { type: string, description: Echoed only for local scope. }
+
+    # ---- Reference canvas (world-scoped moodboard; persisted via World) ----
+    ReferenceCanvas:
+      type: object
+      description: >-
+        World-scoped reference whiteboard. Persisted as part of the World
+        object (no granular endpoints yet). Items reference external URLs or
+        uploaded assets by id; canvas links are canvas-local and never touch
+        the backlink index or graph.
+      additionalProperties: true
+
+    # ---- Assets ----
+    PresignResponse:
+      type: object
+      required: [assetId, key, uploadUrl]
+      properties:
+        assetId: { type: string }
+        key: { type: string, description: The object key in the bucket. }
+        uploadUrl: { type: string, description: Presigned PUT (or POST) URL on R2. }
+        uploadFields:
+          type: object
+          additionalProperties: { type: string }
+          description: Extra form fields for POST-style presign, if used.
+        expiresAt: { $ref: '#/components/schemas/Timestamp' }
+
+    Asset:
+      type: object
+      required: [assetId, url, mime]
+      properties:
+        assetId: { type: string }
+        url: { type: string }
+        mime: { type: string }
+        filename: { type: string }
+        size: { type: integer }
