@@ -1,16 +1,24 @@
 # LandForger
 
-Worldbuilding wiki front-end (React + tiptap, mocked data). Pages are Markdown files with YAML frontmatter — MD is the source of truth. Domain glossary: `CONTEXT.md` (use its terms in code and issues). Decisions: `docs/adr/`. Research assets: `docs/research/`.
+Worldbuilding wiki (React + tiptap frontend, MD source of truth). Domain glossary: `CONTEXT.md` (use its terms in code and issues). Decisions: `docs/adr/`. Research assets: `docs/research/`.
 
-## Package manager
+## Repository layout
 
-**Use pnpm, never npm or yarn.** The lockfile is `pnpm-lock.yaml`.
+Monorepo. Each subtree owns its own toolchain — there is no root-level pnpm workspace tying them together.
+
+- `web/` — React + tiptap frontend (Vite). All pnpm/Vite/Vitest commands run **from `web/`**.
+- `api/` — Go backend (accounts, CRUDs). Own `go.mod`.
+- `docs/`, `CONTEXT.md` — project-level; live at the repo root.
+
+## Package manager (frontend)
+
+**Use pnpm, never npm or yarn.** The lockfile is `web/pnpm-lock.yaml`. Run these from `web/`:
 
 - Install: `pnpm install`
 - Add a dependency: `pnpm add <pkg>` / `pnpm add -D <pkg>`
 - Run scripts: `pnpm dev`, `pnpm test`, `pnpm typecheck`, `pnpm build`
 
-## Commands
+## Commands (run from `web/`)
 
 - `pnpm dev` — Vite dev server
 - `pnpm test` — Vitest (happy-dom), full suite
