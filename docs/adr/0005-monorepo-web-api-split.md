@@ -1,0 +1,8 @@
+# Monorepo: `web/` frontend and `api/` backend in one repository
+
+The V1 backend (Go) lands in this same repository under `api/`, alongside the existing Vite + tiptap frontend which moves into `web/`; project-level docs (`docs/`, `CONTEXT.md`, `CLAUDE.md`) stay at the root. The two subtrees own their own toolchains independently — `web/` is a self-contained pnpm project, `api/` is a Go module — and there is deliberately **no** root-level pnpm workspace tying them together (a workspace only manages JS packages, and the Go module can't join one anyway). We accept mixed-language tooling in one tree in exchange for the thing that actually matters here: the API contract changes in lockstep with frontend needs, so a single repo lets one commit change `openapi.yaml`, the Go handler, and the TS caller atomically. Deploys stay fully independent — Cloudflare Pages builds with root directory `web/` and Railway with root directory `api/`, each scoped by watch-paths so a frontend push never redeploys the API and vice-versa.
+
+## Considered Options
+
+- **Two separate repositories** — the natural choice once there are separate teams, separate release cadences, or a reason to open-source one half. None of that is true for a solo V1, and it fragments the shared contract across repos and loses atomic cross-cutting commits. Revisit only if `api/` ever needs to ship on its own cadence.
+- **A pnpm workspace at the root** — buys nothing with a single JS package (`web/`), and the Go `api/` sits outside it regardless. Reconsider only if a second JS package appears (e.g. a generated `api-client` package shared by the web app).

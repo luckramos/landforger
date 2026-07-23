@@ -1,0 +1,30 @@
+.editor { display: grid; gap: 16px; }
+.section { display: grid; gap: 7px; }
+.sectionLabel { color: var(--text-faint); font: var(--text-xs) var(--font-mono); letter-spacing: .1em; text-transform: uppercase; }
+
+/* Chart mode: the pivot between a fixed chart and one redrawn per Era. */
+.chartMode { display: grid; gap: 8px; margin: 0; padding: 0; border: 0; }
+.chartMode legend { padding: 0; color: var(--text-faint); font: var(--text-xs) var(--font-mono); letter-spacing: .1em; text-transform: uppercase; }
+.segmented { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border: 1px solid var(--hairline); border-radius: var(--radius-pill); background: var(--panel-2); }
+.segmented button { display: inline-flex; height: 32px; align-items: center; justify-content: center; gap: 6px; border: 0; border-radius: var(--radius-pill); background: transparent; color: var(--text-faint); font: var(--text-sm) var(--font-sans); cursor: pointer; transition: background calc(var(--mo,1) * 160ms),color calc(var(--mo,1) * 160ms),box-shadow calc(var(--mo,1) * 160ms),transform calc(var(--mo,1) * 140ms) var(--ease-house); }
+.segmented button:hover { color: var(--text); }
+.segmented button[data-active] { background: color-mix(in oklab,var(--bronze) 15%,var(--panel-1)); color: var(--bronze-light); box-shadow: inset 0 0 0 1px color-mix(in oklab,var(--bronze) 34%,transparent); }
+.segmented button:active { transform: scale(0.96); }
+.segmented button:focus-visible { outline: 2px solid var(--bronze); outline-offset: 2px; }
+.chartHint { margin: 0; color: var(--text-faint); font: var(--text-xs)/1.5 var(--font-sans); text-wrap: pretty; }
+
+/* Stratigraphy: eras stack oldest→newest; the Active Era carries a violet edge,
+   and an unset Era shows which stratum above it borrows its chart from. */
+.strata { display: grid; margin: 0; padding: 0; overflow: hidden; border: 1px solid var(--hairline); border-radius: 10px; list-style: none; }
+.stratum { display: grid; gap: 9px; padding: 11px 12px; border-top: 1px solid var(--hairline); background: var(--panel-2); }
+.stratum:first-child { border-top: 0; }
+.stratum[data-active] { background: color-mix(in oklab,var(--cat-eras) 9%,var(--panel-2)); box-shadow: inset 3px 0 0 var(--cat-eras); }
+.stratumHead { display: flex; align-items: baseline; gap: 8px; }
+.stratumHead strong { color: var(--text-hi); font: var(--text-sm) var(--font-sans); }
+.stratumHead em { padding: 1px 6px; border-radius: var(--radius-pill); background: color-mix(in oklab,var(--cat-eras) 20%,transparent); color: var(--cat-eras); font: var(--text-xs) var(--font-mono); font-style: normal; letter-spacing: .06em; text-transform: uppercase; }
+.stratumHead small { margin-left: auto; color: var(--text-faint); font: var(--text-xs) var(--font-mono); }
+.stratumChart { display: flex; align-items: center; gap: 12px; }
+.stratumInherit { display: flex; align-items: center; gap: 5px; margin: 0; color: var(--text-faint); font: var(--text-xs) var(--font-mono); }
+.stratumInherit svg { color: var(--cat-eras); }
+
+@media (prefers-reduced-motion:reduce) { .segmented button { animation-duration: .01ms; transition-duration: .01ms; } }

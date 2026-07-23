@@ -1,16 +1,24 @@
 # LandForger
 
-Worldbuilding wiki front-end (React + tiptap, mocked data). Pages are Markdown files with YAML frontmatter — MD is the source of truth. Domain glossary: `CONTEXT.md` (use its terms in code and issues). Decisions: `docs/adr/`. Research assets: `docs/research/`.
+Worldbuilding wiki (React + tiptap frontend, MD source of truth). Domain glossary: `CONTEXT.md` (use its terms in code and issues). Decisions: `docs/adr/`. Research assets: `docs/research/`.
 
-## Package manager
+## Repository layout
 
-**Use pnpm, never npm or yarn.** The lockfile is `pnpm-lock.yaml`.
+Monorepo. Each subtree owns its own toolchain — there is no root-level pnpm workspace tying them together.
+
+- `web/` — React + tiptap frontend (Vite). All pnpm/Vite/Vitest commands run **from `web/`**.
+- `api/` — Go backend (accounts, CRUDs). Own `go.mod`. Architecture in `docs/adr/0005`–`0008` (see **Backend architecture** below).
+- `docs/`, `CONTEXT.md`, `openapi.yaml` — project-level; live at the repo root.
+
+## Package manager (frontend)
+
+**Use pnpm, never npm or yarn.** The lockfile is `web/pnpm-lock.yaml`. Run these from `web/`:
 
 - Install: `pnpm install`
 - Add a dependency: `pnpm add <pkg>` / `pnpm add -D <pkg>`
 - Run scripts: `pnpm dev`, `pnpm test`, `pnpm typecheck`, `pnpm build`
 
-## Commands
+## Commands (run from `web/`)
 
 - `pnpm dev` — Vite dev server
 - `pnpm test` — Vitest (happy-dom), full suite
@@ -30,3 +38,12 @@ Ratified design standards — apply to any new or touched UI. Full rationale + s
 - Interaction chrome (`docs/adr/0002`, PRD #56): hit targets ≥40×40px on desktop; press feedback `scale(0.96)`; state changes ease, never snap (mode-toggle icons cross-fade); images carry a hairline edge; nested surfaces use concentric radii; every form gets the `:focus-visible` treatment; `will-change` is transient, never retained.
 - Typography (`docs/adr/0003`, PRD #57): inputs ≥16px on mobile, step *down* only at `min-width: 640px` (no viewport zoom); Page body measure ~65–70ch; display titles get tight line-height + negative tracking; `text-wrap: balance` (headings) / `pretty` (paragraphs); real italics only (no synthetic slant); every size from the `--text-*` scale; `tabular-nums` on in-place counts; control chrome is `user-select: none`.
 - Color (`docs/adr/0004`, PRD #58): theme colors authored in OKLCH; use tokens not hand-rolled values (`--laser`, `--scrim`, `--danger`, `--bronze-hi`); `var(--token, <fallback>)` for theme tokens; the token test asserts contrast ratios, not literal color strings.
+
+### Backend architecture
+
+The `api/` backend (Go) is being built for V1. Ratified decisions — read the ADR before touching backend code:
+
+- Monorepo split (`docs/adr/0005`): `web/` + `api/`, independent toolchains, no pnpm workspace.
+- Stack (`docs/adr/0006`): Go + Postgres (app source of truth) + R2 (binary assets only, via presigned URLs); router `chi`, `pgx` + `sqlc`, `goose` migrations, `oapi-codegen`, `slog`. Hosting: Railway (API + Postgres) + Cloudflare Pages (web).
+- Auth (`docs/adr/0007`): opaque session cookie (`HttpOnly`, `SameSite=Lax`) backed by a Postgres `sessions` table via `scs` — not JWT.
+- API contract (`docs/adr/0008`): the root `openapi.yaml` is the single source of truth; Go server stubs and the TS client are both generated from it.
