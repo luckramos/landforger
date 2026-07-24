@@ -1,0 +1,30 @@
+name: API
+
+on:
+  push:
+    paths:
+      - api/**
+      - openapi.yaml
+      - .github/workflows/api.yml
+  pull_request:
+    paths:
+      - api/**
+      - openapi.yaml
+      - .github/workflows/api.yml
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    env:
+      TESTCONTAINERS_RYUK_DISABLED: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22.2"
+      - run: make generate
+      - run: git diff --exit-code
+      - run: go test ./...

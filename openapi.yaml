@@ -39,6 +39,8 @@ security:
   - cookieAuth: []
 
 tags:
+  - name: Infrastructure
+    description: Operational endpoints for the API service.
   - name: Auth
     description: Signup, login, session lifecycle, password reset, email verification.
   - name: Account
@@ -64,6 +66,17 @@ tags:
 # PATHS
 # ============================================================================
 paths:
+
+  # -------------------------------------------------------- Infrastructure ----
+  /healthz:
+    get:
+      tags: [Infrastructure]
+      operationId: getHealthz
+      summary: Check that the API is reachable
+      security: []
+      responses:
+        '200':
+          description: API is healthy.
 
   # ---------------------------------------------------------------- Auth ----
   /auth/signup:
