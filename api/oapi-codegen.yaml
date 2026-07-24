@@ -1,0 +1,7 @@
+package: gen
+generate:
+  chi-server: true
+output: internal/httpapi/gen/server.gen.go
+output-options:
+  include-tags:
+    - Infrastructure
